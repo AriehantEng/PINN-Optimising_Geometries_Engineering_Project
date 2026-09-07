@@ -131,7 +131,103 @@ never imply a capability the code does not have.
 
 ## 6. Results
 
-<!-- FILLED FROM runs/ -->
+### 6.1 What helped, what hurt
+
+Ten formulations at an identical reduced budget (Adam 1500 + L-BFGS 3000,
+width 64, 2048 interior points, Case A, Re = 10). Ranked by relative L2 error
+on `u` against the analytic solution; the SPEC target is 1e-5.
+
+| variant | u relL2 | vs baseline | final loss |
+|---------|---------|-------------|------------|
+| hard pressure gauge | **4.32e-6** | 8.0× better | 8.84e-11 |
+| modified MLP | **6.96e-6** | 5.0× better | 1.11e-10 |
+| lifting + hard gauge | **8.08e-6** | 4.3× better | 3.83e-11 |
+| random weight factorisation | 1.80e-5 | 1.9× better | 6.94e-10 |
+| *baseline* (plain MLP, soft gauge) | 3.48e-5 | — | 2.86e-09 |
+| width 128 instead of 64 | 4.42e-5 | 1.3× worse | 1.26e-09 |
+| gradient-norm weighting | 4.95e-5 | 1.4× worse | 7.65e-09 |
+| inlet lifting | 5.65e-5 | 1.6× worse | 1.63e-09 |
+| Fourier features | 8.46e-5 | 2.4× worse | 2.31e-08 |
+| viscous scaling (wrong regime) | 6.11e-4 | 18× worse | 4.15e-07 |
+
+Every run terminated on its L-BFGS iteration cap rather than on `gtol`, so all
+ten are budget-limited and the ranking, not the absolute values, is the result.
+
+**Four of the SPEC's suggested enhancements measured harmful on this problem**
+(Fourier features, gradient-norm weighting, inlet lifting, extra width). They
+are disabled in the committed configs with the measurement recorded beside
+each disabled option, so they are not re-enabled speculatively. None of this
+generalises to Phase 2 — see section 7.
+
+### 6.2 Three variants lowered the loss while worsening the answer
+
+| variant | final loss | u relL2 |
+|---------|-----------|---------|
+| baseline | 2.86e-9 | 3.48e-5 |
+| inlet lifting | **1.63e-9** (lower) | **5.65e-5** (worse) |
+| lifting + hard gauge | **3.83e-11** (lowest) | 8.08e-6 (worse than hard gauge alone at 8.84e-11 / 4.32e-6) |
+
+The mechanism is mundane and worth stating because it is easy to trip over:
+lifting removes the inlet loss term, so the total is a sum over five terms
+instead of six. Part of the "improvement" is a deleted term.
+
+**Loss values are not comparable across configurations with different active
+term sets.** This is a sharper statement than "loss is a diagnostic, never an
+accuracy claim" — it bites when comparing two runs of the same code on the same
+problem. Phase 2 will vary configurations far more, so this gets worse.
+
+### 6.3 Gradient-norm weighting fails by construction here
+
+The scheme sets `w_i ← (Σ_j ‖∇L_j‖) / ‖∇L_i‖`, so a term the optimiser has
+*already satisfied* has a vanishing gradient norm and therefore an exploding
+weight. Final weights on the Case A run:
+
+```
+outlet_velocity  6325.8      ← du/dx = 0, satisfied identically by the exact solution
+momentum_y         24.7
+momentum_x         10.8
+pressure_gauge      6.0
+continuity          5.0
+inlet               2.2
+```
+
+The optimiser then spent its budget on a solved constraint. Fixed weights are
+the default everywhere as a result. The implementation stays, tested, because
+the SPEC offers the scheme conditionally and Phase 2 may have a genuine
+imbalance; the weight trace is logged per step and plotted in every run's
+`loss_history.png`, which is what made this diagnosable at all.
+
+### 6.4 Pressure scaling costs 18× at Re = 10
+
+Viscous and inertial scaling are the same equation multiplied by `Re`, with
+identical solutions, so the entire 6.11e-4 vs 3.48e-5 gap is conditioning.
+This is the largest single effect in the sweep apart from the gauge, and it
+confirms the SPEC's insistence that the choice be a config option rather than
+hard-coded.
+
+### 6.5 Case A at the selected configuration
+
+Modified MLP, hard pressure gauge, Re = 10, width 128, Adam 2000 + L-BFGS 6000:
+
+| SPEC test | measured | target | |
+|-----------|----------|--------|-|
+| 1 — `u` relative L2 | **1.218e-06** | ≤ 1e-5 | **PASS** (stretch target 1e-6) |
+| 2 — `max\|v*\|` | **7.929e-07** | ≤ 1e-5 | **PASS** |
+| 3 — flux conservation | 2.227e-06 | ≤ 1e-6 | **FAIL** |
+
+Also: `p` relative L2 1.080e-06, and the Adam→L-BFGS loss discontinuity is
+1.6e-15, so the handoff trap in SPEC section 9 is measured absent rather than
+assumed.
+
+**On the test 3 failure.** L-BFGS terminated on its iteration cap while still
+descending, so the first thing to try is more budget — that is not widening a
+tolerance and the tolerance has not been touched. Beyond that, it is worth
+noticing that test 3 as specified is the strictest test in the suite: it asks
+for station-to-station flux agreement of 1e-6 while test 1 asks for 1e-5 on
+`u` itself. Here `u` is accurate to 1.2e-6 and the flux spread is 2.2e-6 — the
+same order — so test 3 is not detecting a mass-conservation defect so much as
+demanding roughly an order of magnitude more accuracy than test 1. That is a
+question for the SPEC author, not a licence to move the number.
 
 ## 7. Carried into Phase 2
 
