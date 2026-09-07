@@ -29,11 +29,11 @@ physics:
   formulation: velocity_pressure
 
 model:
-  arch: mlp
+  arch: modified_mlp      # sweep: 6.96e-6 vs 3.48e-5 for the plain MLP
   width: 128              # SPEC section 3: published recommendation 128-512
   depth: 4                # published recommendation 3-6
   fourier:
-    enabled: false
+    enabled: false        # measured harmful here: 8.46e-5 vs 3.48e-5 baseline
   rwf:
     enabled: false
 
@@ -50,7 +50,7 @@ sampling:
   seed: 1
 
 weights:
-  scheme: fixed
+  scheme: fixed           # grad_norm measured harmful: see docs/phase1-findings.md
   values:
     momentum_x: 1.0
     momentum_y: 1.0
