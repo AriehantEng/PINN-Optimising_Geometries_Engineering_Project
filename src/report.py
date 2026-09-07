@@ -23,11 +23,14 @@ RUNS_ROOT = Path("runs")
 #: the gate; this module never decides whether something passed on its own
 #: terms, it just displays the same numbers.
 TARGETS = {
-    "u_relative_l2": ("test 1  u relative L2", 1e-5, "<="),
-    "v_max_abs": ("test 2  max |v*|", 1e-5, "<="),
-    "flux_conservation_relative_error": ("test 3  flux conservation", 1e-6, "<="),
-    "outlet_profile_relative_l2": ("test 9  outlet profile L2", 1e-4, "<="),
-    "entrance_length_relative_error": ("test 9  entrance length", 0.15, "<="),
+    "u_relative_l2": ("test 1  u relative L2", 1e-5, "<=", "A"),
+    # SPEC test 2 is "Transverse velocity, Case A". Developing flow has a
+    # genuine non-zero v*, so applying this target to Case B would report a
+    # false failure for correct physics.
+    "v_max_abs": ("test 2  max |v*|", 1e-5, "<=", "A"),
+    "flux_conservation_relative_error": ("test 3  flux conservation", 1e-6, "<=", None),
+    "outlet_profile_relative_l2": ("test 9  outlet profile L2", 1e-4, "<=", "B"),
+    "entrance_length_relative_error": ("test 9  entrance length", 0.15, "<=", "B"),
 }
 
 
@@ -52,8 +55,10 @@ def format_run(metrics: dict) -> str:
     lines.append("")
     lines.append("  ACCURACY (relative L2 against the analytic solution)")
     any_target = False
-    for key, (label, target, _) in TARGETS.items():
+    for key, (label, target, _, only_case) in TARGETS.items():
         if key not in metrics:
+            continue
+        if only_case is not None and metrics["case"] != only_case:
             continue
         any_target = True
         value = metrics[key]
@@ -61,6 +66,12 @@ def format_run(metrics: dict) -> str:
         lines.append(f"    {label:<32} {value:10.3e}   target <= {target:<8.1e} {verdict}")
     if not any_target:
         lines.append("    (no targeted metrics present)")
+
+    if metrics["case"] != "A":
+        lines.append(
+            f"    {'max |v*| (no target: case B has':<32} {metrics['v_max_abs']:10.3e}"
+        )
+        lines.append(f"    {'  genuine transverse velocity)':<32}")
 
     for key, label in (
         ("p_relative_l2", "p relative L2 (gauged at outlet)"),
