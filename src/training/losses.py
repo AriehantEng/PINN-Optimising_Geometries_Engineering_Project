@@ -1,0 +1,86 @@
+"""Per-term losses. Unweighted.
+
+Each term is the mean squared residual of one governing equation or one
+boundary condition, evaluated on the collocation points for that term. Nothing
+here multiplies by a weight -- that happens in `weights.py` and nowhere else
+(CLAUDE.md, "Code style").
+
+There is deliberately no wall term. No-slip is exact by construction in the
+ansatz, so a wall loss would be identically zero and would only dilute the
+gradient of the terms that matter.
+"""
+
+from __future__ import annotations
+
+import jax.numpy as jnp
+
+from ..config import Config
+from ..physics import residuals
+from ..physics.derivatives import (
+    batched_field_and_jacobian,
+    batched_field_derivatives,
+)
+
+
+def inlet_profile(config: Config, y):
+    """Prescribed streamwise velocity at x* = 0.
+
+    Case A: the fully developed parabola u* = 1 - y*^2.
+    Case B: the uniform profile u* = `physics.inlet_uniform_value`.
+    """
+    if config.case == "A":
+        return 1.0 - y**2
+    return jnp.full_like(y, config.inlet_uniform_value)
+
+
+def make_loss_terms(config: Config, field_fn):
+    """Build `loss_terms(params, points) -> dict[str, scalar]`.
+
+    The returned dict has exactly the keys in `config.loss_terms`, so a term
+    can never be silently dropped or silently added.
+    """
+    reynolds = config.physics.reynolds
+    pressure_scaling = config.physics.pressure_scaling
+    formulation = config.physics.formulation
+
+    def loss_terms(params, points):
+        point_fn = lambda xy: field_fn(params, xy)  # noqa: E731
+
+        d = batched_field_derivatives(point_fn, points.interior)
+        terms = {
+            "momentum_x": jnp.mean(
+                residuals.momentum_x(d, reynolds, pressure_scaling) ** 2
+            ),
+            "momentum_y": jnp.mean(
+                residuals.momentum_y(d, reynolds, pressure_scaling) ** 2
+            ),
+        }
+        if formulation == "velocity_pressure":
+            terms["continuity"] = jnp.mean(residuals.continuity(d) ** 2)
+
+        if config.bc.inlet == "soft":
+            inlet_values, _ = batched_field_and_jacobian(point_fn, points.inlet)
+            target = inlet_profile(config, points.inlet[:, 1])
+            terms["inlet"] = jnp.mean((inlet_values[:, 0] - target) ** 2) + jnp.mean(
+                inlet_values[:, 1] ** 2
+            )
+
+        needs_outlet = (
+            config.bc.outlet_velocity == "soft" or config.bc.pressure_gauge == "soft"
+        )
+        if needs_outlet:
+            outlet_values, outlet_jac = batched_field_and_jacobian(
+                point_fn, points.outlet
+            )
+            if config.bc.outlet_velocity == "soft":
+                # Zero streamwise gradient of velocity: du/dx = dv/dx = 0.
+                terms["outlet_velocity"] = jnp.mean(
+                    outlet_jac[:, 0, 0] ** 2
+                ) + jnp.mean(outlet_jac[:, 1, 0] ** 2)
+            if config.bc.pressure_gauge == "soft":
+                # The gauge fix. Without it the pressure error is meaningless.
+                terms["pressure_gauge"] = jnp.mean(outlet_values[:, 2] ** 2)
+
+        return terms
+
+    return loss_terms

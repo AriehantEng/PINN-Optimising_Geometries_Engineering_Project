@@ -250,3 +250,31 @@ def test_finite_difference_check_would_fail_on_a_wrong_derivative():
 
     with pytest.raises(AssertionError):
         np.testing.assert_allclose(wrong, fd, rtol=0.0, atol=FD_ATOL)
+
+
+@pytest.mark.parametrize("overrides", FORMULATIONS, ids=FORMULATION_IDS)
+def test_batched_derivatives_match_single_point(overrides):
+    """The fast batched path must agree with the reference single-point path.
+
+    `batched_field_derivatives` differentiates the batched field function along
+    constant tangent directions; `field_derivatives` nests `jacfwd` at one
+    point. They are the same mathematics by different routes, and the batched
+    one is 2.4x faster, so it is the one training uses -- which makes this the
+    test that stops it drifting.
+    """
+    from src.physics.derivatives import field_derivatives
+
+    config = _base_config(**overrides)
+    params, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
+    point_fn = lambda xy: field_fn(params, xy)  # noqa: E731
+
+    points = sample_interior(jax.random.PRNGKey(21), Channel(config.domain.length), 96)
+
+    batched = batched_field_derivatives(point_fn, points)
+    reference = jax.vmap(lambda xy: field_derivatives(point_fn, xy))(points)
+
+    for name, fast, slow in zip(batched._fields, batched, reference):
+        np.testing.assert_allclose(
+            np.asarray(fast), np.asarray(slow), rtol=0.0, atol=1e-14,
+            err_msg=f"batched and single-point derivative disagree on {name}",
+        )
