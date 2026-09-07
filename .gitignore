@@ -1,0 +1,11 @@
+# Run outputs are written by the code and never edited by hand.
+runs/
+!runs/.gitkeep
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/

@@ -1,0 +1,59 @@
+# Case A (fully developed channel), Re = 10, baseline MLP.
+# SPEC section 2, Case A. This is the harness-validation configuration.
+name: caseA_re10_baseline
+seed: 0
+case: A
+
+domain:
+  length: 20.0            # L*, in units of the half-height h
+
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial      # Re > 1, per SPEC section 1
+  formulation: velocity_pressure  # continuity as a residual loss term
+
+model:
+  arch: mlp               # tanh MLP, SPEC section 3 item 1
+  width: 128              # published recommendation 128-512
+  depth: 4                # published recommendation 3-6
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+
+bc:
+  inlet: soft             # the PINN must discover the parabolic profile
+  outlet_velocity: soft   # du/dx = dv/dx = 0 at x* = L*
+  pressure_gauge: soft    # p*(L*, y*) = 0
+
+sampling:
+  n_interior: 4096
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    continuity: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+    pressure_gauge: 1.0
+
+training:
+  adam:
+    steps: 20000
+    lr_init: 1.0e-3
+    decay_rate: 0.9
+    decay_steps: 2000
+  lbfgs:
+    enabled: true
+    max_iterations: 20000
+    gtol: 1.0e-14
+
+evaluation:
+  nx: 401
+  ny: 201
