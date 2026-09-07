@@ -101,6 +101,19 @@ weights.scheme: fixed unless a specific imbalance is demonstrated, and always
 read runs/<id>/loss_history.png, whose right-hand panel is the weight trace.
 Logging the weights per step is what made this diagnosable at all.
 
+**Soft continuity lets mass drift downstream, silently.**
+Case B (velocity-pressure) reproduced the entrance physics correctly but gained
+6% mass along the channel (station flux 2.004 -> 2.132) → continuity is only a
+penalty term there, so nothing forbids a slow drift, and the loss looks
+unremarkable while it happens → the drift then corrupted the entrance-length
+measurement too, because that is taken at 99% of the developed centreline and
+the centreline was still creeping upward (threshold crossed at x* = 9.3 versus
+a correlation value of 2.4). Always plot station flux against x before
+believing an entrance length. The stream-function formulation removes the
+failure mode by construction, at the cost of making SPEC test 3 trivially true
+and therefore no longer an independent check. Phase 2 splits flux between two
+daughter branches, so this is the single most important Phase 1 finding for it.
+
 **4 CPU cores, so do not train and run pytest at the same time.**
 Both slow down several-fold and timings become meaningless. Run the sweep, then
 the tests.
