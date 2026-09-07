@@ -1,0 +1,55 @@
+# Case B (developing entrance flow), Re = 1.
+# L* = 20: the Durst et al. correlation gives an entrance length of
+# about 1.30 half-heights, and the outlet condition du/dx = 0 is only
+# valid where the flow has developed.
+# Inlet is soft: lifting is unavailable for case B because a uniform inlet
+# is incompatible with hard no-slip at the corners.
+name: caseB_re1
+seed: 0
+case: B
+domain:
+  length: 20.0
+physics:
+  reynolds: 1.0
+  pressure_scaling: viscous
+  formulation: velocity_pressure
+  inlet_uniform_value: 1.0
+model:
+  arch: modified_mlp
+  width: 128
+  depth: 4
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+bc:
+  inlet: soft
+  outlet_velocity: soft
+  pressure_gauge: hard
+sampling:
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+    continuity: 1.0
+training:
+  adam:
+    steps: 2000
+    lr_init: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 6000
+    gtol: 1.0e-14
+evaluation:
+  nx: 401
+  ny: 201

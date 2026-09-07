@@ -1,74 +1,55 @@
 # Case B (developing entrance flow), Re = 10.
-# SPEC section 2, Case B. This is the case that actually predicts Phase 2
-# success, because the bifurcation problem is a redeveloping-flow problem.
+# L* = 20: the Durst et al. correlation gives an entrance length of
+# about 2.36 half-heights, and the outlet condition du/dx = 0 is only
+# valid where the flow has developed.
+# Inlet is soft: lifting is unavailable for case B because a uniform inlet
+# is incompatible with hard no-slip at the corners.
 name: caseB_re10
 seed: 0
 case: B
-
 domain:
-  length: 20.0            # Durst correlation gives L_e* = 2.36 at Re = 10
-
+  length: 20.0
 physics:
   reynolds: 10.0
   pressure_scaling: inertial
   formulation: velocity_pressure
-  inlet_uniform_value: 1.0   # SPEC section 2: uniform u* = 1. See
-                             # docs/spec-deviations.md item 1 -- this carries
-                             # flux 2, so the developed centreline is 3/2.
-
+  inlet_uniform_value: 1.0
 model:
-  arch: modified_mlp      # the developing flow has real streamwise structure
+  arch: modified_mlp
   width: 128
   depth: 4
   fourier:
     enabled: false
   rwf:
     enabled: false
-
 bc:
-  inlet: soft             # lifting is unavailable: a uniform inlet is
-                          # incompatible with hard no-slip at the corners
+  inlet: soft
   outlet_velocity: soft
-  pressure_gauge: soft
-
+  pressure_gauge: hard
 sampling:
-  n_interior: 4096
-  n_inlet: 256
-  n_outlet: 256
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
   resample_every: 500
   seed: 1
-
 weights:
-  # Fixed, NOT grad_norm. The Case A sweep showed grad-norm annealing is
-  # actively harmful on this problem: a term that becomes well satisfied gets a
-  # vanishing gradient norm and therefore an exploding weight. The
-  # outlet_velocity weight reached 6.3e3 against ~10 for the momentum terms,
-  # and the relative L2 error on u was worse than with fixed weights
-  # (4.95e-5 vs 3.48e-5). See docs/phase1-findings.md.
-  #
-  # The concern that motivated grad_norm here -- that Case B's inlet term
-  # cannot reach zero because of the corner singularity -- does not need it:
-  # near its floor that term has a small gradient, so it does not dominate.
   scheme: fixed
   values:
     momentum_x: 1.0
     momentum_y: 1.0
-    continuity: 1.0
     inlet: 1.0
     outlet_velocity: 1.0
-    pressure_gauge: 1.0
-
+    continuity: 1.0
 training:
   adam:
-    steps: 15000
-    lr_init: 1.0e-3
+    steps: 2000
+    lr_init: 0.001
     decay_rate: 0.9
-    decay_steps: 2000
+    decay_steps: 1000
   lbfgs:
     enabled: true
-    max_iterations: 15000
+    max_iterations: 6000
     gtol: 1.0e-14
-
 evaluation:
-  nx: 601
+  nx: 401
   ny: 201

@@ -60,13 +60,13 @@ weights:
 
 training:
   adam:
-    steps: 3000
+    steps: 2000
     lr_init: 1.0e-3
     decay_rate: 0.9
     decay_steps: 1000
   lbfgs:
     enabled: true
-    max_iterations: 20000
+    max_iterations: 6000
     gtol: 1.0e-14
 
 evaluation:
