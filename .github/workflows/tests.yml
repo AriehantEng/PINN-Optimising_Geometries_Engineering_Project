@@ -1,0 +1,38 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  fast:
+    # Everything that does not require training. This is the suite that must
+    # never go red.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Non-training tests (SPEC tests 5, 6, 7 and structural checks)
+        run: pytest tests/ -q -m "not slow"
+
+  short-schedule:
+    # SPEC section 5: "run a short-schedule version in CI". This trains a much
+    # smaller network for far fewer steps and checks the pipeline end to end
+    # against documented smoke bounds. It is NOT the SPEC accuracy gate --
+    # the gate is `pytest tests/ -q` on the full schedule, which takes far
+    # longer than a CI job should.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Training tests, short schedule (smoke bounds, not the gate)
+        run: pytest tests/ -q -m slow --schedule short

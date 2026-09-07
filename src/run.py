@@ -23,6 +23,7 @@ from jax.flatten_util import ravel_pytree
 
 from .config import Config, load_config
 from .evaluation.accuracy import evaluate
+from .evaluation import plots
 from .models.build import build_model
 from .training.loop import train
 
@@ -86,6 +87,7 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
         json.dump(result.lbfgs_history, handle, indent=2)
     with (directory / "metrics.json").open("w", encoding="utf-8") as handle:
         json.dump(metrics, handle, indent=2)
+    plots.write_all(config, result.field_fn, result.params, directory)
     with (directory / "environment.json").open("w", encoding="utf-8") as handle:
         json.dump(
             {

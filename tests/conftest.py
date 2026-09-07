@@ -16,3 +16,22 @@ def _require_float64():
         "float64 is not active. Every accuracy target in this project is "
         "unreachable in float32 (CLAUDE.md, 'Non-negotiable numerical rules')."
     )
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--schedule",
+        action="store",
+        default="full",
+        choices=["full", "short"],
+        help=(
+            "'full' (default) runs the SPEC accuracy targets. 'short' runs a "
+            "reduced training schedule for CI: it checks the pipeline end to "
+            "end against a documented smoke bound and is NOT the SPEC gate."
+        ),
+    )
+
+
+@pytest.fixture(scope="session")
+def schedule(pytestconfig):
+    return pytestconfig.getoption("--schedule")

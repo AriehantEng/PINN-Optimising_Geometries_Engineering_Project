@@ -58,8 +58,14 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
 
     @jax.jit
     def adam_step(p, state, points, w):
-        terms = loss_terms_fn(p, points)
-        loss, grads = jax.value_and_grad(lambda q: total_loss(loss_terms_fn(q, points), w))(p)
+        def loss_and_terms(q):
+            # `has_aux` returns the per-term losses from the SAME trace that
+            # produced the gradient, instead of a second forward pass just to
+            # log them.
+            terms = loss_terms_fn(q, points)
+            return total_loss(terms, w), terms
+
+        (loss, terms), grads = jax.value_and_grad(loss_and_terms, has_aux=True)(p)
         updates, state = optimiser.update(grads, state, p)
         return optax.apply_updates(p, updates), state, loss, terms
 

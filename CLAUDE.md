@@ -41,3 +41,46 @@ Read `SPEC-phase1-poiseuille.md` before starting work.
 ## Gotchas found so far
 
 <!-- Append entries here as we hit them. Format: symptom → cause → fix. -->
+
+**Central differences cannot check second derivatives to 1e-7 on O(5) fields.**
+SPEC test 5 failed at ~4e-7 with a clean autodiff implementation → the
+three-point central second difference has a roundoff floor of ~4ε|f|/h², and
+O(h²) truncation caps h at ~1e-4, so its floor is ~1e-7|f| — above the target
+for fields of magnitude 5, which an untrained network produces → use the
+five-point (fourth-order) central stencil at h = 1e-3. Measured floor ~2e-9.
+The tolerance was not touched. Same trap will appear in Phase 2.
+
+**`np.asarray` on a JAX array gives a read-only view.**
+`ValueError: assignment destination is read-only` when clipping sampled points
+in a test → JAX buffers are immutable and `asarray` does not copy → use
+`np.array(...)` when you intend to mutate.
+
+**vmapping per-point nested `jacfwd` is 2.4× slower than it needs to be.**
+`value_and_grad` cost 6.5× the forward derivative bundle, when reverse mode
+should cost 2–3× → the reverse pass over a vmapped nested `jacfwd` stores a
+tangent copy of every activation for every collocation point, which goes
+memory-bandwidth bound → differentiate the *already-batched* field function
+along constant tangent directions instead (`_directional` in
+`physics/derivatives.py`). 491 ms → 206 ms at the baseline size, values
+identical to 5.6e-17. Keep the single-point version as the tested reference.
+
+**A stream function of the form ψ = φ²N cannot represent channel flow.**
+Any such ψ is constant on both walls, but ψ(+1) − ψ(−1) *is* the flux, so the
+ansatz can only express zero net throughflow → add a base flow carrying the
+flux: ψ = ψ_base(y) + φ(y)²N. Note ψ_base = (Q/4)(3y − y³) *is* the exact
+Case A solution, so a comparison against the velocity–pressure formulation
+using it measures the ansatz, not the method. Use the sine base for any
+reported comparison.
+
+**A uniform inlet is incompatible with hard no-slip at the corners.**
+Case B's u* = 1 inlet needs N_u = 1/(1 − y²) at x* = 0, which is unbounded →
+the network under-delivers flux near the walls → this is an inlet artefact, not
+a solver error. Report the flux deficit separately and test the developed
+profile shape against the *measured* flux; mass conservation is checked
+independently. Phase 2's bifurcation inlet will have the same issue at the
+junction corners.
+
+**4 CPU cores, so do not train and run pytest at the same time.**
+Both slow down several-fold and timings become meaningless. Run the sweep, then
+the tests.
+
