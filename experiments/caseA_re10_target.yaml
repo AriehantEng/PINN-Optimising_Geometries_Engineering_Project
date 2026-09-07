@@ -1,0 +1,68 @@
+# Case A (fully developed channel), Re = 10 — the SPEC test 1 gate config.
+#
+# PROVISIONAL: the architecture/BC selection is still being chosen by the
+# Case A sweep (see docs/phase1-findings.md section 4). The settings below are
+# the baseline formulation at a budget large enough to converge: the lean sweep
+# run reached 3.48e-5 on u with L-BFGS stopping on its iteration limit while
+# still improving, so the limit is raised here rather than the tolerance.
+#
+# Soft inlet and soft pressure gauge are deliberate: both make the problem
+# harder than the alternatives and therefore make a pass mean more. See
+# docs/phase1-findings.md section 4 for why the hard gauge trivialises Case A.
+name: caseA_re10_target
+seed: 0
+case: A
+
+domain:
+  length: 20.0
+
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+  formulation: velocity_pressure
+
+model:
+  arch: mlp
+  width: 128              # SPEC section 3: published recommendation 128-512
+  depth: 4                # published recommendation 3-6
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+
+bc:
+  inlet: soft
+  outlet_velocity: soft
+  pressure_gauge: soft
+
+sampling:
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    continuity: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+    pressure_gauge: 1.0
+
+training:
+  adam:
+    steps: 3000
+    lr_init: 1.0e-3
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 20000
+    gtol: 1.0e-14
+
+evaluation:
+  nx: 401
+  ny: 201
