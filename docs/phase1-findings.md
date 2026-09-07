@@ -76,10 +76,63 @@ That is the whole reason accuracy in this project is *never* reported as a loss
 value: `src/report.py` prints accuracy and diagnostics under separate headings,
 and the loss is always under "diagnostics".
 
-## 4. Results
+## 4. What limits Case A accuracy (and why it is not the optimiser)
+
+Worth writing down because it decides which lever actually matters.
+
+Substituting the exact solution `u* = 1 − y*²`, `v* = 0` into the x-momentum
+residual leaves
+
+```
+R_x = u u_x + v u_y + p_x − (1/Re)(u_xx + u_yy) = p_x + 2/Re
+```
+
+so the residual demands `p_x ≡ −2/Re` **exactly**, everywhere. The velocity is
+already exactly representable: with `u = φ(y) N_u`, the exact answer is
+`N_u ≡ 1`, which a network reaches by zeroing the `u` row of its output layer
+and setting that bias to 1. Same for `N_v ≡ 0`. So Case A's accuracy is not
+limited by whether the network can represent the velocity — it is limited by
+how well it can represent a **linear pressure field**, because any error there
+pushes back on `u` through the momentum residual.
+
+This makes the pressure gauge a structural lever, not a detail:
+
+| gauge | what `N_p` must represent | exactly representable? |
+|-------|---------------------------|------------------------|
+| soft, `p = N_p` | affine in `x`: `(2/Re)(L* − x*)` | no — tanh cannot be exactly affine |
+| hard, `p = (1 − x*/L*) N_p` | the constant `2L*/Re` | **yes** |
+
+With the hard gauge the entire Case A solution collapses to three constants
+(`N_u ≡ 1`, `N_v ≡ 0`, `N_p ≡ 2L*/Re`) and the loss can reach exactly zero.
+
+**This is a real caveat, not a win to be quoted uncritically.** The hard gauge
+is explicitly endorsed by the SPEC ("gauge-fix it explicitly at the outlet"),
+but it makes Case A an unusually easy optimisation problem, so a good Case A
+number obtained with it validates less of the harness than the same number
+obtained with the soft gauge. Both are run and both are reported. Case B, whose
+solution is not a set of constants under any gauge, remains the case that
+actually predicts Phase 2.
+
+## 5. Deliberately not built
+
+The SPEC gates several items on need. They are listed here so that "absent" is
+never mistaken for "forgotten".
+
+| SPEC item | Status | Why |
+|-----------|--------|-----|
+| PirateNet adaptive residual blocks (§3 item 5) | not built | "only if 1–4 leave you short of the accuracy target. Do not start here." |
+| SOAP / Gauss-Newton / natural gradient (§4) | not built | gated on "if accuracy stalls above target" |
+| NTK-based loss weighting (§4) | not built | the SPEC asks for gradient-norm **or** NTK; gradient-norm annealing is implemented |
+| Residual-based adaptive refinement (§4) | not built | explicitly "optional" in the SPEC; uniform resampling every N steps is implemented |
+
+Where an item is not built, no dead configuration key exists for it either —
+the config loader rejects keys that would have no effect, so a config file can
+never imply a capability the code does not have.
+
+## 6. Results
 
 <!-- FILLED FROM runs/ -->
 
-## 5. Carried into Phase 2
+## 7. Carried into Phase 2
 
 <!-- FILLED FROM runs/ -->
