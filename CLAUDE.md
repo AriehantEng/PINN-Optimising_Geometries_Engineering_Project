@@ -90,6 +90,17 @@ of "loss is a diagnostic, never an accuracy claim": it bites even when
 comparing two runs of the same code. Phase 2 will vary configs far more, so
 this trap gets worse, not better.
 
+**Gradient-norm loss weighting explodes the weight of a satisfied term.**
+The grad_norm sweep variant was worse than fixed weights (4.95e-5 vs 3.48e-5
+on u) → the scheme sets w_i <- (sum_j ||grad L_j||) / ||grad L_i||, so a term
+the optimiser has already nailed has a vanishing gradient norm and therefore an
+exploding weight. outlet_velocity (du/dx = 0, satisfied identically by the
+exact solution) reached 6.3e3 against ~10 for the momentum terms, and the
+optimiser then spent its budget on an already-solved constraint → keep
+weights.scheme: fixed unless a specific imbalance is demonstrated, and always
+read runs/<id>/loss_history.png, whose right-hand panel is the weight trace.
+Logging the weights per step is what made this diagnosable at all.
+
 **4 CPU cores, so do not train and run pytest at the same time.**
 Both slow down several-fold and timings become meaningless. Run the sweep, then
 the tests.

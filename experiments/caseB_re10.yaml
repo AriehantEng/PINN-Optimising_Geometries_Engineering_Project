@@ -39,8 +39,17 @@ sampling:
   seed: 1
 
 weights:
-  scheme: grad_norm       # the inlet term cannot reach zero (corner
-                          # singularity), so fixed weights let it dominate
+  # Fixed, NOT grad_norm. The Case A sweep showed grad-norm annealing is
+  # actively harmful on this problem: a term that becomes well satisfied gets a
+  # vanishing gradient norm and therefore an exploding weight. The
+  # outlet_velocity weight reached 6.3e3 against ~10 for the momentum terms,
+  # and the relative L2 error on u was worse than with fixed weights
+  # (4.95e-5 vs 3.48e-5). See docs/phase1-findings.md.
+  #
+  # The concern that motivated grad_norm here -- that Case B's inlet term
+  # cannot reach zero because of the corner singularity -- does not need it:
+  # near its floor that term has a small gradient, so it does not dominate.
+  scheme: fixed
   values:
     momentum_x: 1.0
     momentum_y: 1.0
@@ -48,9 +57,6 @@ weights:
     inlet: 1.0
     outlet_velocity: 1.0
     pressure_gauge: 1.0
-  grad_norm:
-    update_every: 200
-    alpha: 0.9
 
 training:
   adam:
