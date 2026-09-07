@@ -80,6 +80,16 @@ profile shape against the *measured* flux; mass conservation is checked
 independently. Phase 2's bifurcation inlet will have the same issue at the
 junction corners.
 
+**Loss values are not comparable across configs with different term sets.**
+The lifting-inlet variant reported a LOWER final loss than the soft-inlet
+baseline (1.63e-9 vs 2.86e-9) and a WORSE relative L2 error on u (5.65e-5 vs
+3.48e-5) → lifting removes the inlet loss term, so the total is a sum over five
+terms instead of six; part of the "improvement" is a deleted term → only ever
+rank configurations by relative L2 against the oracle. This is a sharper form
+of "loss is a diagnostic, never an accuracy claim": it bites even when
+comparing two runs of the same code. Phase 2 will vary configs far more, so
+this trap gets worse, not better.
+
 **4 CPU cores, so do not train and run pytest at the same time.**
 Both slow down several-fold and timings become meaningless. Run the sweep, then
 the tests.
