@@ -229,6 +229,75 @@ same order — so test 3 is not detecting a mass-conservation defect so much as
 demanding roughly an order of magnitude more accuracy than test 1. That is a
 question for the SPEC author, not a licence to move the number.
 
+### 6.6 Case B, and the stream-function comparison (SPEC section 3)
+
+Same case, same budget, same architecture; only the continuity treatment
+differs. Re = 10, modified MLP, width 128, Adam 2000 + L-BFGS 6000.
+
+| | velocity-pressure | stream function |
+|---|---|---|
+| flux conservation (test 3) | 3.62e-2 **FAIL** | 8.88e-16 **PASS** |
+| entrance length (test 9) | 9.33, 289% error **FAIL** | 2.659, 12.9% error **PASS** |
+| outlet profile L2 (test 9) | 3.53e-2 **FAIL** | 4.02e-3 **FAIL** |
+| max continuity residual | 2.27e+1 | 2.31e-14 |
+| wall time | 2180 s | 5894 s |
+
+**What went wrong in the velocity-pressure run.** The entrance physics is
+right: centreline 0.995 at the inlet, 1.472 by `x* = 2`, developed by `x* = 4`.
+But the flux grows monotonically down the channel, 2.004 at the first station
+to 2.132 at the last -- **6% of mass created from nothing**. Continuity is only
+a penalty term there, so nothing forbids it, and the loss gives no hint.
+
+That drift is also what broke the entrance-length measurement. The measurement
+is taken where the centreline first reaches 99% of its developed value; with
+the centreline still creeping upward, the threshold was not crossed until
+`x* = 9.3` against a correlation value of 2.4. **The entrance length was never
+an entrance-length problem.** Removing the drift moved it from 289% error to
+12.9%, inside the SPEC's 15% tolerance.
+
+**Two honest caveats.**
+
+1. The stream function's 8.88e-16 on test 3 is **not an achievement, it is a
+   tautology**: the `ψ_base` construction pins the flux exactly, so mass
+   conservation holds by construction and test 3 stops being an independent
+   check for this formulation. It remains a real check for velocity-pressure,
+   which is precisely where it caught something.
+2. Test 9 still **fails** on the outlet profile (4.02e-3 against 1e-4), 8.8×
+   better than velocity-pressure but 40× short. L-BFGS terminated on its
+   iteration cap with the loss still descending, and the momentum residual
+   peaks at 828 localised at the inlet corners, where the uniform-inlet /
+   no-slip discontinuity lives. This looks like under-convergence against an
+   irreducible corner singularity rather than a formulation defect, but it is
+   reported as a failure, not as a near-miss.
+
+**Cost.** The stream function trades one loss term for an extra order of
+differentiation (`u_xx` becomes a third derivative of ψ) and ran 2.7× slower.
+On this problem the differentiation costs more than the deleted term saves.
+
 ## 7. Carried into Phase 2
 
-<!-- FILLED FROM runs/ -->
+1. **Use the stream-function formulation for the bifurcation.** Phase 2's
+   deliverable is flux splitting between two daughter branches, and the
+   velocity-pressure formulation was measured creating 6% of mass out of
+   nothing on a straight channel, silently. Whatever a soft continuity penalty
+   does at a junction will be worse and harder to see. Budget for the 2.7×
+   cost.
+2. **SPEC test 4 must not rely on the ansatz.** A `ψ_base` construction that
+   pins the parent flux would make parent/daughter conservation true by
+   construction, exactly as it made test 3 vacuous here. The Phase 2 flux test
+   has to check the *split ratio* between branches, which no ansatz fixes for
+   free.
+3. **Gauge-fixing is a first-class accuracy lever, not bookkeeping.** The hard
+   outlet gauge bought 8× on Case A. It works because it makes the required
+   network output a constant; whether an equivalent trick exists for the
+   bifurcation depends on the pressure field there and is worth deriving
+   before training anything.
+4. **Corner singularities dominate the residual.** Both Case B runs peak at
+   residuals of several hundred at the inlet corners while the field elsewhere
+   is smooth. The bifurcation junction has the same geometry. Expect the loss
+   to be dominated by a measure-zero region and plan for it -- residual-based
+   adaptive refinement, which Phase 1 did not need, becomes relevant.
+5. **Do not re-enable Fourier features, gradient-norm weighting or inlet
+   lifting without re-measuring.** All three were harmful here. But Phase 1's
+   solution is a low-order polynomial and Phase 2's is not, so these are
+   verdicts about Poiseuille flow, not about the methods.
