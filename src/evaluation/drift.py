@@ -97,6 +97,21 @@ class DriftFit:
             return False
         return self.d_infinity <= 2.0 * self.d_infinity_stderr
 
+    def resolves(self, tolerance=1e-6) -> bool:
+        """Whether the fit can say anything AT the tolerance scale.
+
+        Separate from `identifiable`, which asks whether the trace has enough
+        decay leverage. This asks whether the resulting uncertainty is small
+        enough to matter: a short trace can fit a clean power law (good decay
+        range) and still leave D_inf uncertain by far more than the tolerance
+        being tested, in which case "consistent with zero" is true but says
+        nothing. Measured on a 400-iteration run: D_inf = 2.2e-21 +- 9.8e-3
+        against a 1e-6 tolerance.
+        """
+        if not np.isfinite(self.d_infinity_stderr):
+            return False
+        return self.d_infinity_stderr <= tolerance
+
     def verdict(self, tolerance=1e-6) -> str:
         if self.at_machine_precision:
             return (
@@ -115,6 +130,13 @@ class DriftFit:
                 "separate the constant from the transient. No bias or "
                 "under-convergence verdict can be drawn -- extend the L-BFGS "
                 "budget and refit"
+            )
+        if not self.resolves(tolerance):
+            return (
+                f"the trace cannot resolve D_inf at the {tolerance:.0e} scale: "
+                f"the fitted uncertainty is +-{self.d_infinity_stderr:.1e}, "
+                "larger than the tolerance being tested. Any verdict here would "
+                "be an over-claim -- run longer before concluding anything"
             )
         if self.consistent_with_zero:
             return (

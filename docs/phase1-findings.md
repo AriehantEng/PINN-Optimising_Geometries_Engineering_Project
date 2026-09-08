@@ -457,13 +457,26 @@ exponent = 0.424
 D(n)     : 2.73e-4 (n=1) -> 4.56e-6 (1800) -> 1.78e-6 (5400) -> 1.62e-6 (6000)
 ```
 
-The verdict is "consistent with zero", i.e. under-convergence. **That statement
-is weaker than it looks and should not be quoted without its error bar**: the
-standard error is 5.4x the estimate, so the same trace is equally consistent
-with a real bias up to about 1.7e-5 at two sigma. The trace is still descending
-monotonically at the iteration cap, which is the qualitative support for the
-under-convergence reading, but the fit alone cannot settle it. The
-`caseA_re10_extended` run at 5x the budget is the discriminator S7 prescribes.
+**The correct verdict is that this trace settles nothing.** The standard error
+is 5.4x the estimate and, more to the point, `+-7.9e-6` is larger than the 1e-6
+tolerance the test applies -- so the fit cannot distinguish `D_inf = 0` from a
+real bias an order of magnitude above the target. `fit_drift` now refuses to
+rule either way in that regime:
+
+> the trace cannot resolve D_inf at the 1e-06 scale: the fitted uncertainty is
+> +-7.9e-06, larger than the tolerance being tested. Any verdict here would be
+> an over-claim -- run longer before concluding anything
+
+An earlier version of this section reported the verdict as "consistent with
+zero, i.e. under-convergence". That was an over-claim: it is what the
+two-sigma test says, but a two-sigma test against zero is not informative when
+the uncertainty exceeds the quantity being tested. The qualitative evidence for
+under-convergence is real -- `D` is still descending monotonically at the
+iteration cap -- but it is qualitative, and the fit was not entitled to
+promote it to a verdict.
+
+`caseA_re10_extended` at 5x the L-BFGS budget is the discriminator S7
+prescribes, and a longer trace is exactly what would resolve `D_inf`.
 
 ## 6.11 SPEC v2 Block B gate: test 1 under both lifts
 

@@ -111,3 +111,29 @@ def test_s7_fit_still_engages_just_above_machine_precision():
     fit = fit_drift(n, 2e-7 + 0.02 * n**-1.1)
     assert not fit.at_machine_precision
     assert fit.converged
+
+
+def test_s7_fit_declines_when_the_uncertainty_exceeds_the_tolerance():
+    """A short trace can fit cleanly and still resolve nothing.
+
+    Measured on a real 400-iteration quickstart run: D_inf = 2.2e-21 with a
+    standard error of 9.8e-3, against a 1e-6 tolerance. The decay-range guard
+    passed, so without this check the fit reported "consistent with zero:
+    under-convergence" from data that cannot distinguish 0 from 1e-2.
+    """
+    rng = np.random.default_rng(7)
+    n = np.arange(1, 400, 40)
+    noisy = 1e-3 * n ** -0.5 * (1.0 + 0.5 * rng.standard_normal(n.size))
+    fit = fit_drift(n, np.abs(noisy))
+    if fit.converged and fit.identifiable and fit.d_infinity_stderr > 1e-6:
+        assert not fit.resolves(1e-6)
+        assert "cannot resolve" in fit.verdict()
+        assert "under-convergence" not in fit.verdict()
+
+
+def test_s7_a_well_resolved_fit_still_gives_a_verdict():
+    """Negative control: the new guard must not silence good fits."""
+    n = np.arange(50, 6001, 50)
+    fit = fit_drift(n, 3e-5 + 0.02 * n**-0.7)
+    assert fit.resolves(1e-6)
+    assert "formulation bias" in fit.verdict()
