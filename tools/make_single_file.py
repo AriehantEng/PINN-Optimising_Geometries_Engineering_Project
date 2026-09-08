@@ -103,8 +103,24 @@ import textwrap
 # ===========================================================================
 # THE PROJECT SOURCE, EMBEDDED VERBATIM
 # ===========================================================================
-# Each entry below is one file of the project, exactly as it appears in the
-# tested repository. `unpack()` writes them to disk so they can be imported.
+#
+#   *** IF YOUR EDITOR SHOWS EVERYTHING BELOW AS ONE GREY BLOCK, THAT IS  ***
+#   *** SYNTAX HIGHLIGHTING, NOT A PROBLEM. The code is NOT commented out.***
+#
+# Each entry below is one file of the project, stored as string DATA inside
+# a raw triple-quoted literal. Python reads them as data; unpack() writes
+# them to disk as real .py files, which are then imported normally.
+#
+# Most editors colour everything between the triple quotes as a string, so
+# this file LOOKS inert. It is not: it compiles, runs, trains and predicts.
+# The quotes are balanced - exactly one opening and one closing delimiter
+# per embedded file.
+#
+# To read the code as ordinary syntax-highlighted Python instead, run:
+#
+#       python pinn_poiseuille_all_in_one.py --extract
+#
+# which writes the 34 files into ./src/ and stops, without training.
 
 FILES = {}
 
@@ -237,9 +253,20 @@ def main():
                         help="full accuracy schedule (~30 min) instead of the quick demo")
     parser.add_argument("--check", action="store_true",
                         help="verify the physics and exit, without training")
+    parser.add_argument("--extract", action="store_true",
+                        help="write the source files to ./src/ and exit, so they "
+                             "can be read as ordinary Python")
     args = parser.parse_args()
 
-    print(f"unpacking {unpack()} source files into ./src/")
+    count = unpack()
+    if args.extract:
+        print(f"wrote {count} source files into ./src/\\n")
+        for relative in sorted(FILES):
+            print(f"    {relative}")
+        print("\\nThese are ordinary Python files. Open them in any editor.")
+        return 0
+
+    print(f"unpacking {count} source files into ./src/")
     require_dependencies()
 
     import jax
