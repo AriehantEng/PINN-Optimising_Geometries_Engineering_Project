@@ -65,6 +65,7 @@ def _base_config(**overrides):
         "bc": {"inlet": "soft", "outlet_velocity": "soft", "pressure_gauge": "soft"},
         "sampling": {
             "n_interior": 64,
+            "n_validation": 64,
             "n_inlet": 8,
             "n_outlet": 8,
             "resample_every": 10,
@@ -82,6 +83,7 @@ def _base_config(**overrides):
             },
         },
         "training": {
+            "select": "best_validation",
             "adam": {"steps": 1, "lr_init": 1.0e-3, "decay_rate": 0.9, "decay_steps": 10},
             "lbfgs": {"enabled": False},
         },
