@@ -313,6 +313,39 @@ an entrance-length problem.** Removing the drift moved it from 289% error to
 differentiation (`u_xx` becomes a third derivative of ψ) and ran 2.7× slower.
 On this problem the differentiation costs more than the deleted term saves.
 
+### 6.8 Which formulation wins (the SPEC section 3 question, answered)
+
+Case A, Re = 10, identical architecture, sampling, budget and evaluation grid;
+the stream function uses the SINE base flow, so the network is not handed the
+answer.
+
+| | velocity-pressure | stream function |
+|---|---|---|
+| test 1 — `u` relative L2 | 1.22e-6 **PASS** | **1.49e-7 PASS** |
+| test 2 — `max\|v*\|` | 7.93e-7 **PASS** | **1.07e-7 PASS** |
+| test 3 — flux conservation | 2.23e-6 **FAIL** | 9.99e-16 **PASS**, by construction |
+| `p` relative L2 | 1.08e-6 | 1.29e-7 |
+| max continuity residual | 9.22e-6 | 4.08e-17 |
+| wall time | 2016 s | 5492 s |
+
+**The stream function wins by roughly 8× on every genuine accuracy metric, on
+both cases, at 2.7× the cost.** On Case A it beats not just the 1e-5 target but
+the SPEC's 1e-6 stretch target, by a factor of 6.7. On Case B it is the
+difference between an entrance length that passes and one that fails by 289%.
+
+**The gate configuration is nevertheless the velocity–pressure one.** The
+stream function passes more tests, but its test 3 pass is vacuous: `ψ_base`
+pins the flux, so mass conservation cannot fail there no matter what the
+network does. Making that the headline result would be precisely the hollow
+green tick this harness exists to prevent — and it was the velocity–pressure
+run, where test 3 is a real check, that caught the 6% mass drift in Case B.
+A test suite is worth what its hardest honest configuration is worth.
+
+For Phase 2 the recommendation is still to use the stream function (section 7
+item 1), with the accompanying warning that SPEC test 4 must then be written to
+check the daughter *split ratio* rather than a total flux the ansatz pins for
+free.
+
 ## 7. Carried into Phase 2
 
 1. **Use the stream-function formulation for the bifurcation.** Phase 2's
