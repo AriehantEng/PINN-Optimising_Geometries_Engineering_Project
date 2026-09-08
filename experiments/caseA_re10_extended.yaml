@@ -1,0 +1,74 @@
+# Case A, Re_h = 10, extended L-BFGS budget (SPEC v2 S7 discriminator).
+#
+# The standard-budget run left test 3 at D = 1.622e-6 against a 1e-6 target,
+# and the D(n) fit gave D_inf = 1.47e-6 +- 7.92e-6 with exponent 0.424 -- i.e.
+# consistent with zero, so S7's reading is under-convergence rather than
+# formulation bias. But the standard error is 5.4x the estimate, so the same
+# trace is also consistent with a bias up to ~1.7e-5 at two sigma. The fit
+# alone cannot settle it.
+#
+# This run is the discriminator S7 prescribes: 5x the L-BFGS budget, identical
+# in every other key. If D falls below 1e-6, test 3 was under-convergence and
+# closes as a pass. If it plateaus above, D_inf is real and test 3 closes as a
+# characterised limitation. Either outcome is a result; the tolerance is not
+# touched either way.
+name: caseA_re10_extended
+seed: 0
+case: A
+domain:
+  alpha: 1.5
+  outlet_margin: 5.0
+correlation:
+  c0: 0.3155
+  c1: 0.01105
+  n: 1.6
+  citation: 'Durst, Ray, Unsal & Bayoumi (2005), ''The development lengths of laminar
+    pipe and channel flows'', J. Fluids Eng. 127(6):1154-1160. Plane-channel fit C0=0.631,
+    C1=0.0442, n=1.6, expressed there per FULL channel height H with Re_H based on
+    H and mean velocity. Converted here to hydraulic diameter D_h = 2H, which for
+    a wide channel is 4h: L_e/D_h = (1/2)(L_e/H) and Re_H = Re_Dh/2, giving c0 = C0/2
+    = 0.3155 and c1 = C1/4 = 0.01105. Cross-check: the high-Re asymptote L_e/D_h =
+    0.01105 Re_Dh reproduces the classical plane-channel value 0.011 Re_Dh.'
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+  formulation: velocity_pressure
+model:
+  arch: modified_mlp
+  width: 128
+  depth: 4
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+bc:
+  inlet: soft
+  outlet_velocity: soft
+  pressure_gauge: hard
+sampling:
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    continuity: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+training:
+  adam:
+    steps: 2000
+    lr_init: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 30000
+    gtol: 1.0e-14
+evaluation:
+  nx: 401
+  ny: 201
