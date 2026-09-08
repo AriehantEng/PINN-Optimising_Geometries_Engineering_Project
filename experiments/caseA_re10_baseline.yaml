@@ -35,6 +35,7 @@ bc:
   pressure_gauge: soft
 sampling:
   n_interior: 2048
+  n_validation: 2048
   n_inlet: 128
   n_outlet: 128
   resample_every: 500
@@ -49,6 +50,7 @@ weights:
     outlet_velocity: 1.0
     pressure_gauge: 1.0
 training:
+  select: best_validation
   adam:
     steps: 2000
     lr_init: 0.001

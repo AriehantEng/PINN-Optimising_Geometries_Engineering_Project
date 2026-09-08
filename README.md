@@ -21,6 +21,11 @@ pip install -r requirements.txt
 
 JAX runs on CPU here. Nothing in the project assumes a GPU.
 
+**Just want to run it?** Open `PINN_Poiseuille.ipynb` in Google Colab and hit
+Runtime → Run all. It is fully self-contained: no clone, no setup, the whole
+project is embedded in the first cell. Regenerate it with
+`python tools/make_notebook.py` after changing any source file.
+
 **New here? Read `docs/RUNNING.md`** — it walks through verifying the code,
 training a model, and using the trained model, with the exact commands and
 where to run them.

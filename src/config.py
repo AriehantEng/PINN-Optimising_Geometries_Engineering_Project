@@ -155,6 +155,7 @@ class BCConfig:
 @dataclass(frozen=True)
 class SamplingConfig:
     n_interior: int
+    n_validation: int
     n_inlet: int
     n_outlet: int
     resample_every: int
@@ -193,6 +194,7 @@ class LBFGSConfig:
 class TrainingConfig:
     adam: AdamConfig
     lbfgs: LBFGSConfig
+    select: str  # final | best_validation
 
 
 @dataclass(frozen=True)
@@ -426,6 +428,15 @@ def parse_config(document: Mapping[str, Any]) -> Config:
     s = _require(doc, "sampling", "", dict)
     sampling = SamplingConfig(
         n_interior=_positive(_require(s, "n_interior", "sampling", int), "n_interior"),
+        # Held-out collocation points, never trained on. L-BFGS runs on a FROZEN
+        # point set, so it can drive the residual down on those specific points
+        # while the true error rises. Detecting that needs points the optimiser
+        # has never seen -- and unlike a comparison against the analytic
+        # solution, this still works in Phase 2 where no analytic solution
+        # exists.
+        n_validation=_positive(
+            _require(s, "n_validation", "sampling", int), "n_validation"
+        ),
         n_inlet=_positive(_require(s, "n_inlet", "sampling", int), "n_inlet"),
         n_outlet=_positive(_require(s, "n_outlet", "sampling", int), "n_outlet"),
         resample_every=_positive(
@@ -467,7 +478,8 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         _reject_unused(lb, "gtol", "training.lbfgs", "when lbfgs is disabled")
         lbfgs = LBFGSConfig(False, None, None)
     _finish(lb, "training.lbfgs")
-    training = TrainingConfig(adam, lbfgs)
+    select = _choice(t, "select", "training", {"final", "best_validation"})
+    training = TrainingConfig(adam, lbfgs, select)
     _finish(t, "training")
 
     # -- evaluation --

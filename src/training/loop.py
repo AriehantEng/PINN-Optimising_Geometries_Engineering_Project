@@ -133,6 +133,28 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
     if config.weights.scheme == "grad_norm":
         term_grad_norms = jax.jit(make_grad_norm_update(loss_terms_fn))
 
+    # Held-out validation points. Drawn from a PRNG stream that the training
+    # sampler never reaches, so they are disjoint from every training draw.
+    validation_points = sample_all(
+        jax.random.PRNGKey(config.sampling.seed + 1_000_003),
+        channel,
+        config.sampling.n_validation,
+        config.sampling.n_inlet,
+        config.sampling.n_outlet,
+    )
+    validation_loss = jax.jit(
+        lambda p: total_loss(loss_terms_fn(p, validation_points), weights)
+    )
+
+    best = {"validation": float("inf"), "params": params, "where": "init"}
+
+    def consider(p, where):
+        """Keep the parameters with the lowest HELD-OUT loss seen so far."""
+        value = float(validation_loss(p))
+        if value < best["validation"]:
+            best.update(validation=value, params=jax.tree.map(lambda a: a, p), where=where)
+        return value
+
     sample_key = jax.random.PRNGKey(config.sampling.seed)
     points = sample_all(
         sample_key,
@@ -154,7 +176,8 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
             f"{config.training.adam.steps // max(resample_every, 1)} of them)",
             flush=True,
         )
-        print(f"  {'step':>8} {'epoch':>6} {'loss':>12} {'rel L2 vs exact':>16} {'lr':>9}", flush=True)
+        print(f"  {'step':>8} {'epoch':>6} {'train loss':>12} {'held-out':>12} "
+              f"{'rel L2 vs exact':>16} {'lr':>9}", flush=True)
 
     for step in range(config.training.adam.steps):
         if step > 0 and step % config.sampling.resample_every == 0:
@@ -179,11 +202,13 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
 
         if step % log_every == 0 or step == config.training.adam.steps - 1:
             accuracy = accuracy_probe(params)
+            held_out = consider(params, f"adam:{step}")
             row = {
                 "phase": "adam",
                 "step": step,
                 "epoch": step // max(resample_every, 1),
                 "loss": float(loss),
+                "validation_loss": held_out,
                 "relative_l2_vs_exact": accuracy,
                 "lr": float(schedule(step)),
                 **{f"term_{k}": float(v) for k, v in terms.items()},
@@ -193,7 +218,7 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
             if verbose and (step % (log_every * 10) == 0):
                 print(
                     f"  {step:>8d} {step // max(resample_every, 1):>6d} "
-                    f"{float(loss):>12.4e} {accuracy:>16.4e} "
+                    f"{float(loss):>12.4e} {held_out:>12.4e} {accuracy:>16.4e} "
                     f"{float(schedule(step)):>9.2e}",
                     flush=True,
                 )
@@ -222,19 +247,25 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         drift_fn = _make_drift_probe(config, model)
 
         def trace_fn(p):
-            return {"drift": drift_fn(p), "relative_l2_vs_exact": accuracy_probe(p)}
+            return {
+                "drift": drift_fn(p),
+                "relative_l2_vs_exact": accuracy_probe(p),
+                "validation_loss": consider(p, "lbfgs"),
+            }
 
         if verbose:
             print(
                 f"  [lbfgs] up to {config.training.lbfgs.max_iterations} iterations",
                 flush=True,
             )
-            print(f"  {'iter':>8} {'':>6} {'loss':>12} {'rel L2 vs exact':>16} {'drift D':>9}", flush=True)
+            print(f"  {'iter':>8} {'':>6} {'train loss':>12} {'held-out':>12} "
+                  f"{'rel L2 vs exact':>16} {'drift D':>9}", flush=True)
 
         def on_trace(n, values, loss):
             if verbose:
                 print(
                     f"  {n:>8d} {'':>6} {loss:>12.4e} "
+                    f"{values['validation_loss']:>12.4e} "
                     f"{values['relative_l2_vs_exact']:>16.4e} {values['drift']:>9.2e}",
                     flush=True,
                 )
@@ -256,7 +287,9 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         handoff_gap = abs(result.initial_loss - loss_before)
         handoff_relative = handoff_gap / max(abs(loss_before), 1e-300)
 
+        final_validation = consider(result.params, "lbfgs:final")
         params = result.params
+        diagnostics["validation_loss_final"] = final_validation
         lbfgs_history.append(
             {
                 "phase": "lbfgs",
@@ -308,6 +341,22 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
             )
     else:
         diagnostics["loss_after_adam"] = float(weighted_loss(params, points, weights))
+
+    # SPEC v2 does not cover this; it is the fix for the loss/accuracy
+    # divergence. Selection uses the HELD-OUT loss, never the analytic
+    # solution, so the same mechanism works in Phase 2.
+    diagnostics["validation_loss_best"] = best["validation"]
+    diagnostics["selected_from"] = best["where"]
+    diagnostics["selection_rule"] = config.training.select
+    if config.training.select == "best_validation":
+        if verbose and best["where"] != "lbfgs:final":
+            print(
+                f"  selected parameters from {best['where']} "
+                f"(held-out loss {best['validation']:.4e}) rather than the final "
+                f"iterate ({diagnostics.get('validation_loss_final', float('nan')):.4e})",
+                flush=True,
+            )
+        params = best["params"]
 
     return TrainingResult(
         drift_trace=drift_trace if config.training.lbfgs.enabled else [],
