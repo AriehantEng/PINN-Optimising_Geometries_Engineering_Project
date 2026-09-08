@@ -191,3 +191,34 @@ def test_unknown_pressure_scaling_raises():
     )
     with pytest.raises(ValueError, match="unknown pressure_scaling"):
         residuals.momentum_x(d, 10.0, "isothermal")
+
+
+@pytest.mark.parametrize("pressure_scaling", ["viscous", "inertial"])
+def test_the_two_scalings_coincide_exactly_at_reynolds_one(pressure_scaling):
+    """At Re = 1 the viscous and inertial forms are the SAME function.
+
+    p*_viscous = Re p*_inertial, and the momentum coefficients are
+    (Re, 1) for viscous and (1, 1/Re) for inertial, so both become (1, 1) at
+    Re = 1. This matters for reading the accuracy-vs-Re table: Re = 1 is the
+    only row the SPEC assigns to viscous scaling, and one might suspect its
+    poor accuracy is a scaling artefact. It cannot be -- at Re = 1 there is no
+    difference to blame.
+    """
+    rng = np.random.default_rng(31415)
+    points = jnp.asarray(rng.uniform([0.0, -1.0], [20.0, 1.0], size=(256, 2)))
+    d = batched_field_derivatives(manufactured_field, points)
+
+    viscous = residuals.navier_stokes(d, 1.0, "viscous")
+    inertial = residuals.navier_stokes(d, 1.0, "inertial")
+    for a, b in zip(viscous, inertial):
+        np.testing.assert_array_equal(np.asarray(a), np.asarray(b))
+
+
+def test_the_two_scalings_differ_away_from_reynolds_one():
+    """Negative control: the test above must not be vacuous."""
+    rng = np.random.default_rng(27182)
+    points = jnp.asarray(rng.uniform([0.0, -1.0], [20.0, 1.0], size=(64, 2)))
+    d = batched_field_derivatives(manufactured_field, points)
+    viscous = residuals.navier_stokes(d, 10.0, "viscous")
+    inertial = residuals.navier_stokes(d, 10.0, "inertial")
+    assert not np.array_equal(np.asarray(viscous[0]), np.asarray(inertial[0]))

@@ -229,7 +229,46 @@ same order — so test 3 is not detecting a mass-conservation defect so much as
 demanding roughly an order of magnitude more accuracy than test 1. That is a
 question for the SPEC author, not a licence to move the number.
 
-### 6.6 Case B, and the stream-function comparison (SPEC section 3)
+### 6.6 Accuracy versus Reynolds number
+
+Case A, selected configuration, identical budget at every Re. SPEC section 2
+asks for this table and predicts degradation with increasing Re.
+
+| Re | scaling | u relL2 | max\|v*\| | flux cons | p relL2 | required `N_p` |
+|----|---------|---------|-----------|-----------|---------|----------------|
+| 1 | viscous | 1.65e-4 | 5.02e-5 | 2.26e-4 | 1.28e-4 | 40 |
+| 10 | inertial | **1.22e-6** | 7.93e-7 | 2.23e-6 | 1.08e-6 | 4 |
+| 50 | inertial | 4.46e-6 | 2.88e-6 | 4.78e-6 | 1.33e-5 | 0.8 |
+| 100 | inertial | 1.02e-5 | 3.94e-6 | 4.55e-6 | 2.11e-5 | 0.4 |
+
+The predicted degradation is there from Re = 10 upward: 1.22e-6 → 4.46e-6 →
+1.02e-5, with Re = 100 marginally missing test 1's 1e-5. That is the expected
+convective stiffening and is a reportable result, not a bug.
+
+**But the trend is not monotonic — Re = 1 is 135× worse than Re = 10 — and the
+reason is not the one the SPEC anticipates.**
+
+Re = 1 is the only row the SPEC assigns to viscous scaling, so the obvious
+suspicion is a scaling artefact, especially since the sweep measured viscous
+scaling as 18× harmful at Re = 10. That suspicion is wrong, and provably so:
+`p*_viscous = Re · p*_inertial`, and the momentum coefficients are `(Re, 1)`
+for viscous against `(1, 1/Re)` for inertial, so **at Re = 1 the two forms are
+the same function**. There is no difference to blame. This is asserted as a
+test (`test_the_two_scalings_coincide_exactly_at_reynolds_one`) with a negative
+control, rather than argued.
+
+The actual mechanism is in the last column. Under the hard gauge the network
+must emit the constant `N_p = |dp*/dx*| · L* = 2L*/Re`, which is **40 at
+Re = 1** and 0.4 at Re = 100, while a Glorot-initialised tanh network emits
+O(1). Low Re therefore demands a large-magnitude constant output, which is
+badly conditioned; high Re demands a stiff convective term. Error tracks the
+pressure error at every Re, consistent with section 4's analysis.
+
+**Two competing mechanisms, with an optimum near Re = 10 for this
+configuration.** Anyone extrapolating "PINNs get worse as Re rises" from the
+SPEC alone would predict Re = 1 to be the easiest case. It is the hardest.
+
+### 6.7 Case B, and the stream-function comparison (SPEC section 3)
 
 Same case, same budget, same architecture; only the continuity treatment
 differs. Re = 10, modified MLP, width 128, Adam 2000 + L-BFGS 6000.
