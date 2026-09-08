@@ -73,7 +73,8 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
         print(f"[{config.name}] active loss terms: {', '.join(config.loss_terms)}")
 
     started = time.time()
-    result = train(config, verbose=verbose)
+    result = train(config, verbose=verbose,
+                   checkpoint_path=directory / 'checkpoint.npz')
     metrics = evaluate(config, result.model, result.params)
     metrics["wall_seconds"] = time.time() - started
     metrics.update({f"diag_{k}": v for k, v in result.diagnostics.items()})

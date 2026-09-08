@@ -4069,7 +4069,8 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
         print(f"[{config.name}] active loss terms: {', '.join(config.loss_terms)}")
 
     started = time.time()
-    result = train(config, verbose=verbose)
+    result = train(config, verbose=verbose,
+                   checkpoint_path=directory / 'checkpoint.npz')
     metrics = evaluate(config, result.model, result.params)
     metrics["wall_seconds"] = time.time() - started
     metrics.update({f"diag_{k}": v for k, v in result.diagnostics.items()})
@@ -4194,6 +4195,7 @@ deterministic implementation.
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -4285,8 +4287,33 @@ class TrainingResult:
     diagnostics: dict = field(default_factory=dict)
 
 
-def train(config: Config, *, verbose: bool = True) -> TrainingResult:
+def train(config: Config, *, verbose: bool = True, checkpoint_path=None) -> TrainingResult:
+    """Train a model.
+
+    `checkpoint_path`, when given, receives the current parameters at every
+    trace point. A long L-BFGS run is hours of compute whose result is
+    otherwise written only at the very end, so an interrupted machine loses all
+    of it; with a checkpoint the loss is bounded by one trace interval.
+    """
     channel = Channel(config.domain.length)
+
+    def save_checkpoint(p, label):
+        if checkpoint_path is None:
+            return
+        try:
+            from jax.flatten_util import ravel_pytree
+
+            flat, _ = ravel_pytree(p)
+            path = Path(checkpoint_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Write beside the target then rename: a machine that dies during
+            # the write must not leave a truncated checkpoint behind.
+            temporary = path.with_suffix(".tmp.npz")
+            np.savez_compressed(temporary, flat=np.asarray(flat, dtype=np.float64),
+                                label=np.asarray(label))
+            temporary.replace(path)
+        except Exception:  # noqa: BLE001 - a failed checkpoint must not kill training
+            pass
 
     model_key = jax.random.PRNGKey(config.seed)
     params, model = build_model(config, model_key)
@@ -4432,11 +4459,13 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         drift_fn = _make_drift_probe(config, model)
 
         def trace_fn(p):
-            return {
+            values = {
                 "drift": drift_fn(p),
                 "relative_l2_vs_exact": accuracy_probe(p),
                 "validation_loss": consider(p, "lbfgs"),
             }
+            save_checkpoint(p, "lbfgs")
+            return values
 
         if verbose:
             print(
