@@ -1,19 +1,32 @@
-# Case B (developing entrance flow), Re = 1.
-# L* = 20: the Durst et al. correlation gives an entrance length of
-# about 1.30 half-heights, and the outlet condition du/dx = 0 is only
-# valid where the flow has developed.
+# Case B (developing entrance flow), Re_h = 1.
+# Inlet is uniform u* = 2/3 (SPEC v2 S2): that amplitude carries the
+# developed flux 4/3 over the full height 2, so the developed profile is
+# exactly 1 - y*^2 and U_max of the developed profile remains the single
+# reference velocity across both cases.
 # Inlet is soft: lifting is unavailable for case B because a uniform inlet
 # is incompatible with hard no-slip at the corners.
 name: caseB_re1
 seed: 0
 case: B
 domain:
-  length: 20.0
+  alpha: 1.5
+  outlet_margin: 5.0
+correlation:
+  c0: 0.3155
+  c1: 0.01105
+  n: 1.6
+  citation: 'Durst, Ray, Unsal & Bayoumi (2005), ''The development lengths of laminar
+    pipe and channel flows'', J. Fluids Eng. 127(6):1154-1160. Plane-channel fit C0=0.631,
+    C1=0.0442, n=1.6, expressed there per FULL channel height H with Re_H based on
+    H and mean velocity. Converted here to hydraulic diameter D_h = 2H, which for
+    a wide channel is 4h: L_e/D_h = (1/2)(L_e/H) and Re_H = Re_Dh/2, giving c0 = C0/2
+    = 0.3155 and c1 = C1/4 = 0.01105. Cross-check: the high-Re asymptote L_e/D_h =
+    0.01105 Re_Dh reproduces the classical plane-channel value 0.011 Re_Dh.'
 physics:
   reynolds: 1.0
   pressure_scaling: viscous
   formulation: velocity_pressure
-  inlet_uniform_value: 1.0
+  inlet_uniform_value: 0.6666666666666666
 model:
   arch: modified_mlp
   width: 128
@@ -37,9 +50,9 @@ weights:
   values:
     momentum_x: 1.0
     momentum_y: 1.0
+    continuity: 1.0
     inlet: 1.0
     outlet_velocity: 1.0
-    continuity: 1.0
 training:
   adam:
     steps: 2000

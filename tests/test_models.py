@@ -60,7 +60,7 @@ def test_phi_is_positive_inside_and_matches_its_derivative():
 
 
 def test_normalise_maps_domain_corners_to_unit_square():
-    length = 20.0
+    length = 20.0  # arbitrary: this tests the map, not the domain
     corners = jnp.array([[0.0, -1.0], [length, -1.0], [0.0, 1.0], [length, 1.0]])
     expected = np.array([[-1.0, -1.0], [1.0, -1.0], [-1.0, 1.0], [1.0, 1.0]])
     np.testing.assert_array_equal(np.asarray(normalise(corners, length)), expected)
@@ -214,7 +214,7 @@ def test_stream_function_rejects_lifting_inlet():
 
 
 def test_sampling_is_a_pure_function_of_its_key():
-    channel = Channel(20.0)
+    channel = Channel(_base_config().domain.length)
     a = sample_all(jax.random.PRNGKey(7), channel, 32, 8, 8)
     b = sample_all(jax.random.PRNGKey(7), channel, 32, 8, 8)
     c = sample_all(jax.random.PRNGKey(8), channel, 32, 8, 8)
@@ -223,18 +223,19 @@ def test_sampling_is_a_pure_function_of_its_key():
 
 
 def test_samples_lie_in_the_domain():
-    channel = Channel(20.0)
+    length = _base_config().domain.length
+    channel = Channel(length)
     points = sample_all(jax.random.PRNGKey(9), channel, 4096, 256, 256)
     interior = np.asarray(points.interior)
-    assert interior[:, 0].min() >= 0.0 and interior[:, 0].max() <= 20.0
+    assert interior[:, 0].min() >= 0.0 and interior[:, 0].max() <= length
     assert interior[:, 1].min() >= -1.0 and interior[:, 1].max() <= 1.0
     assert np.all(np.asarray(points.inlet)[:, 0] == 0.0)
-    assert np.all(np.asarray(points.outlet)[:, 0] == 20.0)
+    assert np.all(np.asarray(points.outlet)[:, 0] == length)
 
 
 def test_evaluation_grid_is_not_the_training_set():
     """Guards SPEC section 9: error must be measured on a fixed grid."""
-    channel = Channel(20.0)
+    channel = Channel(_base_config().domain.length)
     grid, _, _ = evaluation_grid(channel, 41, 21)
     training = sample_all(jax.random.PRNGKey(0), channel, 4096, 128, 128).interior
     grid_set = {tuple(map(float, row)) for row in np.asarray(grid)}

@@ -22,6 +22,7 @@ from typing import Any, Mapping
 
 import yaml
 
+from .physics.conventions import EntranceLengthCorrelation, entrance_length_over_h
 from .physics.scaling import PressureScaling
 
 
@@ -90,7 +91,26 @@ def _positive(value, name: str):
 
 @dataclass(frozen=True)
 class DomainConfig:
+    """Streamwise extent of the channel.
+
+    SPEC v2 S3: `length` is DERIVED, not configured. The config supplies the
+    development margin `alpha` and the outlet margin, and
+
+        L* = alpha * (L_e / h)(Re_h) + outlet_margin
+
+    is computed at load from the entrance-length correlation. A config may
+    override `length` explicitly, but then it must still satisfy that bound and
+    the loader raises if it does not -- a truncated domain produces a solution
+    that looks converged and is wrong, which is exactly the failure class this
+    project exists to catch, so the check fires before training rather than
+    after.
+    """
+
     length: float
+    alpha: float
+    outlet_margin: float
+    entrance_length_over_h: float
+    explicitly_overridden: bool
 
 
 @dataclass(frozen=True)
@@ -188,6 +208,7 @@ class Config:
     case: str  # A | B
     inlet_uniform_value: float | None  # Case B only
     domain: DomainConfig
+    correlation: EntranceLengthCorrelation
     physics: PhysicsConfig
     model: ModelConfig
     bc: BCConfig
@@ -245,12 +266,24 @@ def parse_config(document: Mapping[str, Any]) -> Config:
     seed = _require(doc, "seed", "", int)
     case = _choice(doc, "case", "", {"A", "B"})
 
-    # -- domain --
-    d = _require(doc, "domain", "", dict)
-    domain = DomainConfig(length=_positive(_require(d, "length", "domain", float), "domain.length"))
-    _finish(d, "domain")
+    # -- correlation (parsed before domain: S3 derives L* from it) --
+    corr = _require(doc, "correlation", "", dict)
+    if "citation" not in corr:
+        raise ConfigError(
+            "correlation.citation is required (SPEC v2 S1). The entrance-length "
+            "constants differ between pipe and plane-channel geometry and must "
+            "be read from the source; a wrong constant is invisible in the "
+            "output, a missing citation is not."
+        )
+    correlation = EntranceLengthCorrelation(
+        c0=_require(corr, "c0", "correlation", float),
+        c1=_require(corr, "c1", "correlation", float),
+        n=_require(corr, "n", "correlation", float),
+        citation=_require(corr, "citation", "correlation", str),
+    )
+    _finish(corr, "correlation")
 
-    # -- physics --
+    # -- physics (parsed before domain: L* depends on Re_h) --
     p = _require(doc, "physics", "", dict)
     reynolds = _positive(_require(p, "reynolds", "physics", float), "physics.reynolds")
     if reynolds > 200.0:
@@ -274,6 +307,43 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         inlet_uniform_value = None
     physics = PhysicsConfig(reynolds, pressure_scaling, formulation)
     _finish(p, "physics")
+
+    # -- domain (S3: L* derived from Re_h and the correlation) --
+    d = _require(doc, "domain", "", dict)
+    alpha = _positive(_require(d, "alpha", "domain", float), "domain.alpha")
+    outlet_margin = _positive(
+        _require(d, "outlet_margin", "domain", float), "domain.outlet_margin"
+    )
+    if outlet_margin < 5.0:
+        raise ConfigError(
+            f"domain.outlet_margin must be at least 5 (SPEC v2 S3), got "
+            f"{outlet_margin}. The margin exists so the zero-gradient outflow "
+            "condition is applied where the flow is already developed."
+        )
+    le_over_h = float(entrance_length_over_h(reynolds, correlation))
+    required_length = alpha * le_over_h + outlet_margin
+    if "length" in d:
+        length = _positive(_require(d, "length", "domain", float), "domain.length")
+        if length < required_length:
+            raise ConfigError(
+                f"domain.length = {length:g} is below the S3 bound "
+                f"{required_length:g} = alpha ({alpha:g}) * L_e/h ({le_over_h:.4f}) "
+                f"+ outlet_margin ({outlet_margin:g}) at Re_h = {reynolds:g}. "
+                "A truncated domain produces a solution that looks converged "
+                "and is wrong."
+            )
+        overridden = True
+    else:
+        length = required_length
+        overridden = False
+    domain = DomainConfig(
+        length=length,
+        alpha=alpha,
+        outlet_margin=outlet_margin,
+        entrance_length_over_h=le_over_h,
+        explicitly_overridden=overridden,
+    )
+    _finish(d, "domain")
 
     # -- model --
     m = _require(doc, "model", "", dict)
@@ -426,6 +496,7 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         case=case,
         inlet_uniform_value=inlet_uniform_value,
         domain=domain,
+        correlation=correlation,
         physics=physics,
         model=model,
         bc=bc,

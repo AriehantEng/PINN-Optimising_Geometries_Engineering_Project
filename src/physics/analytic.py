@@ -128,30 +128,11 @@ def stream_function_nd(y, flux=FLUX_ND):
     return 0.75 * flux * (y - y**3 / 3.0)
 
 
-# --------------------------------------------------------------------------- #
-# Entrance length (Case B)
-# --------------------------------------------------------------------------- #
-
-
-def entrance_length_correlation_nd(reynolds: float, bulk_velocity_nd: float = 1.0):
-    """Developing length for a plane channel, in units of the half-height h.
-
-    Durst, Ray, Uensal & Bayoumi (2005), "The development lengths of laminar
-    pipe and channel flows", J. Fluids Eng. 127:1154-1160, plane-channel fit:
-
-        L_e / H = [ C1^n + (C2 * Re_H)^n ]^(1/n),
-        C1 = 0.631, C2 = 0.0442, n = 1.6
-
-    where H is the FULL channel height and Re_H = rho * U_bulk * H / mu. The
-    high-Re asymptote L_e/H = 0.0442 Re_H is the classical L_e/D_h = 0.011
-    Re_Dh with D_h = 2H, which is the cross-check that fixes these definitions.
-
-    Converting to this project's variables: H* = 2, and this project's Reynolds
-    number uses U_max and h, so Re_H = 2 * Re * bulk_velocity_nd.
-
-    Returns L_e in units of h (i.e. directly comparable to x*).
-    """
-    c1, c2, n = 0.631, 0.0442, 1.6
-    re_h = 2.0 * reynolds * bulk_velocity_nd
-    le_over_h_full = (c1**n + (c2 * re_h) ** n) ** (1.0 / n)
-    return CHANNEL_HEIGHT_ND * le_over_h_full
+# Entrance length now lives in `conventions.py` (SPEC v2 S1).
+#
+# The previous `entrance_length_correlation_nd` here took a bare
+# `bulk_velocity_nd` argument, and Case B called it with 1.0 (the SPEC v1 inlet
+# amplitude) where the parabolic mean 2/3 was required. That inflated the
+# correlation by 25% at Re_h = 10 and is exactly the unsuffixed-Reynolds bug S1
+# is written to eliminate. Use `conventions.entrance_length_over_h(re_h, corr)`,
+# which converts internally and cannot be called with the wrong convention.

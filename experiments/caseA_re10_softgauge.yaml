@@ -1,0 +1,65 @@
+# Case A, Re_h = 10, modified MLP with the SOFT pressure gauge.
+# The honest counterpart to the hard-gauge configuration: under the hard
+# gauge the Case A solution collapses to constants, so this is the run where
+# the network must actually represent a pressure field affine in x.
+name: caseA_re10_softgauge
+seed: 0
+case: A
+domain:
+  alpha: 1.5
+  outlet_margin: 5.0
+correlation:
+  c0: 0.3155
+  c1: 0.01105
+  n: 1.6
+  citation: 'Durst, Ray, Unsal & Bayoumi (2005), ''The development lengths of laminar
+    pipe and channel flows'', J. Fluids Eng. 127(6):1154-1160. Plane-channel fit C0=0.631,
+    C1=0.0442, n=1.6, expressed there per FULL channel height H with Re_H based on
+    H and mean velocity. Converted here to hydraulic diameter D_h = 2H, which for
+    a wide channel is 4h: L_e/D_h = (1/2)(L_e/H) and Re_H = Re_Dh/2, giving c0 = C0/2
+    = 0.3155 and c1 = C1/4 = 0.01105. Cross-check: the high-Re asymptote L_e/D_h =
+    0.01105 Re_Dh reproduces the classical plane-channel value 0.011 Re_Dh.'
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+  formulation: velocity_pressure
+model:
+  arch: modified_mlp
+  width: 128
+  depth: 4
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+bc:
+  inlet: soft
+  outlet_velocity: soft
+  pressure_gauge: soft
+sampling:
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    continuity: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+    pressure_gauge: 1.0
+training:
+  adam:
+    steps: 2000
+    lr_init: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 6000
+    gtol: 1.0e-14
+evaluation:
+  nx: 401
+  ny: 201

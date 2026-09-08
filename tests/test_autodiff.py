@@ -44,7 +44,12 @@ def _base_config(**overrides):
         "name": "fd-check",
         "seed": 3,
         "case": "A",
-        "domain": {"length": 20.0},
+        "domain": {"alpha": 1.5, "outlet_margin": 5.0},
+        "correlation": {
+            "c0": 0.3155, "c1": 0.01105, "n": 1.6,
+            "citation": "Durst et al. (2005) plane-channel fit, converted to "
+                        "hydraulic-diameter units; see experiments/*.yaml",
+        },
         "physics": {
             "reynolds": 10.0,
             "pressure_scaling": "inertial",

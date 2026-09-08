@@ -103,7 +103,7 @@ def limit(name, schedule):
     return SPEC_TARGETS[name], "SPEC target"
 
 
-CASE_A = "experiments/caseA_re10_target.yaml"
+CASE_A = "experiments/caseA_re10.yaml"
 CASE_B = "experiments/caseB_re10.yaml"
 
 

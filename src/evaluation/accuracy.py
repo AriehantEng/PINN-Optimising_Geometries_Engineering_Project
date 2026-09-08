@@ -14,6 +14,7 @@ from ..config import Config
 from ..geometry.domain import Channel
 from ..geometry.sampling import evaluation_grid
 from ..physics import analytic
+from ..physics.conventions import entrance_length_over_h
 from ..physics.derivatives import batched_field_derivatives
 from ..physics import residuals
 from .metrics import (
@@ -146,8 +147,11 @@ def evaluate(config: Config, field_fn, params) -> dict:
         centreline = centreline_velocity(field_fn, params, stations)
         # The 99% threshold is against the flux the solution actually carries.
         measured = entrance_length(stations, centreline, 0.75 * measured_flux)
-        correlation = analytic.entrance_length_correlation_nd(
-            config.physics.reynolds, bulk_velocity_nd=measured_flux / 2.0
+        # SPEC v2 S1: the correlation consumes Re_Dh, not Re_h, and returns a
+        # length in D_h. `entrance_length_over_h` converts both internally, so
+        # this call site cannot get the factor of 8/3 or the factor of 4 wrong.
+        correlation = float(
+            entrance_length_over_h(config.physics.reynolds, config.correlation)
         )
         metrics["entrance_length_measured"] = measured
         metrics["entrance_length_correlation"] = correlation
@@ -155,6 +159,16 @@ def evaluate(config: Config, field_fn, params) -> dict:
             float(abs(measured - correlation) / correlation)
             if np.isfinite(measured)
             else float("nan")
+        )
+        # T-S2.2: the coupling between profile error and mass drift stays
+        # visible in every run. A ratio near 1 means the profile error IS the
+        # mass drift wearing an amplitude disguise. Undefined once the drift is
+        # at machine zero (stream function), where it is reported as such.
+        drift = metrics["flux_conservation_relative_error"]
+        metrics["profile_error_over_mass_error"] = (
+            float(metrics["outlet_profile_relative_l2"] / drift)
+            if drift > 1e-12
+            else None
         )
         metrics["centreline_stations"] = stations[::100].tolist()
         metrics["centreline_values"] = np.asarray(centreline)[::100].tolist()
