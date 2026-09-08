@@ -26,6 +26,10 @@ Runtime → Run all. It is fully self-contained: no clone, no setup, the whole
 project is embedded in the first cell. Regenerate it with
 `python tools/make_notebook.py` after changing any source file.
 
+**Want to understand the code?** `docs/code-guide.md` walks through every
+module, the design decisions and why they were made, what each test rules out,
+and the sources behind each implemented technique.
+
 **New here? Read `docs/RUNNING.md`** — it walks through verifying the code,
 training a model, and using the trained model, with the exact commands and
 where to run them.
