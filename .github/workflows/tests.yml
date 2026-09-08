@@ -18,7 +18,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Non-training tests (SPEC tests 5, 6, 7 and structural checks)
-        run: pytest tests/ -q -m "not slow"
+        run: python -m pytest tests/ -q -m "not slow"
 
   short-schedule:
     # SPEC section 5: "run a short-schedule version in CI". This trains a much
@@ -35,4 +35,4 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Training tests, short schedule (smoke bounds, not the gate)
-        run: pytest tests/ -q -m slow --schedule short
+        run: python -m pytest tests/ -q -m slow --schedule short
