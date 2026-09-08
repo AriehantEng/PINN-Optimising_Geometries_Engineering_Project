@@ -48,25 +48,49 @@ def test_s7_fit_recovers_d_infinity_when_it_is_identifiable(d_inf, exponent):
     np.testing.assert_allclose(fit.d_infinity, d_inf, rtol=0.25)
 
 
-@pytest.mark.parametrize("d_inf,exponent,expected_error", [(1e-5, 0.4, 0.3), (1e-7, 0.3, 20.0)])
-def test_s7_fit_refuses_to_report_an_unidentifiable_asymptote(
-    d_inf, exponent, expected_error
-):
-    """A slow exponent leaves D_inf as an extrapolation, not a measurement.
-
-    At b = 0.4 the fitted D_inf is 33% out and at b = 0.3 it is wrong by a
-    factor of 25, while the exponent is recovered to three digits in both
-    cases. Reporting a bias verdict there would be reporting the
-    extrapolation, so the fit declines instead.
-    """
+@pytest.mark.parametrize("d_inf,exponent", [(1e-5, 0.4), (1e-7, 0.3)])
+def test_s7_fit_refuses_to_report_an_unidentifiable_asymptote(d_inf, exponent):
+    """A slow exponent leaves D_inf as an extrapolation, not a measurement."""
     n = np.arange(50, 6001, 50)
     fit = fit_drift(n, d_inf + 0.02 * n ** (-exponent))
     assert fit.converged
     assert not fit.identifiable
     assert "NOT identifiable" in fit.verdict()
     assert "formulation bias" not in fit.verdict()
-    # And the error really is as large as the guard implies.
-    assert abs(fit.d_infinity - d_inf) / d_inf > expected_error * 0.8
+
+
+@pytest.mark.parametrize(
+    "d_inf,exponent,expected_error", [(1e-5, 0.4, 2.2), (1e-5, 0.3, 8.0)]
+)
+def test_s7_unidentifiable_asymptote_really_is_badly_wrong(
+    d_inf, exponent, expected_error
+):
+    """The decay-range guard must be justified by real error, not asserted.
+
+    This check previously ran on a NOISELESS trace, where it measured the
+    fitter rather than the physics: the unweighted least-squares fit was 33%
+    out at b = 0.4 and a factor of 25 out at b = 0.3, and those figures set the
+    guard's calibration. Once `fit_drift` weighted its residuals relatively,
+    the same noiseless traces came back exact to nine significant figures and
+    this assertion failed -- correctly, because it had been pinned to a bug.
+
+    Identifiability is a property of noisy data, so the recalibration is
+    measured on noisy data: 10% multiplicative scatter, twenty seeds, median
+    relative error in D_inf. At b = 0.4 it is 218% and at b = 0.3 it is 801%,
+    against 33% at b = 0.7 and 1.6% at b = 1.1 where the guard admits the fit.
+    The guard is doing real work; only the numbers justifying it moved.
+    """
+    n = np.arange(50, 6001, 50)
+    errors = []
+    for seed in range(20):
+        rng = np.random.default_rng(seed)
+        trace = (d_inf + 0.02 * n ** (-exponent)) * (
+            1.0 + 0.10 * rng.standard_normal(n.size)
+        )
+        fit = fit_drift(n, np.abs(trace))
+        assert not fit.identifiable
+        errors.append(abs(fit.d_infinity - d_inf) / d_inf)
+    assert np.median(errors) > expected_error * 0.8
 
 
 def test_s7_fit_distinguishes_bias_from_under_convergence():
@@ -137,3 +161,54 @@ def test_s7_a_well_resolved_fit_still_gives_a_verdict():
     fit = fit_drift(n, 3e-5 + 0.02 * n**-0.7)
     assert fit.resolves(1e-6)
     assert "formulation bias" in fit.verdict()
+
+
+def test_s7_fit_engages_at_the_scale_real_traces_actually_have():
+    """curve_fit reporting success is not evidence that a fit happened.
+
+    Regression for a real failure: on the 30000-iteration Case A run the
+    unweighted least-squares problem had a cost of ~1e-9 at the initial guess,
+    already below curve_fit's default ftol, so it returned p0 untouched and
+    reported convergence. Every downstream guard then passed -- the decay
+    range is computed from the fitted exponent, which was still the 0.5 of the
+    initial guess -- and the run reported "D_inf = 1.885e-07 +- 9.1e-07,
+    consistent with zero" from a curve that missed its own final data point by
+    a factor of nine.
+
+    The trace here is the real one's shape and magnitude: D falling from 2.7e-4
+    to 1.9e-7 over 30000 iterations.
+    """
+    n = np.arange(750, 30001, 750)
+    trace = 4e-4 * n**-0.72
+    fit = fit_drift(n, trace)
+    assert fit.converged
+    assert fit.moved_off_guess, "curve_fit returned the initial guess unchanged"
+    assert fit.exponent != 0.5, "exponent is still the initial guess"
+    np.testing.assert_allclose(fit.exponent, 0.72, rtol=0.05)
+    assert fit.tracks_data
+    assert fit.max_relative_residual < 0.1
+
+
+def test_s7_fit_refuses_a_verdict_when_the_curve_does_not_track_the_trace():
+    """A fit that does not describe the data cannot support any conclusion."""
+    fit = DriftFit(
+        d_infinity=1.885e-07, amplitude=2.7e-4, exponent=0.5,
+        d_infinity_stderr=9.1e-07, points=41, converged=True, message="ok",
+        decay_range=173.2, max_relative_residual=14.5, moved_off_guess=True,
+    )
+    assert not fit.tracks_data
+    verdict = fit.verdict()
+    assert "does not describe the trace" in verdict
+    assert "under-convergence" not in verdict
+    assert "formulation bias" not in verdict
+
+
+def test_s7_fit_names_a_degenerate_fit_as_such():
+    """Returning p0 unchanged is a distinct, unambiguous failure signature."""
+    fit = DriftFit(
+        d_infinity=1.885e-07, amplitude=2.7e-4, exponent=0.5,
+        d_infinity_stderr=9.1e-07, points=41, converged=True, message="ok",
+        decay_range=173.2, max_relative_residual=14.5, moved_off_guess=False,
+    )
+    assert not fit.tracks_data
+    assert "no fit was performed" in fit.verdict()

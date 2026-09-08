@@ -572,3 +572,62 @@ SPEC author, and the tolerance has not been touched.
    lifting without re-measuring.** All three were harmful here. But Phase 1's
    solution is a low-order polynomial and Phase 2's is not, so these are
    verdicts about Poiseuille flow, not about the methods.
+
+## `curve_fit` reporting success is not evidence that a fit happened
+
+The 30000-iteration Case A run recorded `D_inf = 1.885e-07 +- 9.1e-07,
+consistent with zero: under-convergence`. Every parameter in that fit was
+exactly the initial guess: `d_inf` was `drifts[-1]`, `a` was `drifts[0]`, and
+the exponent was the literal `0.5` from `p0`. The fitted curve missed its own
+final data point by a factor of nine and the trace as a whole by 14.5x.
+
+`fit_drift` posed an unweighted least-squares problem over data spanning three
+and a half decades, from 2.7e-4 down to 1.9e-7. The cost at the initial guess
+was therefore around 1e-9, already below `curve_fit`'s default `ftol` of 1e-8,
+so the optimiser terminated immediately and reported convergence. Both guards
+downstream passed it: `identifiable` computes its decay range as
+`(last/first)**exponent`, and with the exponent still at its initial 0.5 that
+came to 173, sailing past the 10x cut. A guard derived from a fitted parameter
+cannot detect that the parameter was never fitted.
+
+Two changes. `curve_fit` now weights each residual by its own `D`
+(`sigma=drifts, absolute_sigma=False`), which makes the residuals O(1) and is
+also the right statistical choice, since the trace is meaningful to constant
+relative rather than constant absolute precision. And `DriftFit` now measures
+`max |model - D| / D` across the trace and refuses any verdict above 2.0,
+which catches a non-tracking fit however it arose.
+
+Relative weighting turned out to change more than the degenerate case. The
+identifiability guard had been calibrated on noiseless synthetic traces, where
+the unweighted fit was 33% out at b = 0.4 and a factor of 25 out at b = 0.3.
+Weighted, those same noiseless traces come back exact to nine significant
+figures, so that calibration was measuring the fitter's bug rather than any
+property of the data. Identifiability is a property of NOISY data, and
+recalibrated on 10% multiplicative scatter the guard is still earning its
+place: median relative error in `D_inf` is 801% at decay 4.5 and 218% at 7.1,
+against 33% at 29 and 1.6% at 197. Across 240 noisy synthetic traces spanning
+four exponents and three true asymptotes, the guard chain drew zero false
+verdicts -- declining as unidentifiable or unresolved in every case it could
+not measure.
+
+Note the guards catch different things and both are needed: at decay 29 with a
+true `D_inf` of 1e-7 the fitted value is still 1040% out, and `identifiable`
+admits it. `resolves` is what declines it, because the standard error there is
+4.4e-6 against the 1e-6 tolerance.
+
+The conclusion of Block C is unchanged, and now rests on something better than
+the fit. Refitted properly, the 6000-iteration run gives `D_inf = 2.3e-22 +-
+8.3e-07` and the 30000-iteration run `D_inf = 2.5e-23 +- 1.25e-07` -- both
+asymptotes indistinguishable from zero, with the longer trace tightening the
+bound 6.6x. The direct measurement is independent of any fit at all: D fell
+from 1.622e-6 at 6000 iterations to 1.885e-7 at 30000, monotonically in
+budget. The residual drift is under-convergence, not formulation bias.
+
+Refitting the stored traces also corrected two runs that predate the
+`at_machine_precision` guard. Both psi-omega runs had recorded `D_inf =
+1.000e-10 +- 4.9e-11 lies below 1e-06: more iterations should reach the
+target` -- a convergence claim about a formulation that conserves mass by
+construction and whose D is exactly zero. They now read VACUOUS, which is what
+the falsifiability matrix requires. `src/refit_drift.py` recomputes
+`diag_drift_*` from a stored `drift_trace.csv`; the traced D(n) is measured
+rather than fitted, so no retraining was needed.

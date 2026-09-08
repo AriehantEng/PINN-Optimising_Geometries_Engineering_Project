@@ -114,6 +114,18 @@ failure mode by construction, at the cost of making SPEC test 3 trivially true
 and therefore no longer an independent check. Phase 2 splits flux between two
 daughter branches, so this is the single most important Phase 1 finding for it.
 
+**`curve_fit` reporting success is not evidence that a fit happened.**
+The 30000-iteration run reported `D_inf = 1.885e-07 +- 9.1e-07, consistent
+with zero` from a fit whose every parameter was still the initial guess -> the
+unweighted least-squares cost over data spanning 2.7e-4 to 1.9e-7 was ~1e-9 at
+`p0`, already under `curve_fit`'s default `ftol`, so it returned immediately
+and reported convergence; the decay-range guard then passed it because that
+guard is computed FROM the fitted exponent, which was never fitted -> weight
+residuals relatively (`sigma=drifts, absolute_sigma=False`) and check
+`max|model - D|/D` directly. Never let a guard derived from a fitted parameter
+be the only thing standing between you and a verdict. Phase 2 fits loss
+coefficients against geometry, so this recurs.
+
 **4 CPU cores, so do not train and run pytest at the same time.**
 Both slow down several-fold and timings become meaningless. Run the sweep, then
 the tests.

@@ -63,12 +63,27 @@ class DriftFit:
     tail_at_last_point: float = float("nan")
     last_iteration: float = float("nan")
     decay_range: float = float("nan")
+    max_relative_residual: float = float("nan")
+    moved_off_guess: bool = True
+
+    #: Largest allowed |model - D| / D across the trace. A power law fitted to
+    #: a noisy tail does not track it tightly -- the real caseA traces reach
+    #: 0.85 and 1.15 with genuine fits -- so this is a gross-failure detector,
+    #: not a quality bar. The degenerate fits it exists to catch sit at 5.8,
+    #: 14.5 and 6e5, so a cut at 2.0 separates them with room on both sides.
+    MAXIMUM_RELATIVE_RESIDUAL = 2.0
 
     #: The fitted transient must decay by at least this factor across the
     #: traced range for D_inf to be a measurement rather than an extrapolation.
-    #: Calibrated on synthetic traces: a decay range of 28 recovers D_inf to
-    #: 4.5% and 193 to better than 0.1%, while 6.8 is 33% out and 4.2 is wrong
-    #: by a factor of 25. One decade is the conservative cut between them.
+    #: Recalibrated on synthetic traces carrying 10% multiplicative scatter,
+    #: since identifiability is a property of noisy data (the earlier noiseless
+    #: calibration was measuring the unweighted fitter's own error, and became
+    #: meaningless once `fit_drift` weighted its residuals relatively). Median
+    #: relative error in D_inf over 20 seeds, at D_inf = 1e-5: decay 4.5 is
+    #: 801% out and 7.1 is 218% out, against 33% at decay 29 and 1.6% at 197.
+    #: One decade is the conservative cut between them. Note decay range alone
+    #: is not sufficient -- at decay 29 with D_inf = 1e-7 the error is still
+    #: 1040% -- which is what `resolves` catches downstream.
     MINIMUM_DECAY_RANGE = 10.0
 
     @property
@@ -89,6 +104,28 @@ class DriftFit:
         if not self.converged or not np.isfinite(self.decay_range):
             return False
         return self.decay_range >= self.MINIMUM_DECAY_RANGE
+
+    @property
+    def tracks_data(self) -> bool:
+        """Whether the fitted curve actually follows the trace.
+
+        `curve_fit` reporting success is not evidence that a fit happened. On
+        an unscaled least-squares problem whose residuals are O(1e-7), the cost
+        at the initial guess is already below the default `ftol`, so the
+        optimiser returns `p0` untouched and `converged=True`. That produced
+        "D_inf = 1.885e-07 +- 9.1e-07, consistent with zero" for the 30000
+        iteration run -- a verdict with the right conclusion drawn from a
+        model that missed its own final data point by 9x.
+
+        Relative weighting in `fit_drift` removes the cause; this checks the
+        symptom directly, and catches any other way the fit can fail to
+        describe the data.
+        """
+        if not self.converged or not np.isfinite(self.max_relative_residual):
+            return False
+        if not self.moved_off_guess:
+            return False
+        return self.max_relative_residual <= self.MAXIMUM_RELATIVE_RESIDUAL
 
     @property
     def consistent_with_zero(self) -> bool:
@@ -122,6 +159,19 @@ class DriftFit:
             )
         if not self.converged:
             return "fit did not converge; too few points or too little variation"
+        if not self.tracks_data:
+            if not self.moved_off_guess:
+                return (
+                    "the fit is degenerate: curve_fit returned the initial "
+                    "guess unchanged, so no fit was performed. No verdict can "
+                    "be drawn from it"
+                )
+            return (
+                f"the fitted curve does not describe the trace: it misses the "
+                f"data by up to {self.max_relative_residual:.1f}x its own "
+                f"value, against the {self.MAXIMUM_RELATIVE_RESIDUAL:.0f}x "
+                "cut. D_inf is not a measurement of anything here"
+            )
         if not self.identifiable:
             return (
                 f"D_inf is NOT identifiable from this trace: the fitted "
@@ -188,8 +238,14 @@ def fit_drift(iterations, drifts) -> DriftFit:
 
     guess = (float(drifts[-1]), float(max(drifts[0] - drifts[-1], drifts[0])), 0.5)
     try:
+        # Weight each residual by its own D. Unweighted, this problem spans
+        # three and a half decades with a cost of O(1e-9) at the initial
+        # guess -- already under curve_fit's default ftol, so the optimiser
+        # returns p0 and reports success. Relative residuals are O(1), which
+        # is also the right statistical choice: the trace is meaningful to
+        # constant relative, not constant absolute, precision.
         popt, pcov = curve_fit(
-            model, iterations, drifts, p0=guess,
+            model, iterations, drifts, p0=guess, sigma=drifts, absolute_sigma=False,
             bounds=([0.0, 0.0, 1e-3], [np.inf, np.inf, 5.0]), maxfev=20000,
         )
     except Exception as error:  # noqa: BLE001 - a failed fit is a reportable state
@@ -200,9 +256,11 @@ def fit_drift(iterations, drifts) -> DriftFit:
     first, last = float(iterations[0]), float(iterations[-1])
     tail = float(popt[1] * last ** (-popt[2]))
     decay = float((last / first) ** popt[2]) if first > 0 else float("nan")
+    residual = float(np.max(np.abs(model(iterations, *popt) - drifts) / drifts))
     return DriftFit(
         d_infinity=float(popt[0]), amplitude=float(popt[1]), exponent=float(popt[2]),
         d_infinity_stderr=stderr, points=int(iterations.size), converged=True,
         message="ok", tail_at_last_point=tail, last_iteration=last,
-        decay_range=decay,
+        decay_range=decay, max_relative_residual=residual,
+        moved_off_guess=not bool(np.allclose(popt, guess)),
     )
