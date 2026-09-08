@@ -131,6 +131,36 @@ never imply a capability the code does not have.
 
 ## 6. Results
 
+### 6.0 Official test-suite run
+
+`pytest tests/ -v` on the full schedule, 63 minutes, retraining both gate
+configurations from scratch:
+
+```
+4 failed, 120 passed, 1 xfailed
+```
+
+| SPEC test | result | |
+|-----------|--------|-|
+| 1 — Case A `u` relative L2 ≤ 1e-5 | **PASS** | 1.22e-6 |
+| 2 — Case A `max\|v*\|` ≤ 1e-5 | **PASS** | 7.93e-7 |
+| 3 — mass conservation ≤ 1e-6 | **FAIL** | 2.23e-6 Case A, 3.62e-2 Case B |
+| 4 — parent/daughter flux | xfail (strict) | Phase 2 placeholder, by design |
+| 5 — autodiff vs central differences ≤ 1e-7 | **PASS** | ~2e-9 measured |
+| 6 — method of manufactured solutions | **PASS** | |
+| 7 — non-dimensionalisation round trip | **PASS** | 4ε |
+| 8 — determinism ≤ 1e-12 | **PASS** | with a negative control |
+| 9 — Case B profile and entrance length | **FAIL** | 3.53e-2 and 289% |
+
+Six of nine numbered tests pass, one is the Phase 2 placeholder, and two fail.
+**Both failures are the same defect**: mass is not conserved in the
+velocity–pressure formulation, because continuity there is only a penalty term.
+Section 6.7 shows the stream-function formulation removes it entirely.
+
+The failures are reported as failures. No tolerance in this project was
+widened, and the two SPEC targets involved (1e-6 and 1e-4) are unchanged from
+the specification.
+
 ### 6.1 What helped, what hurt
 
 Ten formulations at an identical reduced budget (Adam 1500 + L-BFGS 3000,
