@@ -465,6 +465,35 @@ monotonically at the iteration cap, which is the qualitative support for the
 under-convergence reading, but the fit alone cannot settle it. The
 `caseA_re10_extended` run at 5x the budget is the discriminator S7 prescribes.
 
+## 6.11 SPEC v2 Block B gate: test 1 under both lifts
+
+S4 requires Case A to pass test 1 under both the cubic and the sinusoidal lift,
+with the errors logged separately.
+
+| configuration | test 1 `u` relL2 | test 2 `max\|v*\|` | test 3 drift `D` | wall s |
+|---|---|---|---|---|
+| velocity-pressure | 8.638e-7 **PASS** | 1.709e-6 | 1.622e-6 **FAIL** | 1589 |
+| psi-omega, sinusoidal lift | **7.376e-7 PASS** | 1.436e-6 | 8.33e-16 vacuous | 1684 |
+| psi-omega, cubic lift | 1.095e-6 **PASS** | 1.411e-6 | 1.50e-15 vacuous | 1918 |
+
+Gate met: test 1 passes under both lifts. Only the sinusoidal number is quoted
+as an accuracy result; the cubic run is the machinery check.
+
+**The cubic lift is slightly WORSE than the sinusoidal one (1.10e-6 against
+7.38e-7), and that is the point.** Under the cubic lift the correct answer is
+`N_psi = 0`, exactly representable, and the degenerate-target probe shows the
+whole Case A suite passes there with the network removed entirely. One might
+expect that to show up as a suspiciously good number. It does not — it shows up
+as a marginally worse one, because driving a deep tanh network's output to
+exactly zero is not easier than fitting a smooth correction, and `omega` still
+has to learn `2y` either way through `r_1`.
+
+So **a vacuous configuration is not detectable from its accuracy figure.**
+Nothing in the reported numbers distinguishes the run that measures the network
+from the run that measures the lift. That is the entire justification for S5's
+matrix and for the degenerate-target probe: without them, the cubic result
+would sit in a table looking like an ordinary, slightly unlucky data point.
+
 ## 7. Carried into Phase 2
 
 1. **Use the stream-function formulation for the bifurcation.** Phase 2's
