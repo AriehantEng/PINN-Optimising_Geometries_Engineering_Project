@@ -349,7 +349,9 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
     diagnostics["selected_from"] = best["where"]
     diagnostics["selection_rule"] = config.training.select
     if config.training.select == "best_validation":
-        if verbose and best["where"] != "lbfgs:final":
+        final_value = diagnostics.get("validation_loss_final")
+        improved = final_value is None or best["validation"] < final_value
+        if verbose and best["where"] != "lbfgs:final" and improved:
             print(
                 f"  selected parameters from {best['where']} "
                 f"(held-out loss {best['validation']:.4e}) rather than the final "
