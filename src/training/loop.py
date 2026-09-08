@@ -33,6 +33,49 @@ from .weights import initial_weights, make_grad_norm_update, grad_norm_weights, 
 TARGET_LOG_ROWS = 200
 
 
+#: Points across the channel used by the live accuracy probe. Small on purpose:
+#: it runs at every log interval, and the reported accuracy at the END of a run
+#: is always recomputed on the full evaluation grid.
+PROBE_NX, PROBE_NY = 81, 41
+
+
+def _make_accuracy_probe(config, model):
+    """Relative L2 against the analytic solution, as a function of parameters.
+
+    This is the number that actually means something during training. The loss
+    is a diagnostic and can fall while this rises -- that is the failure mode
+    the whole project is built around -- so both are logged at every interval
+    and printed side by side.
+
+    Case A has an analytic solution everywhere. Case B does not, so the probe
+    reports the outlet profile against the flux-consistent developed parabola,
+    which is what SPEC test 9 measures.
+    """
+    from ..geometry.sampling import evaluation_grid
+    from ..physics import analytic
+
+    channel = Channel(config.domain.length)
+    if config.case == "A":
+        points, _, _ = evaluation_grid(channel, PROBE_NX, PROBE_NY)
+        reference = analytic.u_nd(np.asarray(points[:, 1]))
+    else:
+        y = np.linspace(-1.0, 1.0, PROBE_NY * 4)
+        points = jnp.stack(
+            [jnp.full(len(y), config.domain.length), jnp.asarray(y)], axis=-1
+        )
+        reference = analytic.developed_profile_nd(y, config.inlet_flux)
+
+    norm = float(np.linalg.norm(reference))
+
+    def probe(params):
+        u = np.asarray(
+            jax.vmap(lambda xy: model.velocity(params, xy))(points)[:, 0]
+        )
+        return float(np.linalg.norm(u - reference) / norm)
+
+    return probe
+
+
 def _make_drift_probe(config, model):
     """D on the fixed evaluation stations, as a function of parameters alone."""
     length = config.domain.length
@@ -101,7 +144,17 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
 
     history = []
     log_every = max(1, config.training.adam.steps // TARGET_LOG_ROWS)
+    accuracy_probe = _make_accuracy_probe(config, model)
+    resample_every = config.sampling.resample_every
     started = time.time()
+    if verbose:
+        print(
+            f"  [adam] {config.training.adam.steps} steps, resampling every "
+            f"{resample_every} (one 'epoch' = one resampling interval, "
+            f"{config.training.adam.steps // max(resample_every, 1)} of them)",
+            flush=True,
+        )
+        print(f"  {'step':>8} {'epoch':>6} {'loss':>12} {'rel L2 vs exact':>16} {'lr':>9}", flush=True)
 
     for step in range(config.training.adam.steps):
         if step > 0 and step % config.sampling.resample_every == 0:
@@ -125,18 +178,23 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         params, opt_state, loss, terms = adam_step(params, opt_state, points, weights)
 
         if step % log_every == 0 or step == config.training.adam.steps - 1:
+            accuracy = accuracy_probe(params)
             row = {
                 "phase": "adam",
                 "step": step,
+                "epoch": step // max(resample_every, 1),
                 "loss": float(loss),
+                "relative_l2_vs_exact": accuracy,
                 "lr": float(schedule(step)),
                 **{f"term_{k}": float(v) for k, v in terms.items()},
                 **{f"weight_{k}": float(v) for k, v in weights.items()},
             }
             history.append(row)
-            if verbose and (step % (log_every * 20) == 0):
+            if verbose and (step % (log_every * 10) == 0):
                 print(
-                    f"  adam {step:>7d}  loss {float(loss):.6e}  lr {float(schedule(step)):.2e}",
+                    f"  {step:>8d} {step // max(resample_every, 1):>6d} "
+                    f"{float(loss):>12.4e} {accuracy:>16.4e} "
+                    f"{float(schedule(step)):>9.2e}",
                     flush=True,
                 )
 
@@ -163,13 +221,32 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         # points (T-S7.1) -- the frozen set above is the training set.
         drift_fn = _make_drift_probe(config, model)
 
+        def trace_fn(p):
+            return {"drift": drift_fn(p), "relative_l2_vs_exact": accuracy_probe(p)}
+
+        if verbose:
+            print(
+                f"  [lbfgs] up to {config.training.lbfgs.max_iterations} iterations",
+                flush=True,
+            )
+            print(f"  {'iter':>8} {'':>6} {'loss':>12} {'rel L2 vs exact':>16} {'drift D':>9}", flush=True)
+
+        def on_trace(n, values, loss):
+            if verbose:
+                print(
+                    f"  {n:>8d} {'':>6} {loss:>12.4e} "
+                    f"{values['relative_l2_vs_exact']:>16.4e} {values['drift']:>9.2e}",
+                    flush=True,
+                )
+
         started = time.time()
         result = run_lbfgs(
             objective,
             params,
             config.training.lbfgs.max_iterations,
             config.training.lbfgs.gtol,
-            trace_fn=drift_fn,
+            trace_fn=trace_fn,
+            on_trace=on_trace,
         )
         lbfgs_seconds = time.time() - started
 
@@ -198,7 +275,7 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         if drift_trace:
             fit = fit_drift(
                 [row["iteration"] for row in drift_trace],
-                [row["value"] for row in drift_trace],
+                [row["drift"] for row in drift_trace],
             )
             diagnostics.update(
                 {

@@ -21,6 +21,10 @@ pip install -r requirements.txt
 
 JAX runs on CPU here. Nothing in the project assumes a GPU.
 
+**New here? Read `docs/RUNNING.md`** — it walks through verifying the code,
+training a model, and using the trained model, with the exact commands and
+where to run them.
+
 ## Commands
 
 ```bash

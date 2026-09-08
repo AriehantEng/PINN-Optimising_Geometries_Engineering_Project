@@ -60,7 +60,7 @@ class LBFGSResult(NamedTuple):
 
 def run_lbfgs(
     loss_fn: Callable, params, max_iterations: int, gtol: float,
-    *, trace_fn=None, trace_every: int | None = None,
+    *, trace_fn=None, trace_every: int | None = None, on_trace=None,
 ):
     """Minimise `loss_fn(params)` with SciPy L-BFGS-B on a flat float64 vector.
 
@@ -97,9 +97,12 @@ def run_lbfgs(
             state["iteration"] += 1
             n = state["iteration"]
             if n % trace_every == 0 or n == 1:
-                trace.append(
-                    {"iteration": n, "value": float(trace_fn(unflatten(jnp.asarray(flat))))}
-                )
+                values = trace_fn(unflatten(jnp.asarray(flat)))
+                if not isinstance(values, dict):
+                    values = {"value": float(values)}
+                trace.append({"iteration": n, **values})
+                if on_trace is not None:
+                    on_trace(n, values, float(value_and_grad(unflatten(jnp.asarray(flat)))[0]))
     else:
         callback = None
 
