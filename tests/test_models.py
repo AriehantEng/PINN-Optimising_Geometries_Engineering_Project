@@ -26,12 +26,15 @@ ARCHS = [
     ("rwf", {"model.rwf": {"enabled": True, "mean": 0.5, "stddev": 0.1}}),
 ]
 
-STREAM_WEIGHTS = {
-    "momentum_x": 1.0,
-    "momentum_y": 1.0,
-    "inlet": 1.0,
-    "outlet_velocity": 1.0,
-    "pressure_gauge": 1.0,
+PSI_OMEGA = {
+    "physics.formulation": "psi_omega",
+    "bc.pressure_gauge": None,
+    "weights.values": {
+        "vorticity": 1.0,
+        "vorticity_transport": 1.0,
+        "inlet": 1.0,
+        "outlet_velocity": 1.0,
+    },
 }
 
 
@@ -76,8 +79,8 @@ def test_normalise_maps_domain_corners_to_unit_square():
 def test_no_slip_is_exactly_zero_on_both_walls(name, overrides, seed):
     """Not 'small'. Exactly zero, bitwise, for arbitrary parameters."""
     config = _base_config(**overrides, seed=seed)
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
-    values = jax.vmap(lambda xy: field_fn(params, xy))(
+    params, model = build_model(config, jax.random.PRNGKey(seed))
+    values = jax.vmap(lambda xy: model.field(params, xy))(
         _wall_points(config.domain.length)
     )
     assert np.all(np.asarray(values[:, 0]) == 0.0), "u is not identically zero on walls"
@@ -85,17 +88,10 @@ def test_no_slip_is_exactly_zero_on_both_walls(name, overrides, seed):
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2])
-def test_stream_function_no_slip_is_exactly_zero_on_both_walls(seed):
-    config = _base_config(
-        seed=seed,
-        **{
-            "physics.formulation": "stream_function",
-            "model.stream_base": "sine",
-            "weights.values": STREAM_WEIGHTS,
-        },
-    )
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
-    values = jax.vmap(lambda xy: field_fn(params, xy))(
+def test_psi_omega_no_slip_is_exactly_zero_on_both_walls(seed):
+    config = _base_config(seed=seed, **PSI_OMEGA, **{"model.lift": "sinusoidal"})
+    params, model = build_model(config, jax.random.PRNGKey(seed))
+    values = jax.vmap(lambda xy: model.field(params, xy))(
         _wall_points(config.domain.length)
     )
     # psi_base has zero slope at the walls and phi^2 kills both derivatives of
@@ -120,10 +116,10 @@ def test_lifting_inlet_reproduces_the_case_a_profile_exactly(seed):
     )
     assert "inlet" not in config.loss_terms, "lifting must remove the inlet loss term"
 
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
+    params, model = build_model(config, jax.random.PRNGKey(seed))
     y = jnp.linspace(-1.0, 1.0, 129)
     points = jnp.stack([jnp.zeros_like(y), y], axis=-1)
-    values = jax.vmap(lambda xy: field_fn(params, xy))(points)
+    values = jax.vmap(lambda xy: model.field(params, xy))(points)
 
     np.testing.assert_allclose(np.asarray(values[:, 0]), 1.0 - np.asarray(y) ** 2,
                                rtol=0.0, atol=0.0)
@@ -141,10 +137,10 @@ def test_hard_pressure_gauge_is_exactly_zero_on_the_outlet(seed):
     )
     assert "pressure_gauge" not in config.loss_terms
 
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
+    params, model = build_model(config, jax.random.PRNGKey(seed))
     y = jnp.linspace(-1.0, 1.0, 65)
     points = jnp.stack([jnp.full_like(y, config.domain.length), y], axis=-1)
-    values = jax.vmap(lambda xy: field_fn(params, xy))(points)
+    values = jax.vmap(lambda xy: model.field(params, xy))(points)
     assert np.all(np.asarray(values[:, 2]) == 0.0)
 
 
@@ -153,59 +149,95 @@ def test_hard_pressure_gauge_is_exactly_zero_on_the_outlet(seed):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("base", ["sine", "cubic"])
+@pytest.mark.parametrize("lift", ["sinusoidal", "cubic"])
 @pytest.mark.parametrize("seed", [0, 1, 2])
-def test_stream_function_satisfies_continuity_identically(base, seed):
+def test_psi_omega_satisfies_continuity_identically(lift, seed):
     """The whole point of the stream-function formulation.
 
     div u must be zero to rounding for ARBITRARY parameters, which is why the
     continuity loss term does not exist in that configuration.
     """
-    config = _base_config(
-        seed=seed,
-        **{"physics.formulation": "stream_function", "model.stream_base": base,
-           "weights.values": STREAM_WEIGHTS},
-    )
+    config = _base_config(seed=seed, **PSI_OMEGA, **{"model.lift": lift})
     assert "continuity" not in config.loss_terms
 
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
+    params, model = build_model(config, jax.random.PRNGKey(seed))
     points, _, _ = evaluation_grid(Channel(config.domain.length), 41, 21)
-    d = batched_field_derivatives(lambda xy: field_fn(params, xy), points)
+    d = batched_field_derivatives(lambda xy: model.field(params, xy), points)
     assert float(jnp.max(jnp.abs(residuals.continuity(d)))) < 1e-13
 
 
-@pytest.mark.parametrize("base", ["sine", "cubic"])
+@pytest.mark.parametrize("lift", ["sinusoidal", "cubic"])
 @pytest.mark.parametrize("seed", [0, 1, 2])
-def test_stream_function_carries_the_configured_flux_at_every_station(base, seed):
+def test_psi_omega_carries_the_configured_flux_at_every_station(lift, seed):
     """psi(+1) - psi(-1) = flux, so mass is conserved by construction.
 
     This is the property a psi = phi^2 * N ansatz cannot have: it would force
     equal psi on both walls and therefore zero net throughflow.
     """
-    config = _base_config(
-        seed=seed,
-        **{"physics.formulation": "stream_function", "model.stream_base": base,
-           "weights.values": STREAM_WEIGHTS},
-    )
-    params, field_fn = build_model(config, jax.random.PRNGKey(seed))
+    config = _base_config(seed=seed, **PSI_OMEGA, **{"model.lift": lift})
+    params, model = build_model(config, jax.random.PRNGKey(seed))
 
     points, x_stations, y = station_grid(Channel(config.domain.length), 10, 4001)
-    u = jax.vmap(jax.vmap(lambda xy: field_fn(params, xy)[0]))(points)
+    u = jax.vmap(jax.vmap(lambda xy: model.field(params, xy)[0]))(points)
     flux = np.trapezoid(np.asarray(u), np.asarray(y), axis=1)
 
     np.testing.assert_allclose(flux, config.inlet_flux, rtol=1e-6, atol=0.0)
 
 
-def test_stream_function_rejects_lifting_inlet():
+def test_psi_omega_rejects_lifting_inlet():
     """No silent fallbacks: an unimplemented combination raises."""
     config = _base_config(
-        **{"physics.formulation": "stream_function", "model.stream_base": "sine",
+        **{"physics.formulation": "psi_omega", "model.lift": "sinusoidal",
+           "bc.pressure_gauge": None,
            "bc.inlet": "lifting", "bc.lifting_length": 1.0,
-           "weights.values": {"momentum_x": 1.0, "momentum_y": 1.0,
-                              "outlet_velocity": 1.0, "pressure_gauge": 1.0}},
+           "weights.values": {"vorticity": 1.0, "vorticity_transport": 1.0,
+                              "outlet_velocity": 1.0}},
     )
     with pytest.raises(ValueError, match="not implemented for the"):
         build_model(config, jax.random.PRNGKey(0))
+
+
+def test_psi_omega_reports_no_pressure_in_its_system():
+    """SPEC v2 S4: pressure is absent and must not be reported from `field`."""
+    config = _base_config(**PSI_OMEGA, **{"model.lift": "sinusoidal"})
+    _, model = build_model(config, jax.random.PRNGKey(0))
+    assert model.has_pressure is False
+    assert model.stream is not None
+
+    vp = _base_config()
+    _, vp_model = build_model(vp, jax.random.PRNGKey(0))
+    assert vp_model.has_pressure is True
+    assert vp_model.stream is None
+
+
+def test_s4_4_omega_is_not_hard_constrained():
+    """T-S4.4: structural assertion.
+
+    `omega` must be a raw network output. If it were wrapped in any ansatz that
+    forced a value anywhere, r_1 would stop being a residual the network can
+    violate, and the falsifiability that r_1 restores would be gone.
+    """
+    config = _base_config(**PSI_OMEGA, **{"model.lift": "sinusoidal"})
+    params, model = build_model(config, jax.random.PRNGKey(0))
+
+    # On the walls, psi is pinned to the lift but omega must be free -- i.e.
+    # varying the seed must change omega there.
+    wall = jnp.array([[0.3 * config.domain.length, 1.0],
+                      [0.6 * config.domain.length, -1.0]])
+    omegas = []
+    for seed in (0, 1, 2):
+        p_seed, m_seed = build_model(config, jax.random.PRNGKey(seed))
+        omegas.append(np.asarray(jax.vmap(lambda xy: m_seed.stream(p_seed, xy))(wall)[:, 1]))
+    for a, b in zip(omegas, omegas[1:]):
+        assert not np.allclose(a, b), "omega appears constrained on the wall"
+
+    # And psi on the wall IS pinned: identical across seeds.
+    psis = []
+    for seed in (0, 1, 2):
+        p_seed, m_seed = build_model(config, jax.random.PRNGKey(seed))
+        psis.append(np.asarray(jax.vmap(lambda xy: m_seed.stream(p_seed, xy))(wall)[:, 0]))
+    for a, b in zip(psis, psis[1:]):
+        np.testing.assert_allclose(a, b, rtol=0.0, atol=0.0)
 
 
 # --------------------------------------------------------------------------- #

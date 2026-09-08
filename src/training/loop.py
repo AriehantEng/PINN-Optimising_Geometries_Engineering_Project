@@ -34,7 +34,7 @@ TARGET_LOG_ROWS = 200
 @dataclass
 class TrainingResult:
     params: Any
-    field_fn: Any
+    model: Any
     history: list = field(default_factory=list)
     lbfgs_history: list = field(default_factory=list)
     diagnostics: dict = field(default_factory=dict)
@@ -44,9 +44,9 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
     channel = Channel(config.domain.length)
 
     model_key = jax.random.PRNGKey(config.seed)
-    params, field_fn = build_model(config, model_key)
+    params, model = build_model(config, model_key)
 
-    loss_terms_fn = make_loss_terms(config, field_fn)
+    loss_terms_fn = make_loss_terms(config, model)
     weights = initial_weights(config)
 
     def weighted_loss(p, points, w):
@@ -193,7 +193,7 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
 
     return TrainingResult(
         params=params,
-        field_fn=field_fn,
+        model=model,
         history=history,
         lbfgs_history=lbfgs_history,
         diagnostics=diagnostics,

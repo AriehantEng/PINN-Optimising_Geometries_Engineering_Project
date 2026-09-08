@@ -7,15 +7,41 @@ from the config; nothing here has a default.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import jax
+import jax.numpy as jnp
 
 from ..config import Config
 from .fourier import apply_fourier, init_fourier_matrix
-from .hard_bc import make_stream_function_field, make_velocity_pressure_field
+from .hard_bc import (
+    make_psi_omega_field,
+    make_velocity_from_stream,
+    make_velocity_pressure_field,
+)
 from .mlp import apply_mlp, apply_modified_mlp, init_mlp, init_modified_mlp
 
 #: Raw network outputs per formulation.
-_N_OUTPUTS = {"velocity_pressure": 3, "stream_function": 2}
+#: velocity_pressure -> (N_u, N_v, N_p);  psi_omega -> (N_psi, N_omega).
+_N_OUTPUTS = {"velocity_pressure": 3, "psi_omega": 2}
+
+
+@dataclass(frozen=True)
+class Model:
+    """What a formulation exposes.
+
+    `has_pressure` is False for the psi-omega system: pressure is absent from
+    that system and is recovered post hoc by path integration, so any pressure
+    metric taken from `field` there would be meaningless. Callers must check
+    the flag rather than trusting the third slot of `field`.
+    """
+
+    formulation: str
+    field: object          # (params, xy) -> [u, v, p]; p is 0 when has_pressure is False
+    velocity: object       # (params, xy) -> [u, v]
+    stream: object         # (params, xy) -> [psi, omega], or None
+    has_pressure: bool
+    lift: object = None
 
 
 def build_model(config: Config, key):
@@ -64,26 +90,44 @@ def build_model(config: Config, key):
             lifting_length=config.bc.lifting_length,
             gauge_mode=config.bc.pressure_gauge,
         )
-    elif config.physics.formulation == "stream_function":
+        model = Model(
+            formulation="velocity_pressure",
+            field=field_fn,
+            velocity=lambda p, xy: field_fn(p, xy)[:2],
+            stream=None,
+            has_pressure=True,
+        )
+    elif config.physics.formulation == "psi_omega":
         if config.bc.inlet == "lifting":
             raise ValueError(
-                "bc.inlet = 'lifting' is not implemented for the "
-                "stream_function formulation: the inlet condition there is a "
-                "condition on dpsi/dy, and a lifting construction that is "
-                "exact for both u and v at x* = 0 needs lambda'(0) = 0 as "
-                "well. Use bc.inlet = 'soft'."
+                "bc.inlet = 'lifting' is not implemented for the psi_omega "
+                "formulation: the inlet condition there is a condition on "
+                "dpsi/dy, and a lifting construction exact for both u and v at "
+                "x* = 0 needs lambda'(0) = 0 as well. Use bc.inlet = 'soft'."
             )
-        field_fn = make_stream_function_field(
+        stream_fn = make_psi_omega_field(
             net_apply,
             length=config.domain.length,
             flux=config.inlet_flux,
-            base=config.model.stream_base,
-            gauge_mode=config.bc.pressure_gauge,
+            lift=config.model.lift,
+        )
+        velocity_fn = make_velocity_from_stream(stream_fn)
+        model = Model(
+            formulation="psi_omega",
+            # Pressure is absent from the psi-omega system. The zero here is a
+            # placeholder that `has_pressure=False` forbids anyone reporting.
+            field=lambda p, xy: jnp.concatenate(
+                [velocity_fn(p, xy), jnp.zeros((1,), dtype=jnp.float64)]
+            ),
+            velocity=velocity_fn,
+            stream=stream_fn,
+            has_pressure=False,
+            lift=config.model.lift,
         )
     else:
         raise ValueError(f"unknown physics.formulation {config.physics.formulation!r}")
 
-    return params, field_fn
+    return params, model
 
 
 def count_parameters(params) -> int:

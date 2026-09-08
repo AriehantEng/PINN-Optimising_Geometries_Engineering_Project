@@ -46,10 +46,10 @@ def save_parameters(path: Path, params) -> None:
 
 
 def load_parameters(path: Path, config: Config):
-    template, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
+    template, model = build_model(config, jax.random.PRNGKey(config.seed))
     _, unflatten = ravel_pytree(template)
     flat = np.load(path)["flat"]
-    return unflatten(flat), field_fn
+    return unflatten(flat), model
 
 
 def write_history(path: Path, rows: list) -> None:
@@ -74,7 +74,7 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
 
     started = time.time()
     result = train(config, verbose=verbose)
-    metrics = evaluate(config, result.field_fn, result.params)
+    metrics = evaluate(config, result.model, result.params)
     metrics["wall_seconds"] = time.time() - started
     metrics.update({f"diag_{k}": v for k, v in result.diagnostics.items()})
     metrics["name"] = config.name
@@ -87,7 +87,7 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
         json.dump(result.lbfgs_history, handle, indent=2)
     with (directory / "metrics.json").open("w", encoding="utf-8") as handle:
         json.dump(metrics, handle, indent=2)
-    plots.write_all(config, result.field_fn, result.params, directory)
+    plots.write_all(config, result.model, result.params, directory)
     with (directory / "environment.json").open("w", encoding="utf-8") as handle:
         json.dump(
             {

@@ -92,7 +92,10 @@ def _base_config(**overrides):
         *parents, leaf = path.split(".")
         for parent in parents:
             node = node[parent]
-        node[leaf] = value
+        if value is None:
+            node.pop(leaf, None)
+        else:
+            node[leaf] = value
     return parse_config(document)
 
 
@@ -130,28 +133,39 @@ FORMULATIONS = [
     dict(**{"model.rwf": {"enabled": True, "mean": 0.5, "stddev": 0.1}}),
     dict(
         **{
-            "physics.formulation": "stream_function",
-            "model.stream_base": "sine",
+            "physics.formulation": "psi_omega",
+            "model.lift": "sinusoidal",
+            "bc.pressure_gauge": None,  # removed below: no pressure in the system
             "weights.values": {
-                "momentum_x": 1.0,
-                "momentum_y": 1.0,
+                "vorticity": 1.0,
+                "vorticity_transport": 1.0,
                 "inlet": 1.0,
                 "outlet_velocity": 1.0,
-                "pressure_gauge": 1.0,
             },
         }
     ),
 ]
 
-FORMULATION_IDS = ["mlp", "modified_mlp", "fourier", "rwf", "stream_function"]
+FORMULATION_IDS = ["mlp", "modified_mlp", "fourier", "rwf", "psi_omega"]
+
+
+def _under_test(config, params, model):
+    """The vector function whose derivatives the FD check compares against.
+
+    For psi-omega that is (psi, omega): its `field` carries a placeholder zero
+    in the pressure slot, so differentiating that would be a vacuous check.
+    """
+    if config.physics.formulation == "psi_omega":
+        return jax.jit(lambda xy: model.stream(params, xy)), ("psi", "omega")
+    return jax.jit(lambda xy: model.field(params, xy)), ("u", "v", "p")
 
 
 @pytest.mark.parametrize("overrides", FORMULATIONS, ids=FORMULATION_IDS)
 def test_autodiff_matches_central_differences(overrides):
     """SPEC test 5, on every architecture and both formulations."""
     config = _base_config(**overrides)
-    params, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
-    point_fn = jax.jit(lambda xy: field_fn(params, xy))
+    params, model = build_model(config, jax.random.PRNGKey(config.seed))
+    point_fn, names = _under_test(config, params, model)
 
     # Interior points, kept a stencil width clear of the boundaries.
     channel = Channel(config.domain.length)
@@ -159,37 +173,32 @@ def test_autodiff_matches_central_differences(overrides):
     points[:, 0] = np.clip(points[:, 0], 0.05, config.domain.length - 0.05)
     points[:, 1] = np.clip(points[:, 1], -0.95, 0.95)
 
-    d = batched_field_derivatives(point_fn, jnp.asarray(points))
-    autodiff = {
-        ("u", "x"): d.u_x, ("u", "y"): d.u_y,
-        ("v", "x"): d.v_x, ("v", "y"): d.v_y,
-        ("p", "x"): d.p_x, ("p", "y"): d.p_y,
-    }
-    component = {"u": 0, "v": 1, "p": 2}
+    from src.physics.derivatives import batched_directional_derivatives
 
-    for (name, axis_name), value in autodiff.items():
-        axis = 0 if axis_name == "x" else 1
-        fd = _central_difference(point_fn, points, axis, H_FIRST)[:, component[name]]
-        np.testing.assert_allclose(
-            np.asarray(value), fd, rtol=0.0, atol=FD_ATOL,
-            err_msg=f"d{name}/d{axis_name} disagrees with central differences",
-        )
+    value, d_dx, d_dy, d2_dx2, d2_dy2 = batched_directional_derivatives(
+        point_fn, jnp.asarray(points)
+    )
 
-    for name, axis_name, value in (
-        ("u", "x", d.u_xx), ("u", "y", d.u_yy),
-        ("v", "x", d.v_xx), ("v", "y", d.v_yy),
-    ):
-        axis = 0 if axis_name == "x" else 1
-        fd = _central_second_difference(point_fn, points, axis, H_SECOND)[
-            :, component[name]
-        ]
-        np.testing.assert_allclose(
-            np.asarray(value), fd, rtol=0.0, atol=FD_ATOL,
-            err_msg=f"d2{name}/d{axis_name}2 disagrees with central differences",
-        )
+    for index, name in enumerate(names):
+        for axis, axis_name, autodiff in (
+            (0, "x", d_dx[:, index]), (1, "y", d_dy[:, index])
+        ):
+            fd = _central_difference(point_fn, points, axis, H_FIRST)[:, index]
+            np.testing.assert_allclose(
+                np.asarray(autodiff), fd, rtol=0.0, atol=FD_ATOL,
+                err_msg=f"d{name}/d{axis_name} disagrees with central differences",
+            )
+        for axis, axis_name, autodiff in (
+            (0, "x", d2_dx2[:, index]), (1, "y", d2_dy2[:, index])
+        ):
+            fd = _central_second_difference(point_fn, points, axis, H_SECOND)[:, index]
+            np.testing.assert_allclose(
+                np.asarray(autodiff), fd, rtol=0.0, atol=FD_ATOL,
+                err_msg=f"d2{name}/d{axis_name}2 disagrees with central differences",
+            )
 
 
-@pytest.mark.parametrize("overrides", FORMULATIONS, ids=FORMULATION_IDS)
+@pytest.mark.parametrize("overrides", FORMULATIONS[:4], ids=FORMULATION_IDS[:4])
 @pytest.mark.parametrize("pressure_scaling", ["viscous", "inertial"])
 def test_residual_from_finite_differences_matches_autodiff_residual(
     overrides, pressure_scaling
@@ -200,8 +209,8 @@ def test_residual_from_finite_differences_matches_autodiff_residual(
     check above only if it also passed this one, and vice versa.
     """
     config = _base_config(**overrides, **{"physics.pressure_scaling": pressure_scaling})
-    params, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
-    point_fn = jax.jit(lambda xy: field_fn(params, xy))
+    params, model = build_model(config, jax.random.PRNGKey(config.seed))
+    point_fn = jax.jit(lambda xy: model.field(params, xy))
 
     channel = Channel(config.domain.length)
     points = np.array(sample_interior(jax.random.PRNGKey(12), channel, 96))
@@ -242,8 +251,8 @@ def test_finite_difference_check_would_fail_on_a_wrong_derivative():
     passing test.
     """
     config = _base_config()
-    params, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
-    point_fn = jax.jit(lambda xy: field_fn(params, xy))
+    params, model = build_model(config, jax.random.PRNGKey(config.seed))
+    point_fn = jax.jit(lambda xy: model.field(params, xy))
     points = np.array(
         sample_interior(jax.random.PRNGKey(13), Channel(config.domain.length), 64)
     )
@@ -270,8 +279,8 @@ def test_batched_derivatives_match_single_point(overrides):
     from src.physics.derivatives import field_derivatives
 
     config = _base_config(**overrides)
-    params, field_fn = build_model(config, jax.random.PRNGKey(config.seed))
-    point_fn = lambda xy: field_fn(params, xy)  # noqa: E731
+    params, model = build_model(config, jax.random.PRNGKey(config.seed))
+    point_fn, _ = _under_test(config, params, model)
 
     points = sample_interior(jax.random.PRNGKey(21), Channel(config.domain.length), 96)
 

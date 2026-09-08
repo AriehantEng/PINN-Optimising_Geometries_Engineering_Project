@@ -25,17 +25,17 @@ from ..physics.derivatives import batched_field_derivatives  # noqa: E402
 from .metrics import evaluate_fields  # noqa: E402
 
 
-def _grid_fields(config: Config, field_fn, params):
+def _grid_fields(config: Config, model, params):
     channel = Channel(config.domain.length)
     points, x, y = evaluation_grid(channel, config.evaluation.nx, config.evaluation.ny)
-    u, v, p = evaluate_fields(field_fn, params, points)
+    u, v, p = evaluate_fields(model.field, params, points)
     shape = (config.evaluation.nx, config.evaluation.ny)
     return np.asarray(x), np.asarray(y), u.reshape(shape), v.reshape(shape), p.reshape(shape), points
 
 
-def plot_velocity_profiles(config, field_fn, params, path: Path):
+def plot_velocity_profiles(config, model, params, path: Path):
     """Predicted vs analytic profile at several stations."""
-    x, y, u, _, _, _ = _grid_fields(config, field_fn, params)
+    x, y, u, _, _, _ = _grid_fields(config, model, params)
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
 
     stations = np.linspace(0, len(x) - 1, 5).astype(int)
@@ -74,20 +74,36 @@ def plot_velocity_profiles(config, field_fn, params, path: Path):
     plt.close(fig)
 
 
-def plot_residual_map(config, field_fn, params, path: Path):
+def plot_residual_map(config, model, params, path: Path):
     """Where the momentum residual lives. A diagnostic, never an accuracy claim."""
     channel = Channel(config.domain.length)
     points, x, y = evaluation_grid(channel, config.evaluation.nx, config.evaluation.ny)
-    d = batched_field_derivatives(lambda xy: field_fn(params, xy), points)
     shape = (config.evaluation.nx, config.evaluation.ny)
-    r_x, r_y, r_c = residuals.navier_stokes(
-        d, config.physics.reynolds, config.physics.pressure_scaling
-    )
+    if config.physics.formulation == "psi_omega":
+        from ..physics import streamfunction
+        from ..physics.derivatives import batched_stream_derivatives
 
-    fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
-    for axis, values, name in zip(
-        axes, (r_x, r_y, r_c), ("momentum x", "momentum y", "continuity")
-    ):
+        sd = batched_stream_derivatives(lambda xy: model.stream(params, xy), points)
+        values_and_names = list(
+            zip(
+                streamfunction.residuals(sd, config.physics.reynolds),
+                ("r1  omega + lap psi", "r2  vorticity transport"),
+            )
+        )
+    else:
+        d = batched_field_derivatives(lambda xy: model.field(params, xy), points)
+        values_and_names = list(
+            zip(
+                residuals.navier_stokes(
+                    d, config.physics.reynolds, config.physics.pressure_scaling
+                ),
+                ("momentum x", "momentum y", "continuity"),
+            )
+        )
+
+    fig, axes = plt.subplots(len(values_and_names), 1, figsize=(9, 8), sharex=True)
+    axes = np.atleast_1d(axes)
+    for axis, (values, name) in zip(axes, values_and_names):
         magnitude = np.abs(np.asarray(values)).reshape(shape).T
         floor = max(magnitude.max(), 1e-300) * 1e-8
         image = axis.pcolormesh(
@@ -140,9 +156,9 @@ def plot_loss_history(history_path: Path, path: Path, title: str):
     plt.close(fig)
 
 
-def write_all(config: Config, field_fn, params, directory: Path):
-    plot_velocity_profiles(config, field_fn, params, directory / "profiles.png")
-    plot_residual_map(config, field_fn, params, directory / "residuals.png")
+def write_all(config: Config, model, params, directory: Path):
+    plot_velocity_profiles(config, model, params, directory / "profiles.png")
+    plot_residual_map(config, model, params, directory / "residuals.png")
     plot_loss_history(
         directory / "history.csv", directory / "loss_history.png", config.name
     )

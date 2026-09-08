@@ -15,10 +15,11 @@ from __future__ import annotations
 import jax.numpy as jnp
 
 from ..config import Config
-from ..physics import residuals
+from ..physics import residuals, streamfunction
 from ..physics.derivatives import (
     batched_field_and_jacobian,
     batched_field_derivatives,
+    batched_stream_derivatives,
 )
 
 
@@ -33,7 +34,7 @@ def inlet_profile(config: Config, y):
     return jnp.full_like(y, config.inlet_uniform_value)
 
 
-def make_loss_terms(config: Config, field_fn):
+def make_loss_terms(config: Config, model):
     """Build `loss_terms(params, points) -> dict[str, scalar]`.
 
     The returned dict has exactly the keys in `config.loss_terms`, so a term
@@ -44,19 +45,27 @@ def make_loss_terms(config: Config, field_fn):
     formulation = config.physics.formulation
 
     def loss_terms(params, points):
-        point_fn = lambda xy: field_fn(params, xy)  # noqa: E731
+        point_fn = lambda xy: model.field(params, xy)  # noqa: E731
 
-        d = batched_field_derivatives(point_fn, points.interior)
-        terms = {
-            "momentum_x": jnp.mean(
-                residuals.momentum_x(d, reynolds, pressure_scaling) ** 2
-            ),
-            "momentum_y": jnp.mean(
-                residuals.momentum_y(d, reynolds, pressure_scaling) ** 2
-            ),
-        }
-        if formulation == "velocity_pressure":
-            terms["continuity"] = jnp.mean(residuals.continuity(d) ** 2)
+        if formulation == "psi_omega":
+            stream_point_fn = lambda xy: model.stream(params, xy)  # noqa: E731
+            sd = batched_stream_derivatives(stream_point_fn, points.interior)
+            r1, r2 = streamfunction.residuals(sd, reynolds)
+            terms = {
+                "vorticity": jnp.mean(r1**2),
+                "vorticity_transport": jnp.mean(r2**2),
+            }
+        else:
+            d = batched_field_derivatives(point_fn, points.interior)
+            terms = {
+                "momentum_x": jnp.mean(
+                    residuals.momentum_x(d, reynolds, pressure_scaling) ** 2
+                ),
+                "momentum_y": jnp.mean(
+                    residuals.momentum_y(d, reynolds, pressure_scaling) ** 2
+                ),
+                "continuity": jnp.mean(residuals.continuity(d) ** 2),
+            }
 
         if config.bc.inlet == "soft":
             inlet_values, _ = batched_field_and_jacobian(point_fn, points.inlet)
@@ -66,7 +75,8 @@ def make_loss_terms(config: Config, field_fn):
             )
 
         needs_outlet = (
-            config.bc.outlet_velocity == "soft" or config.bc.pressure_gauge == "soft"
+            config.bc.outlet_velocity == "soft"
+            or config.bc.pressure_gauge == "soft"
         )
         if needs_outlet:
             outlet_values, outlet_jac = batched_field_and_jacobian(

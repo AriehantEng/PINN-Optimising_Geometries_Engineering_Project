@@ -1,0 +1,69 @@
+# Case A, Re_h = 100, psi-omega with the SINUSOIDAL lift.
+#
+# EXPRESSIVITY CHECK. Same boundary conditions and same flux as the
+# cubic lift, but its derivative is not the Poiseuille profile, so
+# N_psi must learn a non-zero correction. This is the only psi-omega
+# result whose accuracy may be quoted (SPEC v2 S4).
+#
+# Coupled second-order system in (psi, omega); omega carries no hard
+# constraint, so r_1 = omega + lap psi stays a residual the network can
+# violate. Pressure is absent and recovered post hoc by path integration.
+name: caseA_re100_psiomega_sinusoidal
+seed: 0
+case: A
+domain:
+  alpha: 1.5
+  outlet_margin: 5.0
+correlation:
+  c0: 0.3155
+  c1: 0.01105
+  n: 1.6
+  citation: 'Durst, Ray, Unsal & Bayoumi (2005), ''The development lengths of laminar
+    pipe and channel flows'', J. Fluids Eng. 127(6):1154-1160. Plane-channel fit C0=0.631,
+    C1=0.0442, n=1.6, expressed there per FULL channel height H with Re_H based on
+    H and mean velocity. Converted here to hydraulic diameter D_h = 2H, which for
+    a wide channel is 4h: L_e/D_h = (1/2)(L_e/H) and Re_H = Re_Dh/2, giving c0 = C0/2
+    = 0.3155 and c1 = C1/4 = 0.01105. Cross-check: the high-Re asymptote L_e/D_h =
+    0.01105 Re_Dh reproduces the classical plane-channel value 0.011 Re_Dh.'
+physics:
+  reynolds: 100.0
+  pressure_scaling: inertial
+  formulation: psi_omega
+model:
+  arch: modified_mlp
+  width: 128
+  depth: 4
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+  lift: sinusoidal
+bc:
+  inlet: soft
+  outlet_velocity: soft
+sampling:
+  n_interior: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+weights:
+  scheme: fixed
+  values:
+    vorticity: 1.0
+    vorticity_transport: 1.0
+    outlet_velocity: 1.0
+    inlet: 1.0
+training:
+  adam:
+    steps: 2000
+    lr_init: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 6000
+    gtol: 1.0e-14
+evaluation:
+  nx: 401
+  ny: 201

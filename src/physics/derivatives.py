@@ -93,12 +93,45 @@ def _directional(batched_fn, points, direction):
     return value, first, second
 
 
-def batched_field_derivatives(field_fn, points) -> Derivatives:
-    """Derivative bundle for an (N, 2) array of points."""
-    batched_fn = jax.vmap(field_fn)
+def batched_directional_derivatives(vector_fn, points):
+    """(value, d/dx, d/dy, d2/dx2, d2/dy2) for any vector-valued `f(xy)`.
+
+    Shared by the velocity-pressure bundle and the psi-omega bundle: both need
+    exactly the value, both first derivatives and both unmixed second
+    derivatives of a small vector of outputs, and neither needs the cross
+    derivative.
+    """
+    batched_fn = jax.vmap(vector_fn)
     value, d_dx, d2_dx2 = _directional(batched_fn, points, _EX)
     _, d_dy, d2_dy2 = _directional(batched_fn, points, _EY)
-    return _assemble(value, d_dx, d_dy, d2_dx2, d2_dy2)
+    return value, d_dx, d_dy, d2_dx2, d2_dy2
+
+
+def batched_field_derivatives(field_fn, points) -> Derivatives:
+    """Derivative bundle for an (N, 2) array of points."""
+    return _assemble(*batched_directional_derivatives(field_fn, points))
+
+
+def batched_stream_derivatives(stream_fn, points):
+    """Derivative bundle for the psi-omega system (SPEC v2 S4).
+
+    `stream_fn(xy) -> [psi, omega]`. Only SECOND derivatives are taken, of both
+    outputs -- the whole point of solving the coupled second-order system
+    rather than substituting omega = -lap psi is to avoid fourth-order autodiff
+    through tanh.
+    """
+    from .streamfunction import StreamDerivatives
+
+    value, d_dx, d_dy, d2_dx2, d2_dy2 = batched_directional_derivatives(
+        stream_fn, points
+    )
+    return StreamDerivatives(
+        psi_x=d_dx[..., 0], psi_y=d_dy[..., 0],
+        psi_xx=d2_dx2[..., 0], psi_yy=d2_dy2[..., 0],
+        omega=value[..., 1],
+        omega_x=d_dx[..., 1], omega_y=d_dy[..., 1],
+        omega_xx=d2_dx2[..., 1], omega_yy=d2_dy2[..., 1],
+    )
 
 
 def field_and_jacobian(field_fn, xy):

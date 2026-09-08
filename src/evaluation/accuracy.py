@@ -16,7 +16,8 @@ from ..geometry.sampling import evaluation_grid
 from ..physics import analytic
 from ..physics.conventions import entrance_length_over_h
 from ..physics.derivatives import batched_field_derivatives
-from ..physics import residuals
+from ..physics import residuals, streamfunction
+from ..physics.derivatives import batched_stream_derivatives
 from .metrics import (
     centreline_velocity,
     cross_channel_flux,
@@ -35,19 +36,24 @@ N_FLUX_STATIONS = 10
 FLUX_STATION_MARGIN = 0.05
 
 
-def _residual_norms(config, field_fn, params, points):
+def _residual_norms(config, model, params, points):
     """Max and RMS of each unweighted residual on the evaluation grid.
 
     Reported as a DIAGNOSTIC. A small residual is not an accuracy claim: the
     failure mode this project exists to catch is exactly a low residual with a
     wrong solution.
     """
-    d = batched_field_derivatives(lambda xy: field_fn(params, xy), points)
     out = {}
-    names = ("momentum_x", "momentum_y", "continuity")
-    values = residuals.navier_stokes(
-        d, config.physics.reynolds, config.physics.pressure_scaling
-    )
+    if config.physics.formulation == "psi_omega":
+        sd = batched_stream_derivatives(lambda xy: model.stream(params, xy), points)
+        names = ("vorticity", "vorticity_transport")
+        values = streamfunction.residuals(sd, config.physics.reynolds)
+    else:
+        d = batched_field_derivatives(lambda xy: model.field(params, xy), points)
+        names = ("momentum_x", "momentum_y", "continuity")
+        values = residuals.navier_stokes(
+            d, config.physics.reynolds, config.physics.pressure_scaling
+        )
     for name, value in zip(names, values):
         value = np.asarray(value)
         out[f"residual_{name}_max"] = float(np.max(np.abs(value)))
@@ -55,14 +61,14 @@ def _residual_norms(config, field_fn, params, points):
     return out
 
 
-def _flux_metrics(config, field_fn, params):
+def _flux_metrics(config, model, params):
     length = config.domain.length
     stations = np.linspace(
         FLUX_STATION_MARGIN * length,
         (1.0 - FLUX_STATION_MARGIN) * length,
         N_FLUX_STATIONS,
     )
-    fluxes = cross_channel_flux(field_fn, params, stations)
+    fluxes = cross_channel_flux(model.field, params, stations)
     return {
         "flux_stations": stations.tolist(),
         "flux_values": np.asarray(fluxes).tolist(),
@@ -74,12 +80,12 @@ def _flux_metrics(config, field_fn, params):
     }
 
 
-def evaluate(config: Config, field_fn, params) -> dict:
+def evaluate(config: Config, model, params) -> dict:
     """All reported metrics for a finished run."""
     channel = Channel(config.domain.length)
     points, x, y = evaluation_grid(channel, config.evaluation.nx, config.evaluation.ny)
 
-    u, v, p = evaluate_fields(field_fn, params, points)
+    u, v, p = evaluate_fields(model.field, params, points)
 
     metrics = {
         "case": config.case,
@@ -90,8 +96,20 @@ def evaluate(config: Config, field_fn, params) -> dict:
         "v_max_abs": max_abs(v),
         "u_max": float(np.max(u)),
     }
-    metrics.update(_flux_metrics(config, field_fn, params))
-    metrics.update(_residual_norms(config, field_fn, params, points))
+    metrics["has_pressure_in_system"] = bool(model.has_pressure)
+    if model.lift is not None:
+        metrics["lift"] = model.lift
+    metrics.update(_flux_metrics(config, model, params))
+    metrics.update(_residual_norms(config, model, params, points))
+
+    if not model.has_pressure:
+        # SPEC v2 S4: pressure is absent from the psi-omega system and is
+        # recovered post hoc by integrating grad p from the outlet gauge point.
+        # Path independence is asserted, not assumed: grad p is only a gradient
+        # if the solution actually satisfies momentum.
+        metrics.update(
+            _recovered_pressure_metrics(config, model, params, np.asarray(y))
+        )
 
     grid_y = np.asarray(points[:, 1])
     grid_x = np.asarray(points[:, 0])
@@ -106,9 +124,10 @@ def evaluate(config: Config, field_fn, params) -> dict:
             config.physics.pressure_scaling,
         )
         metrics["u_relative_l2"] = relative_l2(u, u_exact)
-        metrics["p_relative_l2"] = relative_l2(p, p_exact)
         metrics["u_max_abs_error"] = max_abs(u - u_exact)
-        metrics["p_max_abs_error"] = max_abs(p - p_exact)
+        if model.has_pressure:
+            metrics["p_relative_l2"] = relative_l2(p, p_exact)
+            metrics["p_max_abs_error"] = max_abs(p - p_exact)
     else:
         # No closed-form solution. Two checks apply (SPEC section 2, Case B):
         # the downstream profile, and the entrance length.
@@ -132,7 +151,7 @@ def evaluate(config: Config, field_fn, params) -> dict:
         outlet_points = jnp.stack(
             [jnp.full_like(y, config.domain.length), y], axis=-1
         )
-        u_outlet, _, _ = evaluate_fields(field_fn, params, outlet_points)
+        u_outlet, _, _ = evaluate_fields(model.field, params, outlet_points)
         metrics["outlet_profile_relative_l2_vs_nominal_flux"] = relative_l2(
             u_outlet, nominal
         )
@@ -144,7 +163,7 @@ def evaluate(config: Config, field_fn, params) -> dict:
         )
 
         stations = np.linspace(0.0, config.domain.length, 2001)
-        centreline = centreline_velocity(field_fn, params, stations)
+        centreline = centreline_velocity(model.field, params, stations)
         # The 99% threshold is against the flux the solution actually carries.
         measured = entrance_length(stations, centreline, 0.75 * measured_flux)
         # SPEC v2 S1: the correlation consumes Re_Dh, not Re_h, and returns a
@@ -174,3 +193,50 @@ def evaluate(config: Config, field_fn, params) -> dict:
         metrics["centreline_values"] = np.asarray(centreline)[::100].tolist()
 
     return metrics
+
+
+def _recovered_pressure_metrics(config, model, params, y_grid) -> dict:
+    """Post-hoc pressure for the psi-omega system, plus the path-independence check.
+
+    Sampled on a modest set of probe points rather than the full evaluation
+    grid: each probe costs a path integral whose integrand needs second
+    derivatives of velocity, i.e. third derivatives of psi.
+    """
+    velocity_fn = lambda xy: model.velocity(params, xy)  # noqa: E731
+    length = config.domain.length
+    gauge = (length, 0.0)
+
+    probes = [
+        (x, yy)
+        for x in np.linspace(0.05 * length, 0.95 * length, 7)
+        for yy in (-0.6, 0.0, 0.6)
+    ]
+
+    x_first, y_first = [], []
+    for probe in probes:
+        x_first.append(
+            streamfunction.recover_pressure(
+                velocity_fn, probe, gauge, config.physics.reynolds,
+                config.physics.pressure_scaling, path="x_first",
+            )
+        )
+        y_first.append(
+            streamfunction.recover_pressure(
+                velocity_fn, probe, gauge, config.physics.reynolds,
+                config.physics.pressure_scaling, path="y_first",
+            )
+        )
+    x_first = np.asarray(x_first)
+    y_first = np.asarray(y_first)
+
+    out = {
+        "pressure_path_max_disagreement": float(np.max(np.abs(x_first - y_first))),
+        "pressure_recovery_probes": len(probes),
+    }
+    if config.case == "A":
+        exact = analytic.p_nd(
+            np.array([p[0] for p in probes]), length,
+            config.physics.reynolds, config.physics.pressure_scaling,
+        )
+        out["p_relative_l2_recovered"] = relative_l2(x_first, exact)
+    return out

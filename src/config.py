@@ -141,7 +141,7 @@ class ModelConfig:
     depth: int
     fourier: FourierConfig
     rwf: RWFConfig
-    stream_base: str | None  # sine | cubic, stream_function only
+    lift: str | None  # cubic | sinusoidal, psi_omega only (SPEC v2 S4)
 
 
 @dataclass(frozen=True)
@@ -149,7 +149,7 @@ class BCConfig:
     inlet: str  # soft | lifting
     lifting_length: float | None
     outlet_velocity: str  # soft
-    pressure_gauge: str  # soft | hard
+    pressure_gauge: str | None  # soft | hard; None for psi_omega
 
 
 @dataclass(frozen=True)
@@ -238,9 +238,12 @@ class Config:
         Walls never appear: no-slip is imposed by construction in the ansatz,
         so there is no wall loss term to weight (SPEC section 3).
         """
-        terms = ["momentum_x", "momentum_y"]
-        if self.physics.formulation == "velocity_pressure":
-            terms.append("continuity")
+        if self.physics.formulation == "psi_omega":
+            # SPEC v2 S4: two coupled second-order residuals. Continuity is
+            # identical, and pressure is not in the system at all.
+            terms = ["vorticity", "vorticity_transport"]
+        else:
+            terms = ["momentum_x", "momentum_y", "continuity"]
         if self.bc.inlet == "soft":
             terms.append("inlet")
         if self.bc.outlet_velocity == "soft":
@@ -293,7 +296,7 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         )
     pressure_scaling = _choice(p, "pressure_scaling", "physics", {"viscous", "inertial"})
     formulation = _choice(
-        p, "formulation", "physics", {"velocity_pressure", "stream_function"}
+        p, "formulation", "physics", {"velocity_pressure", "psi_omega"}
     )
     if case == "B":
         inlet_uniform_value = _positive(
@@ -379,14 +382,12 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         rwf = RWFConfig(False, None, None)
     _finish(r, "model.rwf")
 
-    if formulation == "stream_function":
-        stream_base = _choice(m, "stream_base", "model", {"sine", "cubic"})
+    if formulation == "psi_omega":
+        lift = _choice(m, "lift", "model", {"cubic", "sinusoidal"})
     else:
-        _reject_unused(
-            m, "stream_base", "model", "for the velocity_pressure formulation"
-        )
-        stream_base = None
-    model = ModelConfig(arch, width, depth, fourier, rwf, stream_base)
+        _reject_unused(m, "lift", "model", "for the velocity_pressure formulation")
+        lift = None
+    model = ModelConfig(arch, width, depth, fourier, rwf, lift)
     _finish(m, "model")
 
     # -- bc --
@@ -406,7 +407,18 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         _reject_unused(b, "lifting_length", "bc", "when bc.inlet is 'soft'")
         lifting_length = None
     outlet_velocity = _choice(b, "outlet_velocity", "bc", {"soft"})
-    pressure_gauge = _choice(b, "pressure_gauge", "bc", {"soft", "hard"})
+    if formulation == "psi_omega":
+        # Pressure is absent from the psi-omega system, so there is no pressure
+        # ansatz to choose. Recovery is post hoc from a gauge point fixed at the
+        # outlet centreline -- that is the definition of the gauge, not a tunable.
+        _reject_unused(
+            b, "pressure_gauge", "bc",
+            "for the psi_omega formulation, which has no pressure in its system "
+            "(recovery is post hoc from a gauge point at the outlet centreline)",
+        )
+        pressure_gauge = None
+    else:
+        pressure_gauge = _choice(b, "pressure_gauge", "bc", {"soft", "hard"})
     bc = BCConfig(inlet, lifting_length, outlet_velocity, pressure_gauge)
     _finish(b, "bc")
 

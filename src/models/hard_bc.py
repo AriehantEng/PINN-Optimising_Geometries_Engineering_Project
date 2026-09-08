@@ -57,6 +57,7 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 
+from ..geometry import lifts
 from ..geometry.domain import normalise, phi
 
 
@@ -131,3 +132,41 @@ def make_stream_function_field(net_apply, *, length, flux, base, gauge_mode):
         return jnp.array([u, v, p])
 
     return field_fn
+
+
+def make_psi_omega_field(net_apply, *, length, flux, lift):
+    """Build the psi-omega pair for SPEC v2 S4.
+
+        psi   = psi_lift(y*) + phi(y*)^2 N_psi(x*, y*)
+        omega = N_omega(x*, y*)                          -- NO hard constraint
+
+    At the walls phi = 0, so psi = psi_lift there and
+    d_y[phi^2 N] = 2 phi phi' N + phi^2 d_y N = 0. Both wall conditions hold
+    exactly for any parameters, which is what pins each wall to its own
+    streamline constant and hence fixes the flux.
+
+    `omega` is deliberately left free. It is coupled only through
+    r_1 = omega + lap psi, which the network can violate -- that residual is
+    what partially restores the falsifiability the pure-psi form destroys.
+    Hard-constraining omega would remove it (SPEC v2 S4, and see S5).
+    """
+    lift_fn = lifts.get(lift)
+
+    def stream_fn(params, xy):
+        y = xy[1]
+        raw = net_apply(params, normalise(xy, length))
+        psi = lift_fn(y, flux) + phi(y) ** 2 * raw[0]
+        omega = raw[1]
+        return jnp.array([psi, omega])
+
+    return stream_fn
+
+
+def make_velocity_from_stream(stream_fn):
+    """(u, v) = (dpsi/dy, -dpsi/dx) from a psi-omega stream function."""
+
+    def velocity_fn(params, xy):
+        gradient = jax.grad(lambda p, z: stream_fn(p, z)[0], argnums=1)(params, xy)
+        return jnp.array([gradient[1], -gradient[0]])
+
+    return velocity_fn
