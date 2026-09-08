@@ -376,6 +376,40 @@ item 1), with the accompanying warning that SPEC test 4 must then be written to
 check the daughter *split ratio* rather than a total flux the ansatz pins for
 free.
 
+## 6.9 SPEC v2 Block A: the entrance-length failure was a convention error
+
+Case B, Re_h = 10, re-run under S1 (unified Reynolds conventions), S2 (inlet
+amplitude 2/3) and S3 (derived domain length). Same formulation, same budget.
+
+| | SPEC v1 | SPEC v2 A |
+|---|---|---|
+| entrance length | 9.328 vs 2.356, 289% **FAIL** | **1.738 vs 1.883, 7.7% PASS** |
+| flux conservation `D` | 3.62e-2 | 6.66e-3 |
+| outlet profile L2 | 3.53e-2 | 7.89e-3 |
+| mass behaviour | **gained** 6% (2.004 -> 2.132) | loses 1.2% (1.310 -> 1.295) |
+| `L*` | 20 (flat) | 7.82 (derived from Re) |
+
+**The 289% entrance-length miss was a convention mismatch, not a solver error**,
+exactly as S1's diagnosis predicted from the signature: one quantity out by
+roughly an order of magnitude while everything else derived from the same
+solution sat within a few percent. My correlation formula was consistent with
+the (8/3) conversion, but the Case B call site passed a bulk velocity of 1.0
+where the parabolic mean 2/3 was required -- the unsuffixed-Reynolds bug S1
+exists to eliminate. Correcting it moves the target from 2.356 to 1.883.
+
+An earlier result in this document was wrong because of it: the SPEC v1
+stream-function Case B run was reported as passing test 9's entrance length at
+12.9%. Against the corrected correlation the same measurement is 41.2%, a
+FAIL. That claim is retracted.
+
+The sign of the mass error also flipped. Under SPEC v1 the flow CREATED 6% of
+mass; it now loses 2.26% relative to nominal, which is the corner-singularity
+inlet deficit and a physically sensible direction. The profile-to-mass error
+ratio is 1.19, so by S2's own diagnostic the residual profile error is still
+essentially the mass drift -- which is what S4 addresses.
+
+Test 3 and test 9's profile criterion still fail, at 6.66e-3 and 7.89e-3.
+
 ## 7. Carried into Phase 2
 
 1. **Use the stream-function formulation for the bifurcation.** Phase 2's
