@@ -507,6 +507,44 @@ from the run that measures the lift. That is the entire justification for S5's
 matrix and for the degenerate-target probe: without them, the cubic result
 would sit in a table looking like an ordinary, slightly unlucky data point.
 
+## 6.12 Block A gate complete: Case B under both formulations
+
+Re_h = 10, S1/S2/S3 conventions, identical budget and derived domain.
+
+| | velocity-pressure | psi-omega (sinusoidal) |
+|---|---|---|
+| test 9 — entrance length | 1.738 vs 1.883, **7.7% PASS** | 1.766 vs 1.883, **6.2% PASS** |
+| test 3 — flux conservation | 6.657e-3 **FAIL** | 1.166e-15 **PASS**, vacuous |
+| test 9 — outlet profile L2 | 7.893e-3 **FAIL** | 6.392e-3 **FAIL** |
+| inlet flux deficit | 2.26e-2 | 5.8e-15 (none) |
+
+**Both formulations pass the entrance-length criterion.** That criterion was a
+289% failure under SPEC v1 and it is met either way once S1's convention error
+is corrected, so the formulation was never the issue there.
+
+### The S2 diagnostic's hypothesis is refuted
+
+S2 asked for this to be recorded because "it changes what test 9 is measuring".
+The reasoning was: if the profile error and the mass error track each other,
+then the profile error is mass drift wearing an amplitude disguise, and the S4
+re-run collapses test 9's profile failure without S2 doing anything.
+
+The two DID track — ratio 1.19 for velocity-pressure. But driving the mass
+drift to **machine zero** (1.166e-15) moved the profile error only from
+7.893e-3 to 6.392e-3, a factor of **1.2. Not a collapse.**
+
+So the tracking was coincidental, not causal. The residual outlet-profile error
+is an independent error source that survives exact mass conservation, and the
+obvious candidate is the inlet corner singularity: a uniform inlet against hard
+no-slip walls needs `N_u = 1/(1-y^2)` at `x* = 0`, which is unbounded, and both
+Case B runs peak their residuals in the hundreds at those corners.
+
+**Consequence for the SPEC:** test 9's 1e-4 profile criterion cannot be reached
+by fixing conservation, and probably cannot be reached at all while the inlet
+is a discontinuous uniform profile imposed on a smooth network. Either the
+criterion or the inlet condition needs revisiting — that is a decision for the
+SPEC author, and the tolerance has not been touched.
+
 ## 7. Carried into Phase 2
 
 1. **Use the stream-function formulation for the bifurcation.** Phase 2's
