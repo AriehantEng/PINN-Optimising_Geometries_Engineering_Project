@@ -91,7 +91,7 @@ def trained(path, schedule):
     if key not in _TRAINED:
         config = load_experiment(path, schedule)
         result = train(config, verbose=False)
-        metrics = evaluate(config, result.field_fn, result.params)
+        metrics = evaluate(config, result.model, result.params)
         _TRAINED[key] = (config, result, metrics)
     return _TRAINED[key]
 
@@ -134,8 +134,20 @@ def test_1_case_a_relative_l2_error_on_u(schedule):
 
 @pytest.mark.slow
 def test_2_case_a_transverse_velocity_is_discovered_to_be_zero(schedule):
-    """SPEC test 2. The PINN must DISCOVER v* = 0; it is never told."""
+    """SPEC test 2. The PINN must DISCOVER v* = 0; it is never told.
+
+    NOTE (SPEC v2 S5): this assertion is passed by the zero field in every
+    formulation -- see docs/falsifiability-matrix.md, "Degenerate targets". It
+    cannot distinguish a correct solution from a dead one on its own, so it is
+    only meaningful conjoined with test 1, which is asserted here too rather
+    than left to a separate test that might be skipped.
+    """
     _, _, metrics = trained(CASE_A, schedule)
+    u_bound, _ = limit("case_a_u_relative_l2", schedule)
+    assert metrics["u_relative_l2"] <= u_bound, (
+        "test 2 is vacuous unless test 1 also holds: the zero field satisfies "
+        f"max|v*| but has u relative L2 = {metrics['u_relative_l2']:.3e}"
+    )
     bound, label = limit("case_a_v_max_abs", schedule)
     assert metrics["v_max_abs"] <= bound, (
         f"max |v*| is {metrics['v_max_abs']:.3e}, {label} is {bound:.1e}"
@@ -212,7 +224,7 @@ def test_8_same_config_and_seed_reproduce_the_same_error():
     errors = []
     for _ in range(2):
         result = train(config, verbose=False)
-        errors.append(evaluate(config, result.field_fn, result.params)["u_relative_l2"])
+        errors.append(evaluate(config, result.model, result.params)["u_relative_l2"])
 
     difference = abs(errors[0] - errors[1])
     assert difference <= SPEC_TARGETS["determinism_absolute"], (
@@ -232,7 +244,7 @@ def test_different_seeds_give_different_results():
         document["seed"] = seed
         config = parse_config(copy.deepcopy(document))
         result = train(config, verbose=False)
-        errors.append(evaluate(config, result.field_fn, result.params)["u_relative_l2"])
+        errors.append(evaluate(config, result.model, result.params)["u_relative_l2"])
 
     assert errors[0] != errors[1], (
         "changing the seed changed nothing, so the determinism test above is "
