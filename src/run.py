@@ -109,23 +109,59 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
     return directory
 
 
+def _show(metrics: dict, key: str, label: str, suffix: str = "") -> None:
+    """Print one metric if present. Absence is normal, not an error.
+
+    Which metrics exist depends on the formulation and the case: the psi-omega
+    system has no pressure in it, and Case A has no entrance length. Printing
+    unconditionally is how this crashed every psi-omega run after its results
+    were already safely written.
+    """
+    if key in metrics and metrics[key] is not None:
+        print(f"  {label:<21}: {metrics[key]:.3e}{suffix}")
+
+
 def _print_summary(metrics: dict) -> None:
     print("  --- accuracy (relative L2 against the analytic solution) ---")
     if metrics["case"] == "A":
-        print(f"  u relative L2        : {metrics['u_relative_l2']:.3e}   (target <= 1e-5)")
-        print(f"  p relative L2        : {metrics['p_relative_l2']:.3e}")
+        _show(metrics, "u_relative_l2", "u relative L2", "   (target <= 1e-5)")
+        _show(metrics, "p_relative_l2", "p relative L2")
+        _show(metrics, "p_relative_l2_recovered", "p relative L2 (recovered)")
     else:
-        print(f"  outlet profile L2    : {metrics['outlet_profile_relative_l2']:.3e}  (target <= 1e-4)")
-        print(f"  entrance length      : {metrics['entrance_length_measured']:.4f} vs "
-              f"{metrics['entrance_length_correlation']:.4f} correlation "
-              f"({metrics['entrance_length_relative_error'] * 100:.1f}%, target <= 15%)")
-    print(f"  max |v*|             : {metrics['v_max_abs']:.3e}   (target <= 1e-5)")
-    print(f"  flux conservation    : {metrics['flux_conservation_relative_error']:.3e}   (target <= 1e-6)")
-    print(f"  flux vs inlet flux   : {metrics['flux_relative_error_vs_inlet']:.3e}")
+        _show(metrics, "outlet_profile_relative_l2", "outlet profile L2",
+              "  (target <= 1e-4)")
+        if "entrance_length_measured" in metrics:
+            print(f"  {'entrance length':<21}: {metrics['entrance_length_measured']:.4f} vs "
+                  f"{metrics['entrance_length_correlation']:.4f} correlation "
+                  f"({metrics['entrance_length_relative_error'] * 100:.1f}%, target <= 15%)")
+    _show(metrics, "v_max_abs", "max |v*|",
+          "   (target <= 1e-5)" if metrics["case"] == "A"
+          else "   (no target: case B has genuine transverse velocity)")
+    _show(metrics, "flux_conservation_relative_error", "mass drift D",
+          "   (target <= 1e-6)")
+    _show(metrics, "flux_relative_error_vs_inlet", "flux vs inlet flux")
+
     print("  --- diagnostics (NOT accuracy claims) ---")
-    print(f"  final loss           : {metrics.get('diag_loss_after_lbfgs', metrics.get('diag_loss_after_adam')):.3e}")
-    print(f"  max momentum-x resid : {metrics['residual_momentum_x_max']:.3e}")
-    print(f"  wall time            : {metrics['wall_seconds']:.1f} s")
+    final = metrics.get("diag_loss_after_lbfgs", metrics.get("diag_loss_after_adam"))
+    if final is not None:
+        print(f"  {'final loss':<21}: {final:.3e}")
+    _show(metrics, "residual_momentum_x_max", "max momentum-x resid")
+    _show(metrics, "residual_vorticity_max", "max r1 resid")
+    _show(metrics, "residual_vorticity_transport_max", "max r2 resid")
+    _show(metrics, "pressure_path_max_disagreement", "pressure path disagree")
+    # Guard at display time as well as at fit time: metrics.json is a snapshot
+    # written by whatever code produced the run, so a stored verdict may predate
+    # the machine-precision guard in drift.py.
+    drift = metrics.get("flux_conservation_relative_error")
+    if drift is not None and drift < 1e-12:
+        print(f"  {'drift':<21}: D is at machine precision -- this formulation "
+              "conserves mass by")
+        print(f"  {'':<21}  construction, so test 3 is VACUOUS here, not passed")
+    elif metrics.get("diag_drift_verdict"):
+        print(f"  {'drift D_inf':<21}: {metrics['diag_drift_d_infinity']:.3e} "
+              f"+- {metrics['diag_drift_d_infinity_stderr']:.1e}")
+        print(f"  {'drift verdict':<21}: {metrics['diag_drift_verdict']}")
+    print(f"  {'wall time':<21}: {metrics['wall_seconds']:.1f} s")
 
 
 def main(argv=None) -> int:

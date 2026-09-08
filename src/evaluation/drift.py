@@ -59,6 +59,7 @@ class DriftFit:
     points: int
     converged: bool
     message: str
+    at_machine_precision: bool = False
     tail_at_last_point: float = float("nan")
     last_iteration: float = float("nan")
     decay_range: float = float("nan")
@@ -97,6 +98,13 @@ class DriftFit:
         return self.d_infinity <= 2.0 * self.d_infinity_stderr
 
     def verdict(self, tolerance=1e-6) -> str:
+        if self.at_machine_precision:
+            return (
+                "D is at machine precision throughout: this formulation "
+                "conserves mass by construction, so there is no drift to "
+                "characterise and no convergence claim to make. Test 3 is "
+                "VACUOUS here (see docs/falsifiability-matrix.md), not passed"
+            )
         if not self.converged:
             return "fit did not converge; too few points or too little variation"
         if not self.identifiable:
@@ -132,6 +140,20 @@ def fit_drift(iterations, drifts) -> DriftFit:
 
     iterations = np.asarray(iterations, dtype=np.float64)
     drifts = np.asarray(drifts, dtype=np.float64)
+
+    # A formulation that conserves mass by construction traces D at the
+    # rounding floor. Fitting D(n) = D_inf + a n^-b to that is fitting noise,
+    # and it produced the confident nonsense "D_inf = 1.0e-10, more iterations
+    # should reach the target" for a run whose D was already exactly zero.
+    finite = drifts[np.isfinite(drifts)]
+    if finite.size and float(np.max(finite)) < 1e-12:
+        return DriftFit(
+            d_infinity=float(np.max(finite)), amplitude=0.0, exponent=float("nan"),
+            d_infinity_stderr=0.0, points=int(finite.size), converged=False,
+            message="D is at machine precision; nothing to fit",
+            at_machine_precision=True,
+        )
+
     keep = (iterations > 0) & np.isfinite(drifts) & (drifts > 0)
     iterations, drifts = iterations[keep], drifts[keep]
 

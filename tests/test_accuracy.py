@@ -309,3 +309,26 @@ def test_9_case_b_conserves_mass(schedule):
         f"flux varies by {metrics['flux_conservation_relative_error']:.3e} "
         f"across stations, {label} is {bound:.1e}"
     )
+
+
+@pytest.mark.parametrize("run_name", [
+    "caseA_re10", "caseA_re10_psiomega_sinusoidal", "caseB_re10",
+])
+def test_run_summary_prints_for_every_formulation(run_name, capsys):
+    """Regression: the summary printer crashed on every psi-omega run.
+
+    It printed `p_relative_l2` unconditionally, which does not exist for a
+    formulation with no pressure in its system, so `python -m src.run` exited
+    non-zero AFTER writing all its results correctly. Skipped when the run
+    directory is absent, since runs/ is git-ignored.
+    """
+    import json
+    from pathlib import Path
+
+    from src.run import _print_summary
+
+    path = Path("runs") / run_name / "metrics.json"
+    if not path.is_file():
+        pytest.skip(f"{path} not present (runs/ is git-ignored)")
+    _print_summary(json.loads(path.read_text()))
+    assert capsys.readouterr().out.strip()

@@ -87,3 +87,27 @@ def test_s7_fit_reports_failure_rather_than_guessing():
     assert not fit.converged
     assert isinstance(fit, DriftFit)
     assert "fewer than 5" in fit.message
+
+
+def test_s7_fit_declines_when_d_is_at_machine_precision():
+    """A formulation that conserves mass by construction has nothing to fit.
+
+    The psi-omega system traces D at ~1e-16, and fitting D(n) = D_inf + a n^-b
+    to that produced the confident nonsense "D_inf = 1.0e-10, more iterations
+    should reach the target" for a run whose D was already exactly zero.
+    """
+    n = np.arange(1, 6001, 150)
+    fit = fit_drift(n, np.full(n.size, 8.3e-16))
+    assert fit.at_machine_precision
+    assert not fit.converged
+    assert "machine precision" in fit.verdict()
+    assert "VACUOUS" in fit.verdict()
+    assert "more iterations" not in fit.verdict()
+
+
+def test_s7_fit_still_engages_just_above_machine_precision():
+    """Negative control: the guard must not swallow a real small drift."""
+    n = np.arange(50, 6001, 50)
+    fit = fit_drift(n, 2e-7 + 0.02 * n**-1.1)
+    assert not fit.at_machine_precision
+    assert fit.converged
