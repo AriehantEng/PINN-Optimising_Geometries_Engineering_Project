@@ -23,6 +23,8 @@ from ..geometry.sampling import sample_all
 from ..models.build import build_model, count_parameters
 from .losses import make_loss_terms
 from .optimisers import adam_schedule, make_adam, run_lbfgs
+from ..evaluation.drift import fit_drift, mass_drift
+from ..evaluation.metrics import cross_channel_flux
 from .weights import initial_weights, make_grad_norm_update, grad_norm_weights, total_loss
 
 #: Target number of logged rows across the Adam phase. Logging cadence is
@@ -31,12 +33,27 @@ from .weights import initial_weights, make_grad_norm_update, grad_norm_weights, 
 TARGET_LOG_ROWS = 200
 
 
+def _make_drift_probe(config, model):
+    """D on the fixed evaluation stations, as a function of parameters alone."""
+    length = config.domain.length
+    stations = np.linspace(0.05 * length, 0.95 * length, 10)
+
+    def probe(params):
+        try:
+            return mass_drift(cross_channel_flux(model.field, params, stations, 64))
+        except (ValueError, FloatingPointError):
+            return float("nan")
+
+    return probe
+
+
 @dataclass
 class TrainingResult:
     params: Any
     model: Any
     history: list = field(default_factory=list)
     lbfgs_history: list = field(default_factory=list)
+    drift_trace: list = field(default_factory=list)
     diagnostics: dict = field(default_factory=dict)
 
 
@@ -133,6 +150,7 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
 
     # -- L-BFGS on FROZEN points -------------------------------------------- #
     lbfgs_history = []
+    drift_trace = []
     if config.training.lbfgs.enabled:
         frozen = points
         loss_before = float(weighted_loss(params, frozen, weights))
@@ -140,12 +158,18 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         def objective(p):
             return weighted_loss(p, frozen, weights)
 
+        # SPEC v2 S7: trace the mass drift D against L-BFGS iteration. Measured
+        # on the FIXED evaluation stations, never on the training collocation
+        # points (T-S7.1) -- the frozen set above is the training set.
+        drift_fn = _make_drift_probe(config, model)
+
         started = time.time()
         result = run_lbfgs(
             objective,
             params,
             config.training.lbfgs.max_iterations,
             config.training.lbfgs.gtol,
+            trace_fn=drift_fn,
         )
         lbfgs_seconds = time.time() - started
 
@@ -170,6 +194,23 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
                 "message": result.message,
             }
         )
+        drift_trace = result.trace
+        if drift_trace:
+            fit = fit_drift(
+                [row["iteration"] for row in drift_trace],
+                [row["value"] for row in drift_trace],
+            )
+            diagnostics.update(
+                {
+                    "drift_d_infinity": fit.d_infinity,
+                    "drift_d_infinity_stderr": fit.d_infinity_stderr,
+                    "drift_exponent": fit.exponent,
+                    "drift_fit_points": fit.points,
+                    "drift_fit_converged": fit.converged,
+                    "drift_verdict": fit.verdict(),
+                }
+            )
+
         diagnostics.update(
             {
                 "lbfgs_seconds": lbfgs_seconds,
@@ -192,6 +233,7 @@ def train(config: Config, *, verbose: bool = True) -> TrainingResult:
         diagnostics["loss_after_adam"] = float(weighted_loss(params, points, weights))
 
     return TrainingResult(
+        drift_trace=drift_trace if config.training.lbfgs.enabled else [],
         params=params,
         model=model,
         history=history,

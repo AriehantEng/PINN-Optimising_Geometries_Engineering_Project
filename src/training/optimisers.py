@@ -55,13 +55,22 @@ class LBFGSResult(NamedTuple):
     function_evaluations: int
     status: int
     message: str
+    trace: list = []
 
 
-def run_lbfgs(loss_fn: Callable, params, max_iterations: int, gtol: float):
+def run_lbfgs(
+    loss_fn: Callable, params, max_iterations: int, gtol: float,
+    *, trace_fn=None, trace_every: int | None = None,
+):
     """Minimise `loss_fn(params)` with SciPy L-BFGS-B on a flat float64 vector.
 
     `loss_fn` must be a pure function of the parameters alone; bind the
     collocation points before calling.
+
+    `trace_fn(params) -> float` is sampled every `trace_every` iterations and
+    recorded against the iteration count. SPEC v2 S7 uses this to trace the
+    mass drift D against L-BFGS iteration and fit D(n) = D_inf + a n^-b, which
+    is what discriminates formulation bias from under-convergence.
     """
     flat_initial, unflatten = ravel_pytree(params)
 
@@ -78,11 +87,28 @@ def run_lbfgs(loss_fn: Callable, params, max_iterations: int, gtol: float):
         # SciPy needs contiguous float64 numpy arrays, not JAX arrays.
         return float(value), np.asarray(flat_grad, dtype=np.float64)
 
+    trace = []
+    if trace_fn is not None:
+        if trace_every is None:
+            trace_every = max(1, max_iterations // 40)
+        state = {"iteration": 0}
+
+        def callback(flat):
+            state["iteration"] += 1
+            n = state["iteration"]
+            if n % trace_every == 0 or n == 1:
+                trace.append(
+                    {"iteration": n, "value": float(trace_fn(unflatten(jnp.asarray(flat))))}
+                )
+    else:
+        callback = None
+
     result = minimize(
         objective,
         np.asarray(flat_initial, dtype=np.float64),
         jac=True,
         method="L-BFGS-B",
+        callback=callback,
         options={
             "maxiter": max_iterations,
             "maxfun": max_iterations * 2,
@@ -103,4 +129,5 @@ def run_lbfgs(loss_fn: Callable, params, max_iterations: int, gtol: float):
         function_evaluations=int(evaluations["count"]),
         status=int(result.status),
         message=str(result.message),
+        trace=trace,
     )

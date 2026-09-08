@@ -18,6 +18,7 @@ from ..physics.conventions import entrance_length_over_h
 from ..physics.derivatives import batched_field_derivatives
 from ..physics import residuals, streamfunction
 from ..physics.derivatives import batched_stream_derivatives
+from .drift import mass_drift
 from .metrics import (
     centreline_velocity,
     cross_channel_flux,
@@ -73,7 +74,12 @@ def _flux_metrics(config, model, params):
         "flux_stations": stations.tolist(),
         "flux_values": np.asarray(fluxes).tolist(),
         "flux_mean": float(np.mean(fluxes)),
-        "flux_conservation_relative_error": flux_conservation_error(fluxes),
+        # SPEC v2 S7 defines D against the FIRST station, so a monotonic
+        # downstream drift shows at full size rather than half of it. The
+        # spread-about-the-mean figure is kept alongside for comparison with
+        # the SPEC v1 numbers.
+        "flux_conservation_relative_error": mass_drift(fluxes),
+        "flux_spread_about_mean": flux_conservation_error(fluxes),
         "flux_relative_error_vs_inlet": float(
             abs(np.mean(fluxes) - config.inlet_flux) / config.inlet_flux
         ),

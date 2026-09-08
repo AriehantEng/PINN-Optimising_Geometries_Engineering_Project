@@ -83,6 +83,8 @@ def execute(config_path: str, out: str | None = None, verbose: bool = True) -> P
     shutil.copyfile(config_path, directory / "config.yaml")
     save_parameters(directory / "params.npz", result.params)
     write_history(directory / "history.csv", result.history)
+    # T-S7.2: the D(n) trace is written for every run.
+    write_history(directory / "drift_trace.csv", result.drift_trace)
     with (directory / "lbfgs.json").open("w", encoding="utf-8") as handle:
         json.dump(result.lbfgs_history, handle, indent=2)
     with (directory / "metrics.json").open("w", encoding="utf-8") as handle:
