@@ -410,6 +410,61 @@ essentially the mass drift -- which is what S4 addresses.
 
 Test 3 and test 9's profile criterion still fail, at 6.66e-3 and 7.89e-3.
 
+## 6.10 SPEC v2 Blocks B and C: Case A under both formulations
+
+Re_h = 10, identical architecture, sampling, budget, derived domain (L* = 7.82)
+and evaluation grid. The psi-omega column uses the SINUSOIDAL lift, so the
+network is not handed the answer.
+
+| | velocity-pressure | psi-omega (sinusoidal) |
+|---|---|---|
+| test 1 — `u` relative L2 | 8.638e-7 **PASS** | 7.376e-7 **PASS** |
+| test 2 — `max\|v*\|` | 1.709e-6 **PASS** | 1.436e-6 **PASS** |
+| test 3 — mass drift `D` | 1.622e-6 **FAIL** | 8.327e-16 **PASS**, vacuous |
+| `p` relative L2 | 1.429e-6 | recovered post hoc |
+| wall time | 1589 s | 1684 s |
+
+Both formulations now beat not just the 1e-5 target but the SPEC's 1e-6 stretch
+target on test 1.
+
+### Two earlier claims in this document do not survive SPEC v2
+
+**"The stream function wins by roughly 8x on every genuine accuracy metric."**
+Retracted. Under the corrected conventions and the derived domain the two
+formulations are within 17% of each other on test 1 (7.38e-7 against 8.64e-7).
+The v1 gap was inflated by a domain 2.6x longer than S3 requires and by the
+convention error in S1, and it compared a different, pure-psi formulation.
+
+**"The stream function costs 2.7x in wall time."** Retracted, and the reason is
+a design instruction in S4 that I had not followed. My v1 stream function
+substituted `omega = -lap psi` and solved a fourth-order equation in psi, so
+`u_xx` was a third derivative of the network. S4's coupled second-order system
+in `(psi, omega)` avoids that entirely: **1684 s against 1589 s, 6% slower, not
+170%.** The cost argument against the stream function was an artefact of my
+formulation, not a property of stream functions.
+
+What survives is narrower and cleaner: at equal accuracy and equal cost, the
+psi-omega system conserves mass exactly, and the price is that test 3 stops
+being able to fail.
+
+### Block C: the test 3 miss is under-convergence, not formulation bias
+
+Fitting `D(n) = D_inf + a n^-b` to the 41-point L-BFGS trace:
+
+```
+D_inf    = 1.466e-06  +-  7.917e-06
+exponent = 0.424
+D(n)     : 2.73e-4 (n=1) -> 4.56e-6 (1800) -> 1.78e-6 (5400) -> 1.62e-6 (6000)
+```
+
+The verdict is "consistent with zero", i.e. under-convergence. **That statement
+is weaker than it looks and should not be quoted without its error bar**: the
+standard error is 5.4x the estimate, so the same trace is equally consistent
+with a real bias up to about 1.7e-5 at two sigma. The trace is still descending
+monotonically at the iteration cap, which is the qualitative support for the
+under-convergence reading, but the fit alone cannot settle it. The
+`caseA_re10_extended` run at 5x the budget is the discriminator S7 prescribes.
+
 ## 7. Carried into Phase 2
 
 1. **Use the stream-function formulation for the bifurcation.** Phase 2's
