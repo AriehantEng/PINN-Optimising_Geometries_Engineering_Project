@@ -247,7 +247,29 @@ def check_physics():
     print("  OK")
 
 
-def main():
+def in_notebook():
+    """True inside Jupyter, Colab, or any IPython kernel."""
+    return "ipykernel" in sys.modules or "google.colab" in sys.modules
+
+
+def main(argv=None):
+    """Entry point.
+
+    `argv` defaults to the command line, EXCEPT in a notebook. Colab and
+    Jupyter inject their own arguments (-f /path/to/kernel.json) into sys.argv,
+    which argparse rejects with "unrecognized arguments" -- so pasting this
+    file into a Colab cell and running it would fail at the first line of
+    main(). In a notebook the command line is ignored and the defaults are
+    used; pass options explicitly instead:
+
+        main()                # quick demo
+        main(["--full"])      # full accuracy schedule
+        main(["--check"])     # verify the physics only
+        main(["--extract"])   # write readable source files and stop
+    """
+    if argv is None:
+        argv = [] if in_notebook() else sys.argv[1:]
+
     parser = argparse.ArgumentParser(description="PINN for plane Poiseuille flow")
     parser.add_argument("--full", action="store_true",
                         help="full accuracy schedule (~30 min) instead of the quick demo")
@@ -256,7 +278,7 @@ def main():
     parser.add_argument("--extract", action="store_true",
                         help="write the source files to ./src/ and exit, so they "
                              "can be read as ordinary Python")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     count = unpack()
     if args.extract:
@@ -357,7 +379,11 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    _exit_code = main()
+    # In a notebook, `raise SystemExit` prints an ugly traceback and can look
+    # like a crash, so only use it from a real command line.
+    if not in_notebook() and _exit_code:
+        raise SystemExit(_exit_code)
 '''
 
 
