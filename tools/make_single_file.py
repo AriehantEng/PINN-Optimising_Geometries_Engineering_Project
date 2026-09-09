@@ -309,6 +309,7 @@ def main(argv=None):
     from src.evaluation.accuracy import evaluate
     from src.physics import analytic
     from src.predict import TrainedModel
+    from src.report import format_gate, gate_results
 
     config = parse_config(yaml.safe_load(build_config(args.full)))
     print(f"\\n--- TRAINING: {config.name} ---")
@@ -334,6 +335,11 @@ def main(argv=None):
     row("mass conservation drift D", "flux_conservation_relative_error", 1e-6)
     if "p_relative_l2" in metrics:
         print(f"  {'relative L2 error on p':<34}{metrics['p_relative_l2']:.4e}")
+
+    # Decided here, reported at the very end so it is the last thing on screen.
+    # Only --full is gated: the quick schedule is not meant to reach the
+    # targets and says so itself.
+    gate_failures, gate_vacuous = gate_results(metrics) if args.full else ([], [])
 
     print("\\n  DIAGNOSTICS (not accuracy claims)")
     final = result.diagnostics.get("loss_after_lbfgs",
@@ -375,6 +381,18 @@ def main(argv=None):
         y, u, v = solution.profile(x=3.0)      # a cross-channel profile
         x, y, u, v = solution.grid(201, 101)   # the whole field
     """).strip())
+
+    report = format_gate(gate_failures, gate_vacuous)
+    if report:
+        print(f"\\n{report}")
+    if gate_failures:
+        print("\\n  A FAIL above is a real miss against the SPEC targets, so this "
+              "exits non-zero.")
+        print("  For the drift target specifically, raise "
+              "training.lbfgs.max_iterations: it is")
+        print("  under-convergence, not a formulation bias (see "
+              "docs/phase1-findings.md).")
+        return 1
     return 0
 
 

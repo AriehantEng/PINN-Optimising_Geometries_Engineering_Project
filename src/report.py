@@ -33,6 +33,50 @@ TARGETS = {
     "entrance_length_relative_error": ("test 9  entrance length", 0.15, "<=", "B"),
 }
 
+#: Below this, D sits at the rounding floor: the formulation conserves mass by
+#: construction, so test 3 is VACUOUS rather than passed. It is not a failure
+#: either -- the test simply provides no evidence about that run.
+VACUOUS_DRIFT_FLOOR = 1e-12
+
+
+def gate_results(metrics):
+    """Return (failures, vacuous) among the SPEC targets applicable to a run.
+
+    Each entry is (label, value, target). A run whose `failures` is non-empty
+    has missed a SPEC section 5 target and must not exit zero: the targets are
+    the whole point of the benchmark, and a green exit code on a printed FAIL
+    means no CI job, queue script or reviewer can ever catch a regression.
+    """
+    failures, vacuous = [], []
+    for key, (label, target, _, only_case) in TARGETS.items():
+        if key not in metrics:
+            continue
+        if only_case is not None and metrics.get("case") != only_case:
+            continue
+        value = metrics[key]
+        if (key == "flux_conservation_relative_error"
+                and value < VACUOUS_DRIFT_FLOOR):
+            vacuous.append((label, value, target))
+        elif value > target:
+            failures.append((label, value, target))
+    return failures, vacuous
+
+
+def format_gate(failures, vacuous) -> str:
+    """One block naming every vacuous and failed target, or a clean line."""
+    lines = []
+    for label, value, _ in vacuous:
+        lines.append(
+            f"  {label}: D = {value:.3e} is at the rounding floor -- this "
+            "formulation conserves mass by construction, so the test is "
+            "VACUOUS here, not passed"
+        )
+    if failures:
+        lines.append("GATE FAILED -- SPEC section 5 targets not met:")
+        for label, value, target in failures:
+            lines.append(f"  {label}: {value:.4e} exceeds the {target:.0e} target")
+    return "\n".join(lines)
+
 
 def load_metrics(directory: Path) -> dict:
     path = directory / "metrics.json"

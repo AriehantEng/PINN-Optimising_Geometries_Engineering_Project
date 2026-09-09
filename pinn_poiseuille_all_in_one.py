@@ -3955,6 +3955,50 @@ TARGETS = {
     "entrance_length_relative_error": ("test 9  entrance length", 0.15, "<=", "B"),
 }
 
+#: Below this, D sits at the rounding floor: the formulation conserves mass by
+#: construction, so test 3 is VACUOUS rather than passed. It is not a failure
+#: either -- the test simply provides no evidence about that run.
+VACUOUS_DRIFT_FLOOR = 1e-12
+
+
+def gate_results(metrics):
+    """Return (failures, vacuous) among the SPEC targets applicable to a run.
+
+    Each entry is (label, value, target). A run whose `failures` is non-empty
+    has missed a SPEC section 5 target and must not exit zero: the targets are
+    the whole point of the benchmark, and a green exit code on a printed FAIL
+    means no CI job, queue script or reviewer can ever catch a regression.
+    """
+    failures, vacuous = [], []
+    for key, (label, target, _, only_case) in TARGETS.items():
+        if key not in metrics:
+            continue
+        if only_case is not None and metrics.get("case") != only_case:
+            continue
+        value = metrics[key]
+        if (key == "flux_conservation_relative_error"
+                and value < VACUOUS_DRIFT_FLOOR):
+            vacuous.append((label, value, target))
+        elif value > target:
+            failures.append((label, value, target))
+    return failures, vacuous
+
+
+def format_gate(failures, vacuous) -> str:
+    """One block naming every vacuous and failed target, or a clean line."""
+    lines = []
+    for label, value, _ in vacuous:
+        lines.append(
+            f"  {label}: D = {value:.3e} is at the rounding floor -- this "
+            "formulation conserves mass by construction, so the test is "
+            "VACUOUS here, not passed"
+        )
+    if failures:
+        lines.append("GATE FAILED -- SPEC section 5 targets not met:")
+        for label, value, target in failures:
+            lines.append(f"  {label}: {value:.4e} exceeds the {target:.0e} target")
+    return "\n".join(lines)
+
 
 def load_metrics(directory: Path) -> dict:
     path = directory / "metrics.json"
@@ -4355,9 +4399,23 @@ def main(argv=None) -> int:
     parser.add_argument("--config", required=True, help="path to an experiments/*.yaml")
     parser.add_argument("--out", default=None, help="override the run directory")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--no-gate", action="store_true",
+        help="exit 0 even when a SPEC target is missed (artifacts are written "
+             "either way; use only when deliberately exploring a failing config)",
+    )
     args = parser.parse_args(argv)
-    execute(args.config, args.out, verbose=not args.quiet)
-    return 0
+    directory = execute(args.config, args.out, verbose=not args.quiet)
+
+    # The artifacts are already on disk. Only the exit code is decided here, so
+    # a failing run still leaves everything needed to diagnose it.
+    from .report import format_gate, gate_results, load_metrics
+
+    failures, vacuous = gate_results(load_metrics(directory))
+    report = format_gate(failures, vacuous)
+    if report:
+        print(f"\n{report}")
+    return 1 if failures and not args.no_gate else 0
 
 
 if __name__ == "__main__":
@@ -5278,6 +5336,7 @@ def main(argv=None):
     from src.evaluation.accuracy import evaluate
     from src.physics import analytic
     from src.predict import TrainedModel
+    from src.report import format_gate, gate_results
 
     config = parse_config(yaml.safe_load(build_config(args.full)))
     print(f"\n--- TRAINING: {config.name} ---")
@@ -5303,6 +5362,11 @@ def main(argv=None):
     row("mass conservation drift D", "flux_conservation_relative_error", 1e-6)
     if "p_relative_l2" in metrics:
         print(f"  {'relative L2 error on p':<34}{metrics['p_relative_l2']:.4e}")
+
+    # Decided here, reported at the very end so it is the last thing on screen.
+    # Only --full is gated: the quick schedule is not meant to reach the
+    # targets and says so itself.
+    gate_failures, gate_vacuous = gate_results(metrics) if args.full else ([], [])
 
     print("\n  DIAGNOSTICS (not accuracy claims)")
     final = result.diagnostics.get("loss_after_lbfgs",
@@ -5344,6 +5408,18 @@ def main(argv=None):
         y, u, v = solution.profile(x=3.0)      # a cross-channel profile
         x, y, u, v = solution.grid(201, 101)   # the whole field
     """).strip())
+
+    report = format_gate(gate_failures, gate_vacuous)
+    if report:
+        print(f"\n{report}")
+    if gate_failures:
+        print("\n  A FAIL above is a real miss against the SPEC targets, so this "
+              "exits non-zero.")
+        print("  For the drift target specifically, raise "
+              "training.lbfgs.max_iterations: it is")
+        print("  under-convergence, not a formulation bias (see "
+              "docs/phase1-findings.md).")
+        return 1
     return 0
 
 

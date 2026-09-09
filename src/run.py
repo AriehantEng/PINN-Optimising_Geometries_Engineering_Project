@@ -170,9 +170,23 @@ def main(argv=None) -> int:
     parser.add_argument("--config", required=True, help="path to an experiments/*.yaml")
     parser.add_argument("--out", default=None, help="override the run directory")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--no-gate", action="store_true",
+        help="exit 0 even when a SPEC target is missed (artifacts are written "
+             "either way; use only when deliberately exploring a failing config)",
+    )
     args = parser.parse_args(argv)
-    execute(args.config, args.out, verbose=not args.quiet)
-    return 0
+    directory = execute(args.config, args.out, verbose=not args.quiet)
+
+    # The artifacts are already on disk. Only the exit code is decided here, so
+    # a failing run still leaves everything needed to diagnose it.
+    from .report import format_gate, gate_results, load_metrics
+
+    failures, vacuous = gate_results(load_metrics(directory))
+    report = format_gate(failures, vacuous)
+    if report:
+        print(f"\n{report}")
+    return 1 if failures and not args.no_gate else 0
 
 
 if __name__ == "__main__":

@@ -332,3 +332,68 @@ def test_run_summary_prints_for_every_formulation(run_name, capsys):
         pytest.skip(f"{path} not present (runs/ is git-ignored)")
     _print_summary(json.loads(path.read_text()))
     assert capsys.readouterr().out.strip()
+
+
+def test_a_missed_spec_target_is_a_non_zero_exit():
+    """A printed FAIL must not exit zero.
+
+    The `--full` demo printed `mass conservation drift D 1.4263e-06 target <=
+    1e-06 FAIL` and returned 0. A green exit code on a printed failure means no
+    CI job, queue script or reviewer can catch a regression against the SPEC
+    section 5 targets, which are the entire point of the benchmark.
+    """
+    from src.report import format_gate, gate_results
+
+    failures, vacuous = gate_results({
+        "case": "A",
+        "u_relative_l2": 1.0628e-06,
+        "v_max_abs": 1.4624e-06,
+        "flux_conservation_relative_error": 1.4263e-06,
+    })
+    assert not vacuous
+    assert [label for label, _, _ in failures] == ["test 3  flux conservation"]
+    assert "GATE FAILED" in format_gate(failures, vacuous)
+
+
+def test_a_run_meeting_every_target_has_no_gate_failure():
+    """Negative control: the extended run's numbers must pass cleanly."""
+    from src.report import format_gate, gate_results
+
+    failures, vacuous = gate_results({
+        "case": "A",
+        "u_relative_l2": 1.8369e-07,
+        "v_max_abs": 3.8299e-07,
+        "flux_conservation_relative_error": 1.8849e-07,
+    })
+    assert failures == [] and vacuous == []
+    assert format_gate(failures, vacuous) == ""
+
+
+def test_mass_conservation_at_the_rounding_floor_is_vacuous_not_passed():
+    """psi-omega conserves mass by construction, so test 3 proves nothing.
+
+    It is not a failure either -- the run must still exit zero -- but it must
+    never be counted as evidence that the formulation conserves mass.
+    """
+    from src.report import format_gate, gate_results
+
+    failures, vacuous = gate_results({
+        "case": "A",
+        "u_relative_l2": 1e-06,
+        "flux_conservation_relative_error": 9.99e-16,
+    })
+    assert failures == []
+    assert [label for label, _, _ in vacuous] == ["test 3  flux conservation"]
+    assert "VACUOUS" in format_gate(failures, vacuous)
+
+
+def test_case_b_is_not_gated_on_case_a_only_targets():
+    """Developing flow has a genuine non-zero v*; gating it would be wrong."""
+    from src.report import gate_results
+
+    failures, _ = gate_results({
+        "case": "B",
+        "v_max_abs": 0.1889,
+        "flux_conservation_relative_error": 1e-07,
+    })
+    assert failures == []
