@@ -85,21 +85,40 @@ def divergence(u_x, v_y):
 # --------------------------------------------------------------------------- #
 
 
-def _scaling_coefficients(reynolds: float, pressure_scaling: PressureScaling):
-    """(convective coefficient, viscous coefficient) for the chosen scaling."""
+def _scaling_coefficients(
+    reynolds: float,
+    pressure_scaling: PressureScaling,
+    convective_coefficient: float = 1.0,
+):
+    """(convective coefficient, viscous coefficient) for the chosen scaling.
+
+    `convective_coefficient` scales u.grad(u): 1.0 gives Navier-Stokes, 0.0
+    gives Stokes. It defaults to 1.0 here so the pure-physics helpers stay
+    callable on their own (the MMS and autodiff tests use them directly), but
+    every run takes it from `physics.convective_coefficient`, which is a
+    REQUIRED config key with no default -- a run's equations must be readable
+    off its config.
+    """
     if pressure_scaling == "inertial":
-        return 1.0, 1.0 / reynolds
+        return convective_coefficient * 1.0, 1.0 / reynolds
     if pressure_scaling == "viscous":
-        return reynolds, 1.0
+        return convective_coefficient * reynolds, 1.0
     raise ValueError(
         f"unknown pressure_scaling {pressure_scaling!r}; "
         "expected 'inertial' or 'viscous'"
     )
 
 
-def momentum_x(d: Derivatives, reynolds: float, pressure_scaling: PressureScaling):
+def momentum_x(
+    d: Derivatives,
+    reynolds: float,
+    pressure_scaling: PressureScaling,
+    convective_coefficient: float = 1.0,
+):
     """x-momentum residual, unweighted."""
-    a_conv, a_visc = _scaling_coefficients(reynolds, pressure_scaling)
+    a_conv, a_visc = _scaling_coefficients(
+        reynolds, pressure_scaling, convective_coefficient
+    )
     return (
         a_conv * convective_x(d.u, d.v, d.u_x, d.u_y)
         + d.p_x
@@ -107,9 +126,16 @@ def momentum_x(d: Derivatives, reynolds: float, pressure_scaling: PressureScalin
     )
 
 
-def momentum_y(d: Derivatives, reynolds: float, pressure_scaling: PressureScaling):
+def momentum_y(
+    d: Derivatives,
+    reynolds: float,
+    pressure_scaling: PressureScaling,
+    convective_coefficient: float = 1.0,
+):
     """y-momentum residual, unweighted."""
-    a_conv, a_visc = _scaling_coefficients(reynolds, pressure_scaling)
+    a_conv, a_visc = _scaling_coefficients(
+        reynolds, pressure_scaling, convective_coefficient
+    )
     return (
         a_conv * convective_y(d.u, d.v, d.v_x, d.v_y)
         + d.p_y
@@ -122,10 +148,15 @@ def continuity(d: Derivatives):
     return divergence(d.u_x, d.v_y)
 
 
-def navier_stokes(d: Derivatives, reynolds: float, pressure_scaling: PressureScaling):
+def navier_stokes(
+    d: Derivatives,
+    reynolds: float,
+    pressure_scaling: PressureScaling,
+    convective_coefficient: float = 1.0,
+):
     """All three residuals as a tuple (R_x, R_y, R_c), unweighted."""
     return (
-        momentum_x(d, reynolds, pressure_scaling),
-        momentum_y(d, reynolds, pressure_scaling),
+        momentum_x(d, reynolds, pressure_scaling, convective_coefficient),
+        momentum_y(d, reynolds, pressure_scaling, convective_coefficient),
         continuity(d),
     )

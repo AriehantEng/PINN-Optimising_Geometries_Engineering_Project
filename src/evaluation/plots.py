@@ -34,31 +34,70 @@ def _grid_fields(config: Config, model, params):
 
 
 def plot_velocity_profiles(config, model, params, path: Path):
-    """Predicted vs analytic profile at several stations."""
+    """Predicted vs analytic profile at several stations.
+
+    For Case A the agreement is around 1e-7, which means an overlay plot shows
+    six pixel-identical curves: it proves the match and displays nothing. So
+    Case A gets a middle panel carrying the SIGNED DIFFERENCE against the
+    analytic profile on its own axis, which is the panel that actually shows
+    how close the two are. The overlay keeps the predicted profile as sparse
+    markers over a solid analytic line for the same reason -- coincidence has
+    to be visible rather than hidden by overplotting.
+    """
     x, y, u, _, _, _ = _grid_fields(config, model, params)
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
+    case_a = config.case == "A"
+    columns = 3 if case_a else 2
+    fig, axes = plt.subplots(1, columns, figsize=(5.5 * columns, 4.2))
 
     stations = np.linspace(0, len(x) - 1, 5).astype(int)
-    for index in stations:
-        axes[0].plot(u[index], y, label=f"x* = {x[index]:.1f}")
-    if config.case == "A":
+    if case_a:
         reference = analytic.u_nd(y)
         label = "analytic  1 - y*²"
     else:
         reference = analytic.developed_profile_nd(y, config.inlet_flux)
         label = f"developed (flux {config.inlet_flux:.3f})"
-    axes[0].plot(reference, y, "k--", linewidth=2, label=label)
+
+    # Analytic first and solid, prediction over it as markers.
+    axes[0].plot(reference, y, "k-", linewidth=2.0, label=label, zorder=1)
+    every = max(1, len(y) // 24)
+    for order, index in enumerate(stations):
+        axes[0].plot(u[index][::every], y[::every], marker="o", linestyle="none",
+                     markersize=4.0, markerfacecolor="none",
+                     label=f"PINN  x* = {x[index]:.1f}", zorder=2 + order)
     axes[0].set_xlabel("u*")
     axes[0].set_ylabel("y*")
     axes[0].set_title(f"{config.name}: streamwise profiles")
     axes[0].legend(fontsize=8)
     axes[0].grid(alpha=0.3)
 
-    if config.case == "A":
-        error = np.abs(u - analytic.u_nd(y)[None, :])
-        image = axes[1].pcolormesh(x, y, error.T, shading="auto")
-        fig.colorbar(image, ax=axes[1], label="|u* - u*_exact|")
-        axes[1].set_title("pointwise error in u*")
+    if case_a:
+        exact = analytic.u_nd(y)
+        for index in stations:
+            axes[1].plot(u[index] - exact, y, linewidth=1.2,
+                         label=f"x* = {x[index]:.1f}")
+        axes[1].axvline(0.0, color="k", linewidth=0.8)
+        axes[1].set_xlabel("u* - u*_exact")
+        axes[1].set_ylabel("y*")
+        axes[1].set_title("difference from the analytic profile")
+        axes[1].legend(fontsize=8)
+        axes[1].grid(alpha=0.3)
+        axes[1].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+
+        error = np.abs(u - exact[None, :])
+        relative_l2 = float(
+            np.sqrt(np.sum(error**2) / np.sum(np.broadcast_to(exact, u.shape) ** 2))
+        )
+        axes[1].annotate(
+            f"relative L2 = {relative_l2:.3e}\nmax |error| = {error.max():.3e}",
+            xy=(0.03, 0.03), xycoords="axes fraction", fontsize=8,
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.85},
+        )
+
+        image = axes[2].pcolormesh(x, y, error.T, shading="auto")
+        fig.colorbar(image, ax=axes[2], label="|u* - u*_exact|")
+        axes[2].set_title("pointwise error in u*")
+        axes[2].set_xlabel("x*")
+        axes[2].grid(alpha=0.3)
     else:
         axes[1].plot(x, u[:, u.shape[1] // 2])
         axes[1].axhline(0.75 * config.inlet_flux, color="k", linestyle="--",
@@ -66,8 +105,8 @@ def plot_velocity_profiles(config, model, params, path: Path):
         axes[1].set_ylabel("u*(x*, 0)")
         axes[1].set_title("centreline development")
         axes[1].legend(fontsize=8)
-    axes[1].set_xlabel("x*")
-    axes[1].grid(alpha=0.3)
+        axes[1].set_xlabel("x*")
+        axes[1].grid(alpha=0.3)
 
     fig.tight_layout()
     fig.savefig(path, dpi=140)
@@ -95,7 +134,10 @@ def plot_residual_map(config, model, params, path: Path):
         values_and_names = list(
             zip(
                 residuals.navier_stokes(
-                    d, config.physics.reynolds, config.physics.pressure_scaling
+                    d,
+                    config.physics.reynolds,
+                    config.physics.pressure_scaling,
+                    config.physics.convective_coefficient,
                 ),
                 ("momentum x", "momentum y", "continuity"),
             )

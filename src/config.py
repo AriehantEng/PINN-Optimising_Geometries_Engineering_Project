@@ -118,6 +118,13 @@ class PhysicsConfig:
     reynolds: float
     pressure_scaling: PressureScaling
     formulation: str  # velocity_pressure | stream_function
+    #: Multiplies the convective term u.grad(u) in both momentum residuals.
+    #: 1.0 is the Navier-Stokes equations; 0.0 drops inertia and leaves the
+    #: Stokes equations. This exists so "the inertial terms are included" is a
+    #: MEASUREMENT rather than an assertion: Case A annihilates u.grad(u)
+    #: exactly (u = u(y), v = 0), so no Case A run can demonstrate inertia, and
+    #: only an ablation against 0.0 on a developing flow can.
+    convective_coefficient: float
 
 
 @dataclass(frozen=True)
@@ -310,7 +317,19 @@ def parse_config(document: Mapping[str, Any]) -> Config:
             p, "inlet_uniform_value", "physics", "for case A (its inlet is parabolic)"
         )
         inlet_uniform_value = None
-    physics = PhysicsConfig(reynolds, pressure_scaling, formulation)
+    convective_coefficient = _require(
+        p, "convective_coefficient", "physics", float
+    )
+    if not 0.0 <= convective_coefficient <= 1.0:
+        raise ConfigError(
+            f"physics.convective_coefficient must lie in [0, 1], got "
+            f"{convective_coefficient}. It scales u.grad(u): 1.0 is "
+            "Navier-Stokes, 0.0 is Stokes. Values outside that range do not "
+            "correspond to a physical system."
+        )
+    physics = PhysicsConfig(
+        reynolds, pressure_scaling, formulation, convective_coefficient
+    )
     _finish(p, "physics")
 
     # -- domain (S3: L* derived from Re_h and the correlation) --

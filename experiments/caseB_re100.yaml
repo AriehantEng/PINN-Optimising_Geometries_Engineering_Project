@@ -26,6 +26,7 @@ physics:
   reynolds: 100.0
   pressure_scaling: inertial
   formulation: velocity_pressure
+  convective_coefficient: 1.0
   inlet_uniform_value: 0.6666666666666666
 model:
   arch: modified_mlp

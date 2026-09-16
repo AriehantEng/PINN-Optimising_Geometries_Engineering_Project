@@ -42,6 +42,7 @@ def make_loss_terms(config: Config, model):
     """
     reynolds = config.physics.reynolds
     pressure_scaling = config.physics.pressure_scaling
+    convective_coefficient = config.physics.convective_coefficient
     formulation = config.physics.formulation
 
     def loss_terms(params, points):
@@ -59,10 +60,16 @@ def make_loss_terms(config: Config, model):
             d = batched_field_derivatives(point_fn, points.interior)
             terms = {
                 "momentum_x": jnp.mean(
-                    residuals.momentum_x(d, reynolds, pressure_scaling) ** 2
+                    residuals.momentum_x(
+                        d, reynolds, pressure_scaling, convective_coefficient
+                    )
+                    ** 2
                 ),
                 "momentum_y": jnp.mean(
-                    residuals.momentum_y(d, reynolds, pressure_scaling) ** 2
+                    residuals.momentum_y(
+                        d, reynolds, pressure_scaling, convective_coefficient
+                    )
+                    ** 2
                 ),
                 "continuity": jnp.mean(residuals.continuity(d) ** 2),
             }

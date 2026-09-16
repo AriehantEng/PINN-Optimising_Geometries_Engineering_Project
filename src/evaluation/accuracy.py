@@ -53,7 +53,10 @@ def _residual_norms(config, model, params, points):
         d = batched_field_derivatives(lambda xy: model.field(params, xy), points)
         names = ("momentum_x", "momentum_y", "continuity")
         values = residuals.navier_stokes(
-            d, config.physics.reynolds, config.physics.pressure_scaling
+            d,
+            config.physics.reynolds,
+            config.physics.pressure_scaling,
+            config.physics.convective_coefficient,
         )
     for name, value in zip(names, values):
         value = np.asarray(value)

@@ -40,6 +40,15 @@ FD_ATOL = 1e-7  # SPEC test 5. Never widen this.
 
 
 def _base_config(**overrides):
+    return parse_config(_base_document(**overrides))
+
+
+def _base_document(**overrides):
+    """The raw config dict, before parsing.
+
+    Split out from `_base_config` so tests that need to DELETE or corrupt a key
+    can do so: `_base_config` returns a frozen Config, which cannot be edited.
+    """
     document = {
         "name": "fd-check",
         "seed": 3,
@@ -54,6 +63,7 @@ def _base_config(**overrides):
             "reynolds": 10.0,
             "pressure_scaling": "inertial",
             "formulation": "velocity_pressure",
+            "convective_coefficient": 1.0,
         },
         "model": {
             "arch": "mlp",
@@ -98,7 +108,7 @@ def _base_config(**overrides):
             node.pop(leaf, None)
         else:
             node[leaf] = value
-    return parse_config(document)
+    return document
 
 
 def _shifted(fn, points, axis, step, multiple):
@@ -294,3 +304,110 @@ def test_batched_derivatives_match_single_point(overrides):
             np.asarray(fast), np.asarray(slow), rtol=0.0, atol=1e-14,
             err_msg=f"batched and single-point derivative disagree on {name}",
         )
+
+
+# --------------------------------------------------------------------------- #
+# Inertia ablation switch
+# --------------------------------------------------------------------------- #
+
+
+def test_convective_coefficient_zero_removes_the_inertial_terms():
+    """coefficient 0 must leave exactly the Stokes residual, 1 the full NS one.
+
+    The switch exists so that "the inertial terms are included" is a
+    measurement rather than an assertion. If it does not actually remove
+    u.grad(u), every Stokes-vs-Navier-Stokes comparison built on it is
+    meaningless.
+    """
+    import jax
+    import jax.numpy as jnp
+
+    from src.physics import residuals
+    from src.physics.derivatives import batched_field_derivatives
+
+    def field(xy):
+        x, y = xy[..., 0], xy[..., 1]
+        return jnp.stack(
+            [jnp.sin(x) * (1 - y**2), 0.3 * jnp.cos(x) * y, 0.2 * x - 0.1 * y], -1
+        )
+
+    points = jax.random.uniform(
+        jax.random.PRNGKey(0), (64, 2), minval=-0.9, maxval=0.9, dtype=jnp.float64
+    )
+    d = batched_field_derivatives(field, points)
+
+    full = residuals.momentum_x(d, 10.0, "inertial", 1.0)
+    stokes = residuals.momentum_x(d, 10.0, "inertial", 0.0)
+    convective = residuals.convective_x(d.u, d.v, d.u_x, d.u_y)
+
+    # full - stokes must be exactly the convective term it claims to switch.
+    np.testing.assert_allclose(np.asarray(full - stokes),
+                               np.asarray(convective), rtol=0, atol=1e-14)
+    # and the terms must be large enough here for that to mean something.
+    assert np.max(np.abs(np.asarray(convective))) > 1e-3
+
+    full_y = residuals.momentum_y(d, 10.0, "inertial", 1.0)
+    stokes_y = residuals.momentum_y(d, 10.0, "inertial", 0.0)
+    np.testing.assert_allclose(
+        np.asarray(full_y - stokes_y),
+        np.asarray(residuals.convective_y(d.u, d.v, d.v_x, d.v_y)),
+        rtol=0, atol=1e-14,
+    )
+
+
+def test_the_switch_is_a_no_op_on_the_case_a_solution():
+    """Case A annihilates u.grad(u) exactly, so the switch must do nothing.
+
+    This is why no Case A run can demonstrate inertia, and it is the cheapest
+    possible check that the coefficient is wired to the right term: on the
+    exact Poiseuille field u = 1 - y^2, v = 0, both settings must give an
+    identical residual.
+    """
+    import jax.numpy as jnp
+
+    from src.physics import residuals
+    from src.physics.derivatives import batched_field_derivatives
+
+    def exact(xy):
+        x, y = xy[..., 0], xy[..., 1]
+        return jnp.stack([1.0 - y**2, jnp.zeros_like(y), -0.2 * x], -1)
+
+    points = jnp.array(
+        [[xx, yy] for xx in np.linspace(0, 5, 9) for yy in np.linspace(-0.95, 0.95, 9)]
+    )
+    d = batched_field_derivatives(exact, points)
+    for name in ("momentum_x", "momentum_y"):
+        fn = getattr(residuals, name)
+        np.testing.assert_allclose(
+            np.asarray(fn(d, 10.0, "inertial", 1.0)),
+            np.asarray(fn(d, 10.0, "inertial", 0.0)),
+            rtol=0, atol=1e-15, err_msg=f"{name} changed on the Case A solution",
+        )
+
+
+def test_convective_coefficient_is_a_required_config_key():
+    """No silent default: a run's equations must be readable off its config."""
+    import copy
+
+    import pytest
+
+    from src.config import ConfigError, parse_config
+
+    document = copy.deepcopy(_base_document())
+    del document["physics"]["convective_coefficient"]
+    with pytest.raises(ConfigError, match="convective_coefficient"):
+        parse_config(document)
+
+
+def test_convective_coefficient_outside_zero_to_one_is_rejected():
+    import copy
+
+    import pytest
+
+    from src.config import ConfigError, parse_config
+
+    for bad in (-0.5, 1.5):
+        document = copy.deepcopy(_base_document())
+        document["physics"]["convective_coefficient"] = bad
+        with pytest.raises(ConfigError, match=r"\[0, 1\]"):
+            parse_config(document)
