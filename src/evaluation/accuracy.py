@@ -36,6 +36,14 @@ N_FLUX_STATIONS = 10
 #: boundary-condition error is not counted as a mass-conservation error.
 FLUX_STATION_MARGIN = 0.05
 
+#: Width of the near-inlet band, as a fraction of L*, over which residuals are
+#: reported separately. A corner singularity at the inlet is invisible in a
+#: domain-wide max once anything else in the field is comparable, and invisible
+#: in the RMS always: on the top-hat Case B run the momentum-x residual reaches
+#: 187 inside this band against 4.9 RMS over the whole domain. Whether a
+#: boundary condition is solvable is a question about this band specifically.
+INLET_BAND_FRACTION = 0.05
+
 
 def _residual_norms(config, model, params, points):
     """Max and RMS of each unweighted residual on the evaluation grid.
@@ -43,6 +51,11 @@ def _residual_norms(config, model, params, points):
     Reported as a DIAGNOSTIC. A small residual is not an accuracy claim: the
     failure mode this project exists to catch is exactly a low residual with a
     wrong solution.
+
+    Also reports each residual over the near-inlet band alone -- see
+    `INLET_BAND_FRACTION`. Domain-wide norms cannot answer whether an inlet
+    condition is representable, because the answer lives in a region small
+    enough for the average to hide it.
     """
     out = {}
     if config.physics.formulation == "psi_omega":
@@ -58,10 +71,18 @@ def _residual_norms(config, model, params, points):
             config.physics.pressure_scaling,
             config.physics.convective_coefficient,
         )
+    band = np.asarray(points)[:, 0] < INLET_BAND_FRACTION * config.domain.length
     for name, value in zip(names, values):
-        value = np.asarray(value)
-        out[f"residual_{name}_max"] = float(np.max(np.abs(value)))
+        value = np.abs(np.asarray(value))
+        out[f"residual_{name}_max"] = float(np.max(value))
         out[f"residual_{name}_rms"] = float(np.sqrt(np.mean(value**2)))
+        if band.any():
+            out[f"residual_{name}_max_inlet_band"] = float(np.max(value[band]))
+            out[f"residual_{name}_rms_inlet_band"] = float(
+                np.sqrt(np.mean(value[band] ** 2))
+            )
+    out["residual_inlet_band_fraction"] = INLET_BAND_FRACTION
+    out["residual_inlet_band_points"] = int(band.sum())
     return out
 
 

@@ -397,3 +397,64 @@ def test_case_b_is_not_gated_on_case_a_only_targets():
         "flux_conservation_relative_error": 1e-07,
     })
     assert failures == []
+
+
+# --------------------------------------------------------------------------- #
+# Near-inlet residual band
+# --------------------------------------------------------------------------- #
+
+
+def test_the_inlet_band_metric_is_bounded_by_the_global_one():
+    """A max over a subset can never exceed the max over the whole set.
+
+    Trivial, and worth pinning: the band metric exists to decide whether an
+    inlet condition is representable, and a band that silently covered the
+    whole domain -- or none of it -- would answer that question wrongly while
+    looking fine.
+    """
+    import jax
+
+    from src.config import load_config
+    from src.evaluation.accuracy import INLET_BAND_FRACTION, _residual_norms
+    from src.geometry.domain import Channel
+    from src.geometry.sampling import evaluation_grid
+    from src.models.build import build_model
+
+    config = load_config("experiments/caseB_re10_smooth8.yaml")
+    params, model = build_model(config, jax.random.PRNGKey(config.seed))
+    points, _, _ = evaluation_grid(Channel(config.domain.length), 81, 41)
+    out = _residual_norms(config, model, params, points)
+
+    banded = [k for k in out if k.endswith("_max_inlet_band")]
+    assert banded, "no inlet-band metric was recorded"
+    for key in banded:
+        assert out[key] <= out[key.replace("_max_inlet_band", "_max")] * (1 + 1e-12)
+    for key in (k for k in out if k.endswith("_rms_inlet_band")):
+        assert out[key] > 0.0
+
+    assert out["residual_inlet_band_fraction"] == INLET_BAND_FRACTION
+    assert 0 < out["residual_inlet_band_points"] < len(points)
+
+
+def test_the_inlet_band_actually_selects_the_inlet():
+    """The band must contain x* = 0 and exclude the outlet.
+
+    The point of the metric is that a corner singularity is invisible in a
+    domain-wide norm. If the mask were wrong the number would still look
+    plausible, which is exactly the kind of check that has to be explicit.
+    """
+    import numpy as np
+
+    from src.config import load_config
+    from src.evaluation.accuracy import INLET_BAND_FRACTION
+    from src.geometry.domain import Channel
+    from src.geometry.sampling import evaluation_grid
+
+    config = load_config("experiments/caseB_re10_smooth8.yaml")
+    points, _, _ = evaluation_grid(Channel(config.domain.length), 81, 41)
+    x = np.asarray(points)[:, 0]
+    band = x < INLET_BAND_FRACTION * config.domain.length
+
+    assert band[x == x.min()].all(), "the band excludes the inlet plane"
+    assert not band[x == x.max()].any(), "the band reaches the outlet"
+    assert x[band].max() < 0.5, "the band is far wider than intended"
