@@ -23,7 +23,9 @@ import csv
 import json
 import pathlib
 
-from .evaluation.drift import fit_drift
+import numpy as np
+
+from .evaluation.drift import fit_drift, mass_drift
 
 #: Column holding D. Early runs wrote the generic `value` header.
 DRIFT_COLUMNS = ("drift", "value")
@@ -51,23 +53,76 @@ def read_trace(path):
     )
 
 
+def refit_flux_metrics(metrics):
+    """Recompute the flux metrics from the stored per-station fluxes.
+
+    SPEC v2 S7 redefined D as `max|M(x) - M(0)| / M(0)`, referenced to the
+    FIRST station. Runs from before that recorded the spread about the MEAN
+    under the same key, which is a different and systematically smaller
+    number -- 6.657e-03 against 1.197e-02 on caseB_re10, a factor of 1.8.
+    Reading such a value as S7's D understates the drift.
+
+    The per-station fluxes are raw measurements and are unaffected, so the
+    current definitions are simply reapplied to them. Returns the updated
+    keys, or None when there is nothing stored to recompute from.
+    """
+    values = metrics.get("flux_values")
+    if not values:
+        return None
+    fluxes = np.asarray(values, dtype=np.float64)
+    mean = float(fluxes.mean())
+    return {
+        "flux_conservation_relative_error": mass_drift(fluxes),
+        "flux_spread_about_mean": float(
+            np.max(np.abs(fluxes - mean)) / abs(mean)
+        ),
+    }
+
+
 def refit(directory, write=False):
     """Refit one run. Returns (before, after) verdict strings."""
     directory = pathlib.Path(directory)
     trace_path = directory / "drift_trace.csv"
     metrics_path = directory / "metrics.json"
-    if not trace_path.exists() or not metrics_path.exists():
-        return None
-    iterations, drifts = read_trace(trace_path)
-    if len(iterations) < 5:
+    if not metrics_path.exists():
         return None
 
     with metrics_path.open(encoding="utf-8") as handle:
         metrics = json.load(handle)
     before = metrics.get("diag_drift_verdict", "(none recorded)")
 
+    # The flux metrics come from the stored per-station fluxes and do NOT
+    # depend on the L-BFGS trace, so they are recomputed first. Gating them
+    # behind the trace skipped caseB_re10 -- the one run whose stored D was
+    # actually wrong -- because that run has no drift_trace.csv at all.
+    updated = {}
+    flux = refit_flux_metrics(metrics)
+    if flux is not None:
+        previous = metrics.get("flux_conservation_relative_error")
+        if previous is None or abs(
+            flux["flux_conservation_relative_error"] - previous
+        ) > 0:
+            updated.update(flux)
+            updated["diag_flux_metrics_recomputed"] = (
+                "flux_conservation_relative_error and flux_spread_about_mean "
+                "recomputed from the stored flux_values under the SPEC v2 S7 "
+                "definition (D referenced to the first station). The value "
+                "previously stored predated that definition."
+            )
+
+    if not trace_path.exists():
+        if updated and write:
+            metrics.update(updated)
+            with metrics_path.open("w", encoding="utf-8") as handle:
+                json.dump(metrics, handle, indent=2)
+        return (before, "(no drift trace; flux metrics only)", None) if updated else None
+
+    iterations, drifts = read_trace(trace_path)
+    if len(iterations) < 5:
+        return None
+
     fit = fit_drift(iterations, drifts)
-    updated = {
+    updated |= {
         "diag_drift_d_infinity": fit.d_infinity,
         "diag_drift_d_infinity_stderr": fit.d_infinity_stderr,
         "diag_drift_exponent": fit.exponent,
@@ -113,8 +168,13 @@ def main(argv=None) -> int:
             continue
         before, after, fit = outcome
         print(f"\n{directory.name}")
-        print(f"  D_inf   {fit.d_infinity:.4e} +- {fit.d_infinity_stderr:.2e}  "
-              f"b={fit.exponent:.4f}  max rel residual {fit.max_relative_residual:.3f}")
+        if fit is None:
+            print("  flux metrics recomputed from stored flux_values "
+                  "(no drift trace in this run)")
+        else:
+            print(f"  D_inf   {fit.d_infinity:.4e} +- {fit.d_infinity_stderr:.2e}  "
+                  f"b={fit.exponent:.4f}  max rel residual "
+                  f"{fit.max_relative_residual:.3f}")
         print(f"  before: {before}")
         print(f"  after : {after}")
     if not args.write:

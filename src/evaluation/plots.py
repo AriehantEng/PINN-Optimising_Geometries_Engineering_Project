@@ -190,6 +190,16 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     def column(source, name):
         return np.array([float(r[name]) for r in source if r.get(name) not in (None, "")])
 
+    def aligned(source, name):
+        """The column, or None when it is absent or partly empty.
+
+        Older runs wrote drift traces with an `iteration,value` schema and no
+        validation or accuracy columns at all, so a caller cannot assume a
+        column exists just because a later run has it.
+        """
+        values = column(source, name)
+        return values if len(values) == len(source) and len(values) else None
+
     steps = column(rows, "step")
     adam_end = float(steps[-1]) if len(steps) else 0.0
     term_columns = sorted(c for c in rows[0] if c.startswith("term_"))
@@ -214,10 +224,12 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     if held:
         axis.semilogy(column(held, "step"), column(held, "validation_loss"),
                       color="C0", linestyle="--", alpha=0.7, label="Adam, held-out")
-    if trace:
+    trace_loss = aligned(trace, "validation_loss") if trace else None
+    if trace_loss is not None:
         iterations = column(trace, "iteration") + adam_end
-        axis.semilogy(iterations, column(trace, "validation_loss"),
+        axis.semilogy(iterations, trace_loss,
                       color="C3", label="L-BFGS, held-out")
+    if trace:
         axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
         axis.annotate("Adam -> L-BFGS", xy=(adam_end, axis.get_ylim()[1]),
                       xytext=(4, -10), textcoords="offset points",
@@ -234,10 +246,11 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     if accurate:
         axis.semilogy(column(accurate, "step"), column(accurate, "relative_l2_vs_exact"),
                       color="C2", label="Adam")
-    if trace:
-        axis.semilogy(column(trace, "iteration") + adam_end,
-                      column(trace, "relative_l2_vs_exact"),
+    trace_error = aligned(trace, "relative_l2_vs_exact") if trace else None
+    if trace_error is not None:
+        axis.semilogy(column(trace, "iteration") + adam_end, trace_error,
                       color="C2", linestyle="-", alpha=0.6, label="L-BFGS")
+    if trace:
         axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
     axis.axhline(1e-5, color="k", linestyle="--", linewidth=1.0,
                  label="SPEC target 1e-5")
@@ -289,9 +302,9 @@ def plot_convergence(drift_path: Path, path: Path, title: str):
     fig, axis = plt.subplots(figsize=(7.2, 4.6))
     axis.loglog(iterations, np.maximum(drift, 1e-300), "o-", color="C3",
                 markersize=3.5, label="mass drift D")
-    if rows[0].get("relative_l2_vs_exact"):
-        error = column("relative_l2_vs_exact")
-        axis.loglog(iterations[: len(error)], np.maximum(error, 1e-300), "s-",
+    error = column("relative_l2_vs_exact") if "relative_l2_vs_exact" in rows[0] else np.array([])
+    if len(error) == len(iterations) and len(error):
+        axis.loglog(iterations, np.maximum(error, 1e-300), "s-",
                     color="C2", markersize=3.5, label="relative L2 vs analytic")
         axis.axhline(1e-5, color="C2", linestyle="--", linewidth=1.0, alpha=0.7,
                      label="target 1e-5 (accuracy)")

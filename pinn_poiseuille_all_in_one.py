@@ -1814,6 +1814,16 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     def column(source, name):
         return np.array([float(r[name]) for r in source if r.get(name) not in (None, "")])
 
+    def aligned(source, name):
+        """The column, or None when it is absent or partly empty.
+
+        Older runs wrote drift traces with an `iteration,value` schema and no
+        validation or accuracy columns at all, so a caller cannot assume a
+        column exists just because a later run has it.
+        """
+        values = column(source, name)
+        return values if len(values) == len(source) and len(values) else None
+
     steps = column(rows, "step")
     adam_end = float(steps[-1]) if len(steps) else 0.0
     term_columns = sorted(c for c in rows[0] if c.startswith("term_"))
@@ -1838,10 +1848,12 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     if held:
         axis.semilogy(column(held, "step"), column(held, "validation_loss"),
                       color="C0", linestyle="--", alpha=0.7, label="Adam, held-out")
-    if trace:
+    trace_loss = aligned(trace, "validation_loss") if trace else None
+    if trace_loss is not None:
         iterations = column(trace, "iteration") + adam_end
-        axis.semilogy(iterations, column(trace, "validation_loss"),
+        axis.semilogy(iterations, trace_loss,
                       color="C3", label="L-BFGS, held-out")
+    if trace:
         axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
         axis.annotate("Adam -> L-BFGS", xy=(adam_end, axis.get_ylim()[1]),
                       xytext=(4, -10), textcoords="offset points",
@@ -1858,10 +1870,11 @@ def plot_loss_history(history_path: Path, path: Path, title: str,
     if accurate:
         axis.semilogy(column(accurate, "step"), column(accurate, "relative_l2_vs_exact"),
                       color="C2", label="Adam")
-    if trace:
-        axis.semilogy(column(trace, "iteration") + adam_end,
-                      column(trace, "relative_l2_vs_exact"),
+    trace_error = aligned(trace, "relative_l2_vs_exact") if trace else None
+    if trace_error is not None:
+        axis.semilogy(column(trace, "iteration") + adam_end, trace_error,
                       color="C2", linestyle="-", alpha=0.6, label="L-BFGS")
+    if trace:
         axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
     axis.axhline(1e-5, color="k", linestyle="--", linewidth=1.0,
                  label="SPEC target 1e-5")
@@ -1913,9 +1926,9 @@ def plot_convergence(drift_path: Path, path: Path, title: str):
     fig, axis = plt.subplots(figsize=(7.2, 4.6))
     axis.loglog(iterations, np.maximum(drift, 1e-300), "o-", color="C3",
                 markersize=3.5, label="mass drift D")
-    if rows[0].get("relative_l2_vs_exact"):
-        error = column("relative_l2_vs_exact")
-        axis.loglog(iterations[: len(error)], np.maximum(error, 1e-300), "s-",
+    error = column("relative_l2_vs_exact") if "relative_l2_vs_exact" in rows[0] else np.array([])
+    if len(error) == len(iterations) and len(error):
+        axis.loglog(iterations, np.maximum(error, 1e-300), "s-",
                     color="C2", markersize=3.5, label="relative L2 vs analytic")
         axis.axhline(1e-5, color="C2", linestyle="--", linewidth=1.0, alpha=0.7,
                      label="target 1e-5 (accuracy)")
@@ -4217,7 +4230,9 @@ import csv
 import json
 import pathlib
 
-from .evaluation.drift import fit_drift
+import numpy as np
+
+from .evaluation.drift import fit_drift, mass_drift
 
 #: Column holding D. Early runs wrote the generic `value` header.
 DRIFT_COLUMNS = ("drift", "value")
@@ -4245,23 +4260,76 @@ def read_trace(path):
     )
 
 
+def refit_flux_metrics(metrics):
+    """Recompute the flux metrics from the stored per-station fluxes.
+
+    SPEC v2 S7 redefined D as `max|M(x) - M(0)| / M(0)`, referenced to the
+    FIRST station. Runs from before that recorded the spread about the MEAN
+    under the same key, which is a different and systematically smaller
+    number -- 6.657e-03 against 1.197e-02 on caseB_re10, a factor of 1.8.
+    Reading such a value as S7's D understates the drift.
+
+    The per-station fluxes are raw measurements and are unaffected, so the
+    current definitions are simply reapplied to them. Returns the updated
+    keys, or None when there is nothing stored to recompute from.
+    """
+    values = metrics.get("flux_values")
+    if not values:
+        return None
+    fluxes = np.asarray(values, dtype=np.float64)
+    mean = float(fluxes.mean())
+    return {
+        "flux_conservation_relative_error": mass_drift(fluxes),
+        "flux_spread_about_mean": float(
+            np.max(np.abs(fluxes - mean)) / abs(mean)
+        ),
+    }
+
+
 def refit(directory, write=False):
     """Refit one run. Returns (before, after) verdict strings."""
     directory = pathlib.Path(directory)
     trace_path = directory / "drift_trace.csv"
     metrics_path = directory / "metrics.json"
-    if not trace_path.exists() or not metrics_path.exists():
-        return None
-    iterations, drifts = read_trace(trace_path)
-    if len(iterations) < 5:
+    if not metrics_path.exists():
         return None
 
     with metrics_path.open(encoding="utf-8") as handle:
         metrics = json.load(handle)
     before = metrics.get("diag_drift_verdict", "(none recorded)")
 
+    # The flux metrics come from the stored per-station fluxes and do NOT
+    # depend on the L-BFGS trace, so they are recomputed first. Gating them
+    # behind the trace skipped caseB_re10 -- the one run whose stored D was
+    # actually wrong -- because that run has no drift_trace.csv at all.
+    updated = {}
+    flux = refit_flux_metrics(metrics)
+    if flux is not None:
+        previous = metrics.get("flux_conservation_relative_error")
+        if previous is None or abs(
+            flux["flux_conservation_relative_error"] - previous
+        ) > 0:
+            updated.update(flux)
+            updated["diag_flux_metrics_recomputed"] = (
+                "flux_conservation_relative_error and flux_spread_about_mean "
+                "recomputed from the stored flux_values under the SPEC v2 S7 "
+                "definition (D referenced to the first station). The value "
+                "previously stored predated that definition."
+            )
+
+    if not trace_path.exists():
+        if updated and write:
+            metrics.update(updated)
+            with metrics_path.open("w", encoding="utf-8") as handle:
+                json.dump(metrics, handle, indent=2)
+        return (before, "(no drift trace; flux metrics only)", None) if updated else None
+
+    iterations, drifts = read_trace(trace_path)
+    if len(iterations) < 5:
+        return None
+
     fit = fit_drift(iterations, drifts)
-    updated = {
+    updated |= {
         "diag_drift_d_infinity": fit.d_infinity,
         "diag_drift_d_infinity_stderr": fit.d_infinity_stderr,
         "diag_drift_exponent": fit.exponent,
@@ -4307,8 +4375,13 @@ def main(argv=None) -> int:
             continue
         before, after, fit = outcome
         print(f"\n{directory.name}")
-        print(f"  D_inf   {fit.d_infinity:.4e} +- {fit.d_infinity_stderr:.2e}  "
-              f"b={fit.exponent:.4f}  max rel residual {fit.max_relative_residual:.3f}")
+        if fit is None:
+            print("  flux metrics recomputed from stored flux_values "
+                  "(no drift trace in this run)")
+        else:
+            print(f"  D_inf   {fit.d_infinity:.4e} +- {fit.d_infinity_stderr:.2e}  "
+                  f"b={fit.exponent:.4f}  max rel residual "
+                  f"{fit.max_relative_residual:.3f}")
         print(f"  before: {before}")
         print(f"  after : {after}")
     if not args.write:
