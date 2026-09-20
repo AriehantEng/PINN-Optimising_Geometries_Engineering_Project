@@ -20,6 +20,7 @@ import json
 import pathlib
 import sys
 
+import numpy as np
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference, ScatterChart, Series
 from openpyxl.chart.marker import Marker
@@ -464,6 +465,62 @@ def build(name: str) -> int:
                 log_x=True, log_y=True, anchor="F5", header_row=header_row,
                 x_col=1, series_cols=[2] + ([3] if has_error else []),
                 first=header_row + 1, last=sheet.max_row)
+
+    # --------------------------------------------------------------- profile
+    # u*(y) is NOT in metrics.json or any trace -- the velocity field lives in
+    # params.npz. It has to be evaluated from the trained model, which is why
+    # this sheet needs the run to be loadable, not merely finished.
+    try:
+        from src.predict import load_run
+
+        model = load_run(str(directory))
+        stations = [0.0, 0.25, 0.5, 0.75, 1.0]
+        columns, rows_by_y = [], None
+        for fraction in stations:
+            x = fraction * model.domain_length
+            y, u, _ = model.profile(x=x, n=201)
+            y = np.asarray(y); u = np.asarray(u)
+            if rows_by_y is None:
+                rows_by_y = y
+            columns.append((f"u* at x*={x:.2f}", u))
+        from src.physics import analytic as _analytic
+
+        exact = (1.0 - rows_by_y**2 if metrics["case"] == "A"
+                 else np.asarray(_analytic.developed_profile_nd(
+                     rows_by_y, model.config.inlet_flux)))
+        header = ["y*"] + [name for name, _ in columns] + ["exact", "u* - exact (at mid-channel x*)"]
+        mid = columns[len(columns) // 2][1]
+        body = [[float(rows_by_y[i])] + [float(col[i]) for _, col in columns]
+                + [float(exact[i]), float(mid[i] - exact[i])]
+                for i in range(len(rows_by_y))]
+        sheet, header_row = write_sheet(
+            book, "profile", header, body,
+            notes=["u*(y*) evaluated from the trained model at five streamwise "
+                   "stations, 201 points each. This is the velocity profile "
+                   "itself -- the 'flux' sheet holds its INTEGRAL over y, which "
+                   "is a different quantity.",
+                   "For Case A every station should collapse onto 1 - y*^2: the "
+                   "flow is fully developed, so the profile does not vary with "
+                   "x. The last column is the difference at mid-channel, which "
+                   "is the only way to see agreement this close."],
+            widths=[10] + [17] * (len(columns) + 2),
+        )
+        scatter(sheet, title="u* as a function of y*",
+                x_title="y*", y_title="u*", log_x=False, log_y=False,
+                anchor="J4", header_row=header_row, x_col=1,
+                series_cols=list(range(2, 2 + len(columns))) + [2 + len(columns)],
+                first=header_row + 1, last=sheet.max_row, width=20, height=11)
+        scatter(sheet, title="difference from the exact profile",
+                x_title="y*", y_title="u* - exact", log_x=False, log_y=False,
+                anchor="J28", header_row=header_row, x_col=1,
+                series_cols=[3 + len(columns)],
+                first=header_row + 1, last=sheet.max_row, width=20, height=9)
+    except Exception as error:  # noqa: BLE001 - a missing profile is reportable
+        sheet = book.create_sheet("profile")
+        sheet.append([f"could not evaluate the velocity field: {error}"])
+        sheet.append(["u*(y*) requires loading params.npz; see "
+                      "src/migrate_configs.py if the config no longer parses"])
+        sheet.column_dimensions["A"].width = 100
 
     # ---------------------------------------------------------------- config
     sheet, _ = write_sheet(
