@@ -1785,8 +1785,20 @@ def plot_residual_map(config, model, params, path: Path):
     plt.close(fig)
 
 
-def plot_loss_history(history_path: Path, path: Path, title: str):
-    """Per-term loss history from the Adam phase."""
+def plot_loss_history(history_path: Path, path: Path, title: str,
+                      drift_path: Path | None = None, weights_vary: bool = True):
+    """The whole run: per-term Adam losses, both phases, and the true error.
+
+    The previous version plotted the Adam phase alone. For the 30000-iteration
+    Case A run that is 2000 of 32000 iterations -- it showed 6% of the run and
+    none of the phase that produced the result, while `relative_l2_vs_exact`
+    and `validation_loss` sat unplotted in the same CSV and the drift trace sat
+    unplotted in the file next to it.
+
+    The second panel therefore carries BOTH phases on one axis, and the third
+    carries the accuracy curve, which is the only line in this figure that is
+    an accuracy claim at all.
+    """
     if not history_path.is_file():
         return
     with history_path.open(encoding="utf-8") as handle:
@@ -1794,29 +1806,126 @@ def plot_loss_history(history_path: Path, path: Path, title: str):
     if not rows:
         return
 
-    steps = np.array([float(row["step"]) for row in rows])
-    term_columns = sorted(c for c in rows[0] if c.startswith("term_"))
+    trace = []
+    if drift_path is not None and drift_path.is_file():
+        with drift_path.open(encoding="utf-8") as handle:
+            trace = list(csv.DictReader(handle))
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
-    axes[0].semilogy(steps, [float(row["loss"]) for row in rows], "k", label="total")
-    for column in term_columns:
-        values = np.array([float(row[column]) for row in rows])
-        axes[0].semilogy(steps, np.maximum(values, 1e-300), label=column[5:], alpha=0.8)
+    def column(source, name):
+        return np.array([float(r[name]) for r in source if r.get(name) not in (None, "")])
+
+    steps = column(rows, "step")
+    adam_end = float(steps[-1]) if len(steps) else 0.0
+    term_columns = sorted(c for c in rows[0] if c.startswith("term_"))
+    panels = 3 + (1 if weights_vary else 0)
+    fig, axes = plt.subplots(1, panels, figsize=(5.2 * panels, 4.2))
+
+    # -- per-term Adam loss ------------------------------------------------ #
+    axes[0].semilogy(steps, column(rows, "loss"), "k", label="total", linewidth=1.6)
+    for name in term_columns:
+        axes[0].semilogy(steps, np.maximum(column(rows, name), 1e-300),
+                         label=name[5:], alpha=0.85, linewidth=1.1)
     axes[0].set_xlabel("Adam step")
     axes[0].set_ylabel("loss (diagnostic, not accuracy)")
-    axes[0].set_title(title)
+    axes[0].set_title(f"{title}: Adam, per term")
     axes[0].legend(fontsize=8)
     axes[0].grid(alpha=0.3)
 
-    weight_columns = sorted(c for c in rows[0] if c.startswith("weight_"))
-    for column in weight_columns:
-        axes[1].semilogy(steps, [float(row[column]) for row in rows], label=column[7:])
-    axes[1].set_xlabel("Adam step")
-    axes[1].set_ylabel("loss weight")
-    axes[1].set_title("loss weights")
-    axes[1].legend(fontsize=8)
-    axes[1].grid(alpha=0.3)
+    # -- both phases on one axis ------------------------------------------- #
+    axis = axes[1]
+    axis.semilogy(steps, column(rows, "loss"), color="C0", label="Adam, train")
+    held = [r for r in rows if r.get("validation_loss")]
+    if held:
+        axis.semilogy(column(held, "step"), column(held, "validation_loss"),
+                      color="C0", linestyle="--", alpha=0.7, label="Adam, held-out")
+    if trace:
+        iterations = column(trace, "iteration") + adam_end
+        axis.semilogy(iterations, column(trace, "validation_loss"),
+                      color="C3", label="L-BFGS, held-out")
+        axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
+        axis.annotate("Adam -> L-BFGS", xy=(adam_end, axis.get_ylim()[1]),
+                      xytext=(4, -10), textcoords="offset points",
+                      fontsize=8, rotation=90, va="top")
+    axis.set_xlabel("iteration (Adam steps, then L-BFGS)")
+    axis.set_ylabel("loss (diagnostic)")
+    axis.set_title("whole run")
+    axis.legend(fontsize=8)
+    axis.grid(alpha=0.3)
 
+    # -- the accuracy curve ------------------------------------------------ #
+    axis = axes[2]
+    accurate = [r for r in rows if r.get("relative_l2_vs_exact")]
+    if accurate:
+        axis.semilogy(column(accurate, "step"), column(accurate, "relative_l2_vs_exact"),
+                      color="C2", label="Adam")
+    if trace:
+        axis.semilogy(column(trace, "iteration") + adam_end,
+                      column(trace, "relative_l2_vs_exact"),
+                      color="C2", linestyle="-", alpha=0.6, label="L-BFGS")
+        axis.axvline(adam_end, color="k", linewidth=0.9, linestyle=":")
+    axis.axhline(1e-5, color="k", linestyle="--", linewidth=1.0,
+                 label="SPEC target 1e-5")
+    axis.set_xlabel("iteration (Adam steps, then L-BFGS)")
+    axis.set_ylabel("relative L2 vs analytic")
+    axis.set_title("ACCURACY (the only such claim here)")
+    axis.legend(fontsize=8)
+    axis.grid(alpha=0.3)
+    if not accurate and not trace:
+        axis.text(0.5, 0.5, "no accuracy trace recorded\n(run predates the column)",
+                  ha="center", va="center", transform=axis.transAxes, fontsize=9)
+
+    # -- weights, only when they move -------------------------------------- #
+    if weights_vary:
+        for name in sorted(c for c in rows[0] if c.startswith("weight_")):
+            axes[3].semilogy(steps, column(rows, name), label=name[7:])
+        axes[3].set_xlabel("Adam step")
+        axes[3].set_ylabel("loss weight")
+        axes[3].set_title("loss weights")
+        axes[3].legend(fontsize=8)
+        axes[3].grid(alpha=0.3)
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=140)
+    plt.close(fig)
+
+
+def plot_convergence(drift_path: Path, path: Path, title: str):
+    """Mass drift and true error against L-BFGS iteration, log-log.
+
+    This is the figure carrying the Block C result -- D fell monotonically
+    with budget rather than plateauing, which is what settled the drift as
+    under-convergence rather than formulation bias -- and it existed in no
+    form until now, despite the data being written by every run.
+    """
+    if not drift_path.is_file():
+        return
+    with drift_path.open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if len(rows) < 2:
+        return
+
+    def column(name):
+        return np.array([float(r[name]) for r in rows if r.get(name) not in (None, "")])
+
+    iterations = column("iteration")
+    drift = column("drift") if "drift" in rows[0] else column("value")
+
+    fig, axis = plt.subplots(figsize=(7.2, 4.6))
+    axis.loglog(iterations, np.maximum(drift, 1e-300), "o-", color="C3",
+                markersize=3.5, label="mass drift D")
+    if rows[0].get("relative_l2_vs_exact"):
+        error = column("relative_l2_vs_exact")
+        axis.loglog(iterations[: len(error)], np.maximum(error, 1e-300), "s-",
+                    color="C2", markersize=3.5, label="relative L2 vs analytic")
+        axis.axhline(1e-5, color="C2", linestyle="--", linewidth=1.0, alpha=0.7,
+                     label="target 1e-5 (accuracy)")
+    axis.axhline(1e-6, color="C3", linestyle="--", linewidth=1.0, alpha=0.7,
+                 label="target 1e-6 (drift)")
+    axis.set_xlabel("L-BFGS iteration")
+    axis.set_ylabel("magnitude")
+    axis.set_title(f"{title}: convergence against budget")
+    axis.legend(fontsize=8)
+    axis.grid(alpha=0.3, which="both")
     fig.tight_layout()
     fig.savefig(path, dpi=140)
     plt.close(fig)
@@ -1826,7 +1935,12 @@ def write_all(config: Config, model, params, directory: Path):
     plot_velocity_profiles(config, model, params, directory / "profiles.png")
     plot_residual_map(config, model, params, directory / "residuals.png")
     plot_loss_history(
-        directory / "history.csv", directory / "loss_history.png", config.name
+        directory / "history.csv", directory / "loss_history.png", config.name,
+        drift_path=directory / "drift_trace.csv",
+        weights_vary=config.weights.scheme != "fixed",
+    )
+    plot_convergence(
+        directory / "drift_trace.csv", directory / "convergence.png", config.name
     )
 '''
 
@@ -2069,6 +2183,200 @@ def station_grid(channel: Channel, n_stations: int, ny: int, *, margin: float = 
     y = jnp.linspace(-WALL, WALL, ny, dtype=jnp.float64)
     xx, yy = jnp.meshgrid(x, y, indexing="ij")
     return jnp.stack([xx, yy], axis=-1), x, y
+'''
+
+# ---------------------------------------------------------------------------
+# src/migrate_configs.py
+# ---------------------------------------------------------------------------
+FILES['src/migrate_configs.py'] = r'''"""Backfill config keys added after a run finished, so finished runs still load.
+
+`load_config` refuses a missing key rather than defaulting, which is the right
+rule for a RUN: a run's equations must be readable off its config. But the rule
+has a side effect on runs that already happened. Adding
+`physics.convective_coefficient` as a required key locked every stored run out
+of `load_run`, so no figure could be regenerated from any completed work.
+
+This backfills the keys with the values that describe what each run ACTUALLY
+computed. That is the opposite of a silent default: the point is to record the
+behaviour, not to guess at it.
+
+    physics.convective_coefficient = 1.0
+        Before the switch existed, `momentum_x`/`momentum_y` included
+        `convective_x`/`convective_y` unconditionally. 1.0 reproduces them
+        exactly; 0.0 would describe a solver that was never run.
+
+    training.select = "final" | "best_validation"
+        Taken from the run's own `diag_selection_rule` when it recorded one.
+        Runs that predate held-out validation recorded nothing and used the
+        final iterate, so they get "final".
+
+    sampling.n_validation = <n_interior>
+        INERT for these runs and recorded as such. Runs needing this backfill
+        predate held-out validation entirely, and with `select: final` no
+        validation set is consulted. The schema requires a positive integer, so
+        "this run had none" cannot be expressed as 0; the value exists only to
+        satisfy the schema and cannot affect any stored result.
+
+Each migrated directory gets a `config.migrated.json` recording what was added
+and why, so the provenance of the edit is itself on disk.
+
+    python -m src.migrate_configs              # dry run, changes nothing
+    python -m src.migrate_configs --write
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime
+import json
+import pathlib
+import re
+
+import yaml
+
+RUNS_ROOT = pathlib.Path("runs")
+
+#: Value, anchor line pattern, and the reason, per backfillable key.
+CONVECTIVE_REASON = (
+    "the convective term was included unconditionally at coefficient 1.0 "
+    "before physics.convective_coefficient existed, so 1.0 reproduces what "
+    "this run computed"
+)
+N_VALIDATION_REASON = (
+    "INERT: this run predates held-out validation and selects the final "
+    "iterate, so no validation set is consulted. The schema requires a "
+    "positive integer, so 'none' cannot be written as 0; mirrored from "
+    "n_interior purely to satisfy the schema"
+)
+SELECT_REASON = (
+    "this run recorded no diag_selection_rule, which means it predates "
+    "best-iterate selection and used the final iterate"
+)
+
+
+def _insert_after(text: str, anchor: re.Pattern, line: str) -> str:
+    """Insert `line` immediately after the first line matching `anchor`.
+
+    A targeted text edit rather than a YAML round-trip, because safe_load then
+    safe_dump would silently drop every comment in the file -- including the
+    provenance headers explaining what each run was for.
+    """
+    match = anchor.search(text)
+    if match is None:
+        raise ValueError(f"anchor {anchor.pattern!r} not found")
+    return text[: match.end()] + "\n" + line + text[match.end() :]
+
+
+def plan_migration(directory: pathlib.Path):
+    """Return (list of (key, value, reason), current document) for one run."""
+    config_path = directory / "config.yaml"
+    if not config_path.is_file():
+        return None
+    document = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        return None
+
+    metrics_path = directory / "metrics.json"
+    metrics = {}
+    if metrics_path.is_file():
+        with metrics_path.open(encoding="utf-8") as handle:
+            metrics = json.load(handle)
+
+    additions = []
+    if "convective_coefficient" not in document.get("physics", {}):
+        additions.append(
+            ("physics.convective_coefficient", 1.0, CONVECTIVE_REASON)
+        )
+    if "select" not in document.get("training", {}):
+        recorded = metrics.get("diag_selection_rule")
+        additions.append((
+            "training.select",
+            recorded or "final",
+            f"taken from this run's diag_selection_rule ({recorded!r})"
+            if recorded else SELECT_REASON,
+        ))
+    if "n_validation" not in document.get("sampling", {}):
+        additions.append((
+            "sampling.n_validation",
+            int(document["sampling"]["n_interior"]),
+            N_VALIDATION_REASON,
+        ))
+    return additions, document
+
+
+def apply_migration(directory: pathlib.Path, additions) -> None:
+    config_path = directory / "config.yaml"
+    text = config_path.read_text(encoding="utf-8")
+
+    for key, value, _ in additions:
+        rendered = f"  {key.split('.')[-1]}: {json.dumps(value)}"
+        if key == "physics.convective_coefficient":
+            anchor = re.compile(r"^  formulation: .*$", re.M)
+        elif key == "training.select":
+            anchor = re.compile(r"^training:$", re.M)
+        elif key == "sampling.n_validation":
+            anchor = re.compile(r"^  n_interior: .*$", re.M)
+        else:  # pragma: no cover - the table above is exhaustive
+            raise ValueError(f"no anchor defined for {key}")
+        text = _insert_after(text, anchor, rendered)
+
+    config_path.write_text(text, encoding="utf-8")
+
+    record = {
+        "migrated_by": "src/migrate_configs.py",
+        "migrated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "why": (
+            "config keys became required after this run finished, which made "
+            "the run unloadable. Values describe what the run actually "
+            "computed; nothing about its results changed."
+        ),
+        "added": [
+            {"key": key, "value": value, "reason": reason}
+            for key, value, reason in additions
+        ],
+    }
+    with (directory / "config.migrated.json").open("w", encoding="utf-8") as handle:
+        json.dump(record, handle, indent=2)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--write", action="store_true",
+        help="apply the backfill; without it nothing is touched",
+    )
+    parser.add_argument("--runs-root", default=str(RUNS_ROOT))
+    args = parser.parse_args(argv)
+
+    root = pathlib.Path(args.runs_root)
+    touched = 0
+    for directory in sorted(root.iterdir()) if root.is_dir() else []:
+        if not directory.is_dir():
+            continue
+        planned = plan_migration(directory)
+        if planned is None:
+            continue
+        additions, _ = planned
+        if not additions:
+            print(f"{directory.name}: already complete")
+            continue
+        touched += 1
+        print(f"\n{directory.name}")
+        for key, value, reason in additions:
+            print(f"  + {key} = {value!r}")
+            print(f"      {reason}")
+        if args.write:
+            apply_migration(directory, additions)
+
+    if not args.write:
+        print(f"\n(dry run: {touched} run(s) would be migrated; pass --write)")
+    else:
+        print(f"\nmigrated {touched} run(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 '''
 
 # ---------------------------------------------------------------------------

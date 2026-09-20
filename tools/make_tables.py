@@ -19,6 +19,7 @@ Usage:  python -m tools.make_tables          (or python tools/make_tables.py)
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import pathlib
@@ -359,8 +360,178 @@ def sheet_hyperparameters(book, runs):
         sheet.cell(row, 2).font = MONO
 
 
+def build_single_run(run):
+    """A workbook for ONE run: everything on disk for it, nothing else.
+
+    Separate from the multi-run pack because the useful shape is different --
+    here the reader wants every scalar the run produced, in full precision,
+    rather than one row per run.
+    """
+    book = Workbook()
+    book.remove(book.active)
+    name, m = run["name"], run["metrics"]
+
+    cover = book.create_sheet("README")
+    trace_rows = len(run["drift"])
+    adam_rows = len(run["history"])
+    for line in [
+        f"{name}: complete data",
+        "",
+        f"Generated from runs/{name}/ by tools/make_tables.py --run {name}",
+        f"at git {git_sha()}.",
+        "",
+        "COVERAGE, stated plainly:",
+        f"  Adam phase     {adam_rows} logged rows, per-term losses and weights",
+        f"  L-BFGS phase   {trace_rows} SAMPLED rows over "
+        f"{m.get('diag_lbfgs_iterations', '?')} iterations, and NO per-term breakdown",
+        "",
+        "The L-BFGS phase is traced roughly every max_iterations/40 steps, so",
+        "this table is complete only to that resolution. It is not re-runnable",
+        "at higher density either: the L-BFGS trajectory is not reproducible",
+        "across environments (the Adam phase is bit-identical across JAX",
+        "versions; the quasi-Newton phase is not), so a re-run would produce",
+        "different numbers and invalidate what has already been reported.",
+        "",
+        "Accuracy is relative L2 against the analytic solution. Loss values are",
+        "diagnostics and are never accuracy claims.",
+    ]:
+        cover.append([line])
+    cover["A1"].font = Font(bold=True, size=15)
+    cover.column_dimensions["A"].width = 76
+
+    # Arrays get their own sheets; dicts (e.g. diag_final_weights) are
+    # rendered as JSON text so nothing is silently dropped from the summary.
+    scalars = [(k, v) for k, v in sorted(m.items()) if not isinstance(v, list)]
+
+    def cell(value):
+        return json.dumps(value) if isinstance(value, dict) else value
+
+    write_sheet(
+        book, "summary",
+        ["key", "value", "value (exact)", "type"],
+        [[k, cell(v), repr(v), type(v).__name__] for k, v in scalars],
+        notes=[f"Every scalar in runs/{name}/metrics.json ({len(scalars)} of them). "
+               "'value (exact)' is the full float64 repr as text, because XLSX "
+               "stores numbers as 17-digit decimal and drops the last bit."],
+        widths=[44, 24, 28, 10],
+    )
+
+    target_rows = []
+    failures, vacuous = gate_results(m)
+    failed = {label for label, _, _ in failures}
+    vacant = {label for label, _, _ in vacuous}
+    for key, (label, target, _, only_case) in TARGETS.items():
+        if key not in m or (only_case is not None and m.get("case") != only_case):
+            continue
+        verdict = ("VACUOUS" if label in vacant
+                   else "FAIL" if label in failed else "PASS")
+        target_rows.append([label, m[key], repr(m[key]), target, verdict, key])
+    write_sheet(
+        book, "targets",
+        ["SPEC test", "value", "value (exact)", "target", "verdict", "metrics key"],
+        target_rows,
+        notes=["Verdicts from report.gate_results(), the same function the run's "
+               "exit code uses."],
+        widths=[30, 20, 26, 12, 10, 36],
+    )
+
+    stations, values = m.get("flux_stations", []), m.get("flux_values", [])
+    if stations:
+        reference = values[0]
+        write_sheet(
+            book, "flux_stations",
+            ["station", "x*", "flux", "flux (exact)",
+             "fractional deficit vs 4/3", "fractional change vs station 1"],
+            [[i + 1, x, f, repr(f), f / (4 / 3) - 1.0, (f - reference) / reference]
+             for i, (x, f) in enumerate(zip(stations, values))],
+            notes=["Deficit vs 4/3 and drift vs station 1 are DIFFERENT "
+                   "quantities. SPEC test 3 is the max absolute value of the "
+                   "last column."],
+            widths=[9, 12, 20, 26, 26, 30],
+        )
+
+    if run["history"]:
+        columns = list(run["history"][0].keys())
+        ordered = (["phase", "step", "epoch", "loss", "validation_loss",
+                    "relative_l2_vs_exact", "lr"]
+                   + sorted(c for c in columns if c.startswith("term_"))
+                   + sorted(c for c in columns if c.startswith("weight_")))
+        ordered = [c for c in ordered if c in columns]
+        write_sheet(
+            book, "adam_history", ordered,
+            [[(float(r[c]) if c not in ("phase",) and r.get(c) not in (None, "") else r.get(c))
+              for c in ordered] for r in run["history"]],
+            notes=[f"runs/{name}/history.csv verbatim, column order rearranged "
+                   "for reading. Per-term values come from the same "
+                   "value_and_grad trace as the gradient, not a second pass."],
+            widths=[8, 8, 7, 14, 15, 18, 11] + [15] * 12,
+        )
+
+    if run["drift"]:
+        columns = list(run["drift"][0].keys())
+        ordered = [c for c in ["iteration", "drift", "relative_l2_vs_exact",
+                               "validation_loss", "value"] if c in columns]
+        write_sheet(
+            book, "lbfgs_trace", ordered,
+            [[float(r[c]) if r.get(c) not in (None, "") else None for c in ordered]
+             for r in run["drift"]],
+            notes=[f"runs/{name}/drift_trace.csv. {trace_rows} sampled points "
+                   "over the whole L-BFGS phase -- see README for why this is "
+                   "not denser.",
+                   "The D in this sheet is computed with 64-node Gauss-Legendre "
+                   "quadrature (cheap enough to run inside the optimiser loop), "
+                   "while the D in 'summary' and 'targets' comes from the final "
+                   "200-node evaluation. They therefore differ slightly -- by "
+                   "8.8e-10 relative on this run -- and the final row of this "
+                   "sheet is NOT expected to equal the reported figure exactly."],
+            widths=[14, 20, 22, 18, 18],
+        )
+
+    if run["lbfgs"]:
+        write_sheet(
+            book, "lbfgs_summary", ["key", "value", "value (exact)"],
+            [[k, v, repr(v)] for k, v in run["lbfgs"].items()],
+            notes=["The handoff gap is the relative difference between the loss "
+                   "Adam ended on and the loss L-BFGS started from. A large gap "
+                   "would mean the two phases disagree about the same point."],
+            widths=[34, 26, 30],
+        )
+
+    write_sheet(
+        book, "config", ["config.yaml line"],
+        [[line.rstrip()] for line in run["config"].splitlines()],
+        notes=[f"runs/{name}/config.yaml verbatim. Every run is fully "
+               "determined by this plus its seed."],
+        widths=[112],
+    )
+    for row in range(1, book["config"].max_row + 1):
+        book["config"].cell(row, 1).font = MONO
+
+    out = ROOT / "docs" / f"{name}-tables.xlsx"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    book.save(out)
+    print(f"wrote {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)")
+    for sheet in book.worksheets:
+        print(f"  {sheet.title:<16} {sheet.max_row:>6} rows")
+    return 0
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--run", help="build a single-run workbook for this run directory name "
+                      "instead of the multi-run evidence pack",
+    )
+    args = parser.parse_args()
+
     runs = load_runs()
+    if args.run:
+        matching = [r for r in runs if r["name"] == args.run]
+        if not matching:
+            print(f"no run named {args.run!r} under runs/", file=sys.stderr)
+            return 1
+        return build_single_run(matching[0])
+
     if not runs:
         print("no runs with a metrics.json found under runs/", file=sys.stderr)
         return 1

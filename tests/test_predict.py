@@ -144,3 +144,41 @@ def test_grid_shape_and_bounds(tiny_run):
     assert y[0] == -1.0 and y[-1] == 1.0
     # Walls are exactly no-slip on every station.
     assert np.all(u[:, 0] == 0.0) and np.all(u[:, -1] == 0.0)
+
+
+def test_every_stored_run_still_loads():
+    """A finished run must never become unloadable.
+
+    Making `physics.convective_coefficient` required locked EVERY run
+    directory out of `load_run`, because their configs predate the key. That
+    is a real cost: no figure could be regenerated from any completed work,
+    and the failure was invisible until someone tried.
+
+    The no-silent-defaults rule is right for a run being launched. This test
+    is the other half of it: when a key becomes required, the stored runs must
+    be migrated in the same change (see `src/migrate_configs.py`).
+    """
+    import pathlib
+
+    from src.predict import load_run
+
+    runs = pathlib.Path("runs")
+    if not runs.is_dir():
+        pytest.skip("no runs/ directory in this checkout")
+    directories = [d for d in sorted(runs.iterdir())
+                   if d.is_dir() and (d / "config.yaml").is_file()
+                   and (d / "params.npz").is_file()]
+    if not directories:
+        pytest.skip("no finished runs to check")
+
+    broken = []
+    for directory in directories:
+        try:
+            load_run(str(directory))
+        except Exception as error:  # noqa: BLE001 - any failure is the finding
+            broken.append(f"{directory.name}: {type(error).__name__}: {error}")
+    assert not broken, (
+        "stored runs no longer load:\n  " + "\n  ".join(broken)
+        + "\n\nIf a config key was just made required, migrate the stored runs "
+          "in the same change: python -m src.migrate_configs --write"
+    )
