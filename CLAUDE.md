@@ -38,6 +38,29 @@ Read `SPEC-phase1-poiseuille.md` before starting work.
 - Prefer one small function per governing equation term over one large residual
   function, so terms can be unit-tested independently.
 
+## Making a config key required
+
+**IMPORTANT: when a config key becomes required, migrate the stored runs in the
+SAME change.** `load_config` refuses a missing key rather than defaulting, which
+is right for launching a run -- a run's equations must be readable off its
+config. But every finished run under `runs/` has a config written before the key
+existed, so adding one locks them all out of `load_run` and no figure can be
+regenerated from any completed work.
+
+This has now happened twice: `physics.convective_coefficient` bricked all six
+runs, and `physics.inlet_profile` bricked both Case B runs. Both times it was
+invisible until something tried to load a run.
+
+The procedure:
+
+1. add the key and its validation
+2. extend `src/migrate_configs.py` with the value that describes what the
+   stored runs ACTUALLY did -- not a convenient default; if the honest value
+   cannot be expressed in the schema, record it as inert and say so
+3. run `python -m src.migrate_configs --write`
+4. `pytest tests/test_predict.py` -- `test_every_stored_run_still_loads` is the
+   guard, and it is not in the "directly affected" set you will think to run
+
 ## Gotchas found so far
 
 <!-- Append entries here as we hit them. Format: symptom → cause → fix. -->

@@ -2329,6 +2329,11 @@ SELECT_REASON = (
     "this run recorded no diag_selection_rule, which means it predates "
     "best-iterate selection and used the final iterate"
 )
+INLET_PROFILE_REASON = (
+    "this run carries inlet_uniform_value, i.e. a top hat, which is what "
+    "physics.inlet_profile: uniform now names explicitly. The regularised "
+    "family did not exist when it ran"
+)
 
 
 def _insert_after(text: str, anchor: re.Pattern, line: str) -> str:
@@ -2372,6 +2377,13 @@ def plan_migration(directory: pathlib.Path):
             f"taken from this run's diag_selection_rule ({recorded!r})"
             if recorded else SELECT_REASON,
         ))
+    physics = document.get("physics", {})
+    if document.get("case") == "B" and "inlet_profile" not in physics:
+        # A stored Case B run has inlet_uniform_value and nothing else, which
+        # is exactly the top hat. Naming it is a relabel, not a change.
+        additions.append(
+            ("physics.inlet_profile", "uniform", INLET_PROFILE_REASON)
+        )
     if "n_validation" not in document.get("sampling", {}):
         additions.append((
             "sampling.n_validation",
@@ -2391,6 +2403,10 @@ def apply_migration(directory: pathlib.Path, additions) -> None:
             anchor = re.compile(r"^  formulation: .*$", re.M)
         elif key == "training.select":
             anchor = re.compile(r"^training:$", re.M)
+        elif key == "physics.inlet_profile":
+            anchor = re.compile(r"^  inlet_uniform_value: .*$", re.M)
+            # inserted BEFORE the value it describes reads better, but the
+            # helper appends after the anchor; YAML is order-insensitive.
         elif key == "sampling.n_validation":
             anchor = re.compile(r"^  n_interior: .*$", re.M)
         else:  # pragma: no cover - the table above is exhaustive
