@@ -215,7 +215,9 @@ class Config:
     name: str
     seed: int
     case: str  # A | B
-    inlet_uniform_value: float | None  # Case B only
+    inlet_uniform_value: float | None  # Case B, inlet_profile "uniform" only
+    inlet_profile: str | None  # Case B only: "uniform" | "smoothed"
+    inlet_sharpness: int | None  # Case B, inlet_profile "smoothed" only
     domain: DomainConfig
     correlation: EntranceLengthCorrelation
     physics: PhysicsConfig
@@ -234,11 +236,29 @@ class Config:
         """Non-dimensional flux entering at x* = 0.
 
         Case A: int (1 - y^2) dy = 4/3 over y in [-1, 1].
-        Case B: uniform u* = U over the full height 2, so flux = 2U.
+        Case B "uniform": u* = U over the full height 2, so flux = 2U.
+        Case B "smoothed": 4/3 by construction -- the family is normalised so
+        every sharpness carries the same flux the top hat does, which is what
+        lets a sharpness sweep change only the inlet SHAPE.
         """
         if self.case == "A":
             return 4.0 / 3.0
+        if self.inlet_profile == "smoothed":
+            from .physics.inlets import FLUX
+
+            return FLUX
         return 2.0 * self.inlet_uniform_value
+
+    @property
+    def inlet_peak(self) -> float:
+        """Maximum of the prescribed inlet profile."""
+        if self.case == "A":
+            return 1.0
+        if self.inlet_profile == "smoothed":
+            from .physics.inlets import peak
+
+            return peak(self.inlet_sharpness)
+        return self.inlet_uniform_value
 
     @property
     def loss_terms(self) -> tuple[str, ...]:
@@ -308,15 +328,55 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         p, "formulation", "physics", {"velocity_pressure", "psi_omega"}
     )
     if case == "B":
-        inlet_uniform_value = _positive(
-            _require(p, "inlet_uniform_value", "physics", float),
-            "physics.inlet_uniform_value",
+        inlet_profile = _choice(
+            p, "inlet_profile", "physics", {"uniform", "smoothed"}
         )
+        if inlet_profile == "uniform":
+            # The top hat. Incompatible with exact no-slip at the inlet
+            # corners -- it requires an unbounded network output there -- so
+            # it is kept only as the reference against which the regularised
+            # family is measured. See src/physics/inlets.py.
+            inlet_uniform_value = _positive(
+                _require(p, "inlet_uniform_value", "physics", float),
+                "physics.inlet_uniform_value",
+            )
+            _reject_unused(
+                p, "inlet_sharpness", "physics",
+                'when physics.inlet_profile is "uniform" (the top hat has no '
+                "sharpness parameter)",
+            )
+            inlet_sharpness = None
+        else:
+            inlet_sharpness = _require(p, "inlet_sharpness", "physics", int)
+            if inlet_sharpness < 1:
+                raise ConfigError(
+                    f"physics.inlet_sharpness must be at least 1, got "
+                    f"{inlet_sharpness}. The profile is U0(1 - y^(2m)); m = 1 "
+                    "is the developed parabola and larger m sharpens toward "
+                    "the top hat."
+                )
+            if inlet_sharpness == 1:
+                raise ConfigError(
+                    "physics.inlet_sharpness = 1 makes the inlet profile "
+                    "1 - y^2, which IS the fully developed solution. Case B "
+                    "would then start developed: no entrance region, zero "
+                    "entrance length, and nothing tested. This configuration "
+                    "is vacuous rather than wrong, and is refused so it cannot "
+                    "be reported as a Case B result. Use m >= 2 (the sweep "
+                    "starts at 4)."
+                )
+            _reject_unused(
+                p, "inlet_uniform_value", "physics",
+                'when physics.inlet_profile is "smoothed" (the peak is derived '
+                "from the sharpness so the flux stays 4/3)",
+            )
+            inlet_uniform_value = None
     else:
-        _reject_unused(
-            p, "inlet_uniform_value", "physics", "for case A (its inlet is parabolic)"
-        )
-        inlet_uniform_value = None
+        for key in ("inlet_uniform_value", "inlet_profile", "inlet_sharpness"):
+            _reject_unused(
+                p, key, "physics", "for case A (its inlet is parabolic)"
+            )
+        inlet_uniform_value = inlet_profile = inlet_sharpness = None
     convective_coefficient = _require(
         p, "convective_coefficient", "physics", float
     )
@@ -538,6 +598,8 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         seed=seed,
         case=case,
         inlet_uniform_value=inlet_uniform_value,
+        inlet_profile=inlet_profile,
+        inlet_sharpness=inlet_sharpness,
         domain=domain,
         correlation=correlation,
         physics=physics,

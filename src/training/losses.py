@@ -15,6 +15,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 
 from ..config import Config
+from ..physics import inlets
 from ..physics import residuals, streamfunction
 from ..physics.derivatives import (
     batched_field_and_jacobian,
@@ -27,10 +28,15 @@ def inlet_profile(config: Config, y):
     """Prescribed streamwise velocity at x* = 0.
 
     Case A: the fully developed parabola u* = 1 - y*^2.
-    Case B: the uniform profile u* = `physics.inlet_uniform_value`.
+    Case B "uniform":  the top hat u* = `physics.inlet_uniform_value`.
+    Case B "smoothed": U0 (1 - y^(2m)) from `physics.inlet_sharpness`, which
+        satisfies no-slip exactly and so places a BOUNDED demand on the
+        network, unlike the top hat. See src/physics/inlets.py.
     """
     if config.case == "A":
         return 1.0 - y**2
+    if config.inlet_profile == "smoothed":
+        return inlets.profile(y, config.inlet_sharpness)
     return jnp.full_like(y, config.inlet_uniform_value)
 
 

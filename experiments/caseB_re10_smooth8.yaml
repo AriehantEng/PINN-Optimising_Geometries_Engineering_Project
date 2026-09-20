@@ -1,0 +1,83 @@
+# Case B, Re_h = 10, REGULARISED inlet (sharpness m = 8).
+#
+# The top-hat inlet is incompatible with exact no-slip at the corners: it needs
+# N_u = U/(1 - y^2), unbounded at y = +-1. Measured on caseB_re10, that leaves
+# the momentum-x residual at 525 near the corner and the loss floored at
+# 2.45e-03, against 3.8e-06 and 8.35e-13 for Case A.
+#
+# This run replaces it with u*(0,y) = U0 (1 - y^(2m)), m = 8, which carries the
+# same flux 4/3 and satisfies no-slip exactly, so the ansatz demand is a
+# BOUNDED polynomial peaking at U0*m = 5.67 rather than infinity. Wall layer
+# thickness ~1/(2m) = 0.0625.
+#
+# ACCEPTANCE (all three, before any sharpness sweep or inertia ablation):
+#   - max |momentum-x| within x* < 0.05 drops below 1.0 (from 187)
+#   - final loss drops at least two orders below 2.45e-03
+#   - L-BFGS terminates on gtol, or is still descending at the cap
+# If these fail, the corner singularity was not the cause and the diagnosis
+# needs redoing rather than the budget raising.
+name: caseB_re10_smooth8
+seed: 0
+case: B
+domain:
+  alpha: 1.5
+  outlet_margin: 5.0
+correlation:
+  c0: 0.3155
+  c1: 0.01105
+  n: 1.6
+  citation: 'Durst, Ray, Unsal & Bayoumi (2005), ''The development lengths of laminar
+    pipe and channel flows'', J. Fluids Eng. 127(6):1154-1160. Plane-channel fit C0=0.631,
+    C1=0.0442, n=1.6, expressed there per FULL channel height H with Re_H based on
+    H and mean velocity. Converted here to hydraulic diameter D_h = 2H, which for
+    a wide channel is 4h: L_e/D_h = (1/2)(L_e/H) and Re_H = Re_Dh/2, giving c0 = C0/2
+    = 0.3155 and c1 = C1/4 = 0.01105. Cross-check: the high-Re asymptote L_e/D_h =
+    0.01105 Re_Dh reproduces the classical plane-channel value 0.011 Re_Dh.'
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+  formulation: velocity_pressure
+  convective_coefficient: 1.0
+  inlet_profile: smoothed
+  inlet_sharpness: 8
+model:
+  arch: modified_mlp
+  width: 128
+  depth: 4
+  fourier:
+    enabled: false
+  rwf:
+    enabled: false
+bc:
+  inlet: soft
+  outlet_velocity: soft
+  pressure_gauge: hard
+sampling:
+  n_interior: 2048
+  n_validation: 2048
+  n_inlet: 128
+  n_outlet: 128
+  resample_every: 500
+  seed: 1
+weights:
+  scheme: fixed
+  values:
+    momentum_x: 1.0
+    momentum_y: 1.0
+    continuity: 1.0
+    inlet: 1.0
+    outlet_velocity: 1.0
+training:
+  select: best_validation
+  adam:
+    steps: 2000
+    lr_init: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+  lbfgs:
+    enabled: true
+    max_iterations: 6000
+    gtol: 1.0e-14
+evaluation:
+  nx: 401
+  ny: 201

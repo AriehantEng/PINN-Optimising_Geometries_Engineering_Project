@@ -57,3 +57,22 @@ them at all:
 
 * wall no-slip
 * CONTROL always-true
+
+## Degenerate configurations (not detectable from accuracy alone)
+
+A configuration is degenerate when the correct answer is something the ansatz
+already produces, so the network is not being tested. Accuracy does not reveal
+this -- the cubic lift scored 1.10e-06 against the sinusoidal lift's 7.38e-07,
+i.e. slightly WORSE, despite its answer being exactly representable. Only the
+structure reveals it.
+
+| Configuration | Why it is vacuous | Guard |
+|---|---|---|
+| `model.lift: cubic` (psi-omega) | psi_base' = (3Q/4)(1 - y^2) IS the exact Case A profile, so the correct answer is N_psi = 0 | `lifts.DEGENERATE_LIFTS`; reported by the sentinel matrix |
+| `physics.inlet_sharpness: 1` (Case B) | U0 = 1 and the profile is 1 - y^2, the developed solution, so Case B starts developed: no entrance region, zero entrance length | `inlets.DEGENERATE_SHARPNESS`; **refused by config** so it cannot be reported |
+| test 3 under psi-omega | continuity holds by construction, so mass conservation cannot fail | drift < 1e-12 reports VACUOUS, never PASS |
+| test 2 (`max |v*|`) in every formulation | the zero field passes it | reported as degenerate in the matrix |
+
+The inlet case is refused outright rather than merely flagged, because unlike
+the cubic lift it has no legitimate use: the cubic lift is a useful machinery
+check, whereas a Case B that is already developed tests nothing at all.

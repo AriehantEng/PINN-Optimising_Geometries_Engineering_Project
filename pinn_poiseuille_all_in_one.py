@@ -355,7 +355,9 @@ class Config:
     name: str
     seed: int
     case: str  # A | B
-    inlet_uniform_value: float | None  # Case B only
+    inlet_uniform_value: float | None  # Case B, inlet_profile "uniform" only
+    inlet_profile: str | None  # Case B only: "uniform" | "smoothed"
+    inlet_sharpness: int | None  # Case B, inlet_profile "smoothed" only
     domain: DomainConfig
     correlation: EntranceLengthCorrelation
     physics: PhysicsConfig
@@ -374,11 +376,29 @@ class Config:
         """Non-dimensional flux entering at x* = 0.
 
         Case A: int (1 - y^2) dy = 4/3 over y in [-1, 1].
-        Case B: uniform u* = U over the full height 2, so flux = 2U.
+        Case B "uniform": u* = U over the full height 2, so flux = 2U.
+        Case B "smoothed": 4/3 by construction -- the family is normalised so
+        every sharpness carries the same flux the top hat does, which is what
+        lets a sharpness sweep change only the inlet SHAPE.
         """
         if self.case == "A":
             return 4.0 / 3.0
+        if self.inlet_profile == "smoothed":
+            from .physics.inlets import FLUX
+
+            return FLUX
         return 2.0 * self.inlet_uniform_value
+
+    @property
+    def inlet_peak(self) -> float:
+        """Maximum of the prescribed inlet profile."""
+        if self.case == "A":
+            return 1.0
+        if self.inlet_profile == "smoothed":
+            from .physics.inlets import peak
+
+            return peak(self.inlet_sharpness)
+        return self.inlet_uniform_value
 
     @property
     def loss_terms(self) -> tuple[str, ...]:
@@ -448,15 +468,55 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         p, "formulation", "physics", {"velocity_pressure", "psi_omega"}
     )
     if case == "B":
-        inlet_uniform_value = _positive(
-            _require(p, "inlet_uniform_value", "physics", float),
-            "physics.inlet_uniform_value",
+        inlet_profile = _choice(
+            p, "inlet_profile", "physics", {"uniform", "smoothed"}
         )
+        if inlet_profile == "uniform":
+            # The top hat. Incompatible with exact no-slip at the inlet
+            # corners -- it requires an unbounded network output there -- so
+            # it is kept only as the reference against which the regularised
+            # family is measured. See src/physics/inlets.py.
+            inlet_uniform_value = _positive(
+                _require(p, "inlet_uniform_value", "physics", float),
+                "physics.inlet_uniform_value",
+            )
+            _reject_unused(
+                p, "inlet_sharpness", "physics",
+                'when physics.inlet_profile is "uniform" (the top hat has no '
+                "sharpness parameter)",
+            )
+            inlet_sharpness = None
+        else:
+            inlet_sharpness = _require(p, "inlet_sharpness", "physics", int)
+            if inlet_sharpness < 1:
+                raise ConfigError(
+                    f"physics.inlet_sharpness must be at least 1, got "
+                    f"{inlet_sharpness}. The profile is U0(1 - y^(2m)); m = 1 "
+                    "is the developed parabola and larger m sharpens toward "
+                    "the top hat."
+                )
+            if inlet_sharpness == 1:
+                raise ConfigError(
+                    "physics.inlet_sharpness = 1 makes the inlet profile "
+                    "1 - y^2, which IS the fully developed solution. Case B "
+                    "would then start developed: no entrance region, zero "
+                    "entrance length, and nothing tested. This configuration "
+                    "is vacuous rather than wrong, and is refused so it cannot "
+                    "be reported as a Case B result. Use m >= 2 (the sweep "
+                    "starts at 4)."
+                )
+            _reject_unused(
+                p, "inlet_uniform_value", "physics",
+                'when physics.inlet_profile is "smoothed" (the peak is derived '
+                "from the sharpness so the flux stays 4/3)",
+            )
+            inlet_uniform_value = None
     else:
-        _reject_unused(
-            p, "inlet_uniform_value", "physics", "for case A (its inlet is parabolic)"
-        )
-        inlet_uniform_value = None
+        for key in ("inlet_uniform_value", "inlet_profile", "inlet_sharpness"):
+            _reject_unused(
+                p, key, "physics", "for case A (its inlet is parabolic)"
+            )
+        inlet_uniform_value = inlet_profile = inlet_sharpness = None
     convective_coefficient = _require(
         p, "convective_coefficient", "physics", float
     )
@@ -678,6 +738,8 @@ def parse_config(document: Mapping[str, Any]) -> Config:
         seed=seed,
         case=case,
         inlet_uniform_value=inlet_uniform_value,
+        inlet_profile=inlet_profile,
+        inlet_sharpness=inlet_sharpness,
         domain=domain,
         correlation=correlation,
         physics=physics,
@@ -1292,7 +1354,7 @@ import numpy as np
 from ..geometry.domain import WALL, Channel
 from ..geometry.sampling import evaluation_grid
 from ..models.build import build_model
-from ..physics import analytic
+from ..physics import analytic, inlets
 from .metrics import cross_channel_flux, evaluate_fields, flux_conservation_error, max_abs, relative_l2
 
 LIVE = "LIVE"
@@ -1366,6 +1428,8 @@ def check_inlet_profile(config, model, params):
     u, v, _ = evaluate_fields(model.field, params, points)
     if config.case == "A":
         target = analytic.u_nd(np.asarray(y))
+    elif config.inlet_profile == "smoothed":
+        target = np.asarray(inlets.profile(y, config.inlet_sharpness))
     else:
         target = np.full(len(y), config.inlet_uniform_value)
     return max_abs(u - target) < 1e-6 and max_abs(v) < 1e-6
@@ -3309,6 +3373,115 @@ def batched_field_and_jacobian(field_fn, points):
     value, d_dx = jax.jvp(batched_fn, (points,), (jnp.broadcast_to(_EX, points.shape),))
     _, d_dy = jax.jvp(batched_fn, (points,), (jnp.broadcast_to(_EY, points.shape),))
     return value, jnp.stack([d_dx, d_dy], axis=-1)
+'''
+
+# ---------------------------------------------------------------------------
+# src/physics/inlets.py
+# ---------------------------------------------------------------------------
+FILES['src/physics/inlets.py'] = r'''"""Case B inlet profiles, and why the obvious one cannot be solved.
+
+The natural developing-flow inlet is a top hat: u*(0, y) = U for every y. It is
+also incompatible with the ansatz. No-slip is imposed exactly by writing
+u = phi(y) N_u with phi = 1 - y^2, so matching a top hat at x* = 0 requires
+
+    N_u(0, y) = U / (1 - y^2)
+
+which is UNBOUNDED at y = +-1. The network is being asked for infinity at two
+points, and it cannot comply: measured on runs/caseB_re10, the momentum-x
+residual reaches 525 at the inlet corner against 3.8e-06 for Case A, and the
+loss floors at 2.45e-03 against 8.35e-13.
+
+The regularised family
+----------------------
+
+    u*(0, y) = U0 (1 - y^(2m)),    U0 = (2/3)(2m+1)/(2m)
+
+with U0 chosen so the flux is exactly 4/3 for every m -- the same flux the top
+hat carries, so nothing else in the problem changes.
+
+What makes this family the right one is the exact factorisation
+
+    1 - y^(2m) = (1 - y^2) (1 + y^2 + ... + y^(2m-2))
+
+so that
+
+    N_u(0, y) = U0 (1 + y^2 + ... + y^(2m-2))
+
+is a BOUNDED polynomial for every finite m, with maximum U0*m at the wall. The
+singularity is precisely the m -> infinity limit, and it is approached linearly
+in m. The wall layer has thickness ~1/(2m).
+
+It is also the physically honest choice. A real inlet has a finite boundary
+layer; the top hat is the idealisation, and recovering it as a limit is more
+defensible than imposing it and then fighting the consequences.
+
+DEGENERACY -- m = 1
+-------------------
+
+At m = 1, U0 = 1 and the profile is 1 - y^2: the fully developed Case A
+solution. Case B at m = 1 is ALREADY DEVELOPED at its inlet, so there is no
+entrance region, the entrance length is zero, and the case tests nothing. It is
+registered in `DEGENERATE_SHARPNESS` and reported by the sentinel matrix.
+"""
+
+from __future__ import annotations
+
+import jax.numpy as jnp
+
+#: Sharpness values at which the inlet IS the developed profile, so the case is
+#: vacuous. m = 1 gives U0 = 1 and u = 1 - y^2 exactly.
+DEGENERATE_SHARPNESS = frozenset({1})
+
+#: The flux every profile in this family carries, by construction.
+FLUX = 4.0 / 3.0
+
+
+def peak(sharpness: int) -> float:
+    """U0 such that the profile carries flux 4/3.
+
+    int_{-1}^{1} (1 - y^(2m)) dy = 2 - 2/(2m+1) = 2 (2m)/(2m+1), so
+    U0 = (4/3) / (2 (2m)/(2m+1)) = (2/3)(2m+1)/(2m).
+
+    m = 1 -> 1 (the parabola); m -> infinity -> 2/3 (the top hat).
+    """
+    _validate(sharpness)
+    return (2.0 / 3.0) * (2 * sharpness + 1) / (2 * sharpness)
+
+
+def profile(y, sharpness: int):
+    """u*(0, y) = U0 (1 - y^(2m))."""
+    _validate(sharpness)
+    return peak(sharpness) * (1.0 - y ** (2 * sharpness))
+
+
+def network_value_at_wall(sharpness: int) -> float:
+    """max |N_u(0, y)| = U0 * m, the demand the ansatz places on the network.
+
+    Diverges linearly in m, which is the quantitative statement of how the top
+    hat becomes unsolvable.
+    """
+    _validate(sharpness)
+    return peak(sharpness) * sharpness
+
+
+def wall_layer_thickness(sharpness: int) -> float:
+    """Approximate thickness of the near-wall transition, ~1/(2m)."""
+    _validate(sharpness)
+    return 1.0 / (2.0 * sharpness)
+
+
+def _validate(sharpness) -> None:
+    if not isinstance(sharpness, (int,)) or isinstance(sharpness, bool):
+        raise TypeError(
+            f"inlet sharpness must be an integer, got {sharpness!r}. The "
+            "profile is 1 - y^(2m) and a non-integer m is not a polynomial, "
+            "so the bounded-N_u argument would not hold."
+        )
+    if sharpness < 1:
+        raise ValueError(
+            f"inlet sharpness must be at least 1, got {sharpness}. m = 1 is "
+            "the developed parabola; larger m sharpens toward the top hat."
+        )
 '''
 
 # ---------------------------------------------------------------------------
@@ -5327,6 +5500,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 
 from ..config import Config
+from ..physics import inlets
 from ..physics import residuals, streamfunction
 from ..physics.derivatives import (
     batched_field_and_jacobian,
@@ -5339,10 +5513,15 @@ def inlet_profile(config: Config, y):
     """Prescribed streamwise velocity at x* = 0.
 
     Case A: the fully developed parabola u* = 1 - y*^2.
-    Case B: the uniform profile u* = `physics.inlet_uniform_value`.
+    Case B "uniform":  the top hat u* = `physics.inlet_uniform_value`.
+    Case B "smoothed": U0 (1 - y^(2m)) from `physics.inlet_sharpness`, which
+        satisfies no-slip exactly and so places a BOUNDED demand on the
+        network, unlike the top hat. See src/physics/inlets.py.
     """
     if config.case == "A":
         return 1.0 - y**2
+    if config.inlet_profile == "smoothed":
+        return inlets.profile(y, config.inlet_sharpness)
     return jnp.full_like(y, config.inlet_uniform_value)
 
 

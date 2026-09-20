@@ -114,6 +114,20 @@ failure mode by construction, at the cost of making SPEC test 3 trivially true
 and therefore no longer an independent check. Phase 2 splits flux between two
 daughter branches, so this is the single most important Phase 1 finding for it.
 
+**A top-hat inlet cannot be imposed on hard no-slip walls.**
+Case B floored at loss 2.45e-3 with a momentum-x residual of 525 at the inlet
+corner, against 8.35e-13 and 3.8e-6 for Case A -> u = phi(y) N_u with
+phi = 1 - y^2 means a uniform inlet needs N_u = U/(1 - y^2), unbounded at
+y = +-1; the network is being asked for infinity at two points -> use the
+regularised family u*(0,y) = U0 (1 - y^(2m)) with U0 = (2/3)(2m+1)/(2m)
+(`physics/inlets.py`). It carries flux 4/3 for every m, satisfies no-slip
+exactly, and because 1 - y^(2m) = (1 - y^2)(1 + y^2 + ... ) the demand on the
+network is a BOUNDED polynomial peaking at U0*m. Measured at y = 0.9999:
+3333 for the top hat against 5.66 at m = 8. The top hat is the m -> infinity
+limit, so it is recovered as a limit rather than imposed. NOTE m = 1 is the
+developed parabola and makes Case B vacuous; config refuses it. Phase 2's
+junction inlet has the same corner problem.
+
 **`curve_fit` reporting success is not evidence that a fit happened.**
 The 30000-iteration run reported `D_inf = 1.885e-07 +- 9.1e-07, consistent
 with zero` from a fit whose every parameter was still the initial guess -> the

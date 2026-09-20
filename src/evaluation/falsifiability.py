@@ -29,7 +29,7 @@ import numpy as np
 from ..geometry.domain import WALL, Channel
 from ..geometry.sampling import evaluation_grid
 from ..models.build import build_model
-from ..physics import analytic
+from ..physics import analytic, inlets
 from .metrics import cross_channel_flux, evaluate_fields, flux_conservation_error, max_abs, relative_l2
 
 LIVE = "LIVE"
@@ -103,6 +103,8 @@ def check_inlet_profile(config, model, params):
     u, v, _ = evaluate_fields(model.field, params, points)
     if config.case == "A":
         target = analytic.u_nd(np.asarray(y))
+    elif config.inlet_profile == "smoothed":
+        target = np.asarray(inlets.profile(y, config.inlet_sharpness))
     else:
         target = np.full(len(y), config.inlet_uniform_value)
     return max_abs(u - target) < 1e-6 and max_abs(v) < 1e-6
