@@ -85,6 +85,7 @@ import pathlib  # noqa: E402
 import platform  # noqa: E402
 import sys  # noqa: E402
 import time  # noqa: E402
+import functools  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
 from typing import NamedTuple  # noqa: E402
 
@@ -105,6 +106,13 @@ INLET_FLUX = 4.0 / 3.0
 
 #: Durst et al. (2005), per hydraulic diameter; see the module docstring.
 DURST_C0, DURST_C1, DURST_N = 0.3155, 0.01105, 1.6
+
+#: An entrance length is read where the centreline reaches 99% of its developed
+#: value. If the flux itself varies along the channel by a comparable amount,
+#: the centreline creeps and the crossing moves (CLAUDE.md: a 6% drift once put
+#: it at 9.3 instead of 2.4). Beyond this relative drift the entrance length is
+#: flagged unreliable rather than reported as a result.
+ENTRANCE_DRIFT_LIMIT = 1e-3
 
 #: Validated categorical palette (colour-vision-deficiency checked), in fixed
 #: order, plus the neutral used for reference curves.
@@ -166,8 +174,9 @@ def _check(document, schema, path=""):
         if isinstance(expected, dict):
             _check(value, expected, where)
         elif expected is float:
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ConfigError(f"{where} must be a number, got {value!r}")
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value)):
+                raise ConfigError(f"{where} must be a finite number, got {value!r}")
         elif expected is int:
             if isinstance(value, bool) or not isinstance(value, int):
                 raise ConfigError(f"{where} must be an integer, got {value!r}")
@@ -226,6 +235,11 @@ def parse_config(document) -> Config:
     _check({**document, "sampling": sampling_view}, SCHEMA)
     physics, sampling = document["physics"], document["sampling"]
     adam, lbfgs = document["training"]["adam"], document["training"]["lbfgs"]
+    for station in document["evaluation"]["profile_stations"]:
+        if (isinstance(station, bool) or not isinstance(station, (int, float))
+                or not math.isfinite(station)):
+            raise ConfigError(
+                f"evaluation.profile_stations entries must be finite numbers, got {station!r}")
     evaluation = document["evaluation"]
 
     config = Config(
@@ -274,6 +288,12 @@ def parse_config(document) -> Config:
         raise ConfigError("physics.inlet_sharpness must be an integer >= 2")
     if config.length <= 0:
         raise ConfigError("domain.length must be positive")
+    if config.adam_learning_rate <= 0:
+        raise ConfigError("training.adam.learning_rate must be positive")
+    if not 0.0 < config.adam_decay_rate <= 1.0:
+        raise ConfigError("training.adam.decay_rate must lie in (0, 1]")
+    if config.lbfgs_gtol <= 0:
+        raise ConfigError("training.lbfgs.gtol must be positive")
     for name in ("width", "depth", "n_interior", "n_inlet", "n_outlet",
                  "n_validation", "adam_steps", "adam_decay_steps",
                  "adam_resample_every", "lbfgs_iterations", "check_every",
@@ -510,6 +530,7 @@ def wall_factor(y):
     return 1.0 - y**2
 
 
+@functools.lru_cache(maxsize=None)
 def make_field(length):
     """field(params, xy) -> (u, v, p) at one point.
 
@@ -687,6 +708,10 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         loss, terms = train_terms(p, batch)
         held = float(heldout_loss(p))
         loss = float(loss)
+        if not (math.isfinite(loss) and math.isfinite(held)):
+            raise FloatingPointError(
+                f"non-finite loss at {phase}:{iteration} (training {loss}, held-out {held}); "
+                "training has diverged and nothing will be saved as a result")
         if held < best["heldout"]:
             best.update(heldout=held, params=p, where=f"{phase}:{iteration}")
             if checkpoint is not None:
@@ -765,6 +790,10 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         cycle_log.append({"cycle": cycle, "iterations": int(result.nit),
                           "message": str(result.message)})
 
+    if best["where"] == "initial":
+        raise RuntimeError(
+            "no trained parameters beat the untrained network on the held-out points; "
+            "refusing to return the random initialisation as a result")
     info = {
         "parameter_count": int(ravel_pytree(params)[0].size),
         "adam_seconds": adam_seconds,
@@ -781,13 +810,51 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
 # --------------------------------------------------------------------------- #
 
 
+_PREDICTORS: dict = {}
+_RESIDUALS: dict = {}
+
+
+def _chunked(apply, params, points, chunk):
+    """Apply a compiled batch function in fixed-size chunks.
+
+    The last chunk is padded to full size, so every call has one shape and the
+    function compiles once rather than once per ragged remainder.
+    """
+    points = np.asarray(points, dtype=np.float64).reshape(-1, 2)
+    n = len(points)
+    padded = np.zeros((-(-n // chunk) * chunk, 2))
+    padded[:n] = points
+    outputs = [apply(params, jnp.asarray(padded[i:i + chunk])) for i in range(0, len(padded), chunk)]
+    return outputs, n
+
+
 def predict(field, params, points, chunk=8192):
-    """(u, v, p) arrays at an (N, 2) array of points."""
-    apply = jax.jit(jax.vmap(lambda xy: field(params, xy)))
-    out = [np.asarray(apply(jnp.asarray(points[i:i + chunk])))
-           for i in range(0, len(points), chunk)]
-    out = np.concatenate(out, axis=0)
+    """(u, v, p) arrays at an (N, 2) array of points.
+
+    Compiled once per field function with the parameters as an ARGUMENT, so a
+    new set of parameters or a new set of points does not recompile.
+    """
+    apply = _PREDICTORS.get(field)
+    if apply is None:
+        apply = _PREDICTORS[field] = jax.jit(jax.vmap(field, in_axes=(None, 0)))
+    outputs, n = _chunked(apply, params, points, chunk)
+    out = np.concatenate([np.asarray(o) for o in outputs], axis=0)[:n]
     return out[:, 0], out[:, 1], out[:, 2]
+
+
+def residuals_at(config: Config, field, params, points, chunk=4096):
+    """(R_x, R_y, R_c, u, v, p, p_x) at an (N, 2) array of points."""
+    key = (field, config.reynolds, config.pressure_scaling)
+    apply = _RESIDUALS.get(key)
+    if apply is None:
+        def bundle(p, pts):
+            d = batched_derivatives(lambda xy: field(p, xy), pts)
+            return (momentum_x(d, config.reynolds, config.pressure_scaling),
+                    momentum_y(d, config.reynolds, config.pressure_scaling),
+                    continuity(d), d.u, d.v, d.p, d.p_x)
+        apply = _RESIDUALS[key] = jax.jit(bundle)
+    outputs, n = _chunked(apply, params, points, chunk)
+    return tuple(np.concatenate([np.asarray(o[k]) for o in outputs])[:n] for k in range(7))
 
 
 def _crossing(x, values, target):
@@ -803,7 +870,18 @@ def _crossing(x, values, target):
 
 def evaluate(config: Config, params, last_batch_losses=None):
     """Everything worth knowing about a trained solution, plus plot arrays."""
-    field = make_field(config.length)
+    metrics, arrays = measure_solution(config, make_field(config.length), params)
+    if last_batch_losses is not None:
+        metrics.update(last_batch_losses)
+    return metrics, arrays
+
+
+def measure_solution(config: Config, field, params):
+    """The metrics of `evaluate` for ANY field(params, xy) -> (u, v, p).
+
+    Separate from `evaluate` so it can be checked against a field whose flux,
+    centreline and residuals are known exactly.
+    """
     L = config.length
 
     # Flux through stations along the channel, by 200-node Gauss-Legendre.
@@ -830,13 +908,11 @@ def evaluate(config: Config, params, last_batch_losses=None):
     yg = np.linspace(-1.0, 1.0, config.ny)
     gx, gy = np.meshgrid(xg, yg, indexing="ij")
     grid = np.stack([gx.ravel(), gy.ravel()], axis=-1)
-    residual_fn = jax.jit(lambda pts: _residual_bundle(config, field, params, pts))
-    parts = [residual_fn(jnp.asarray(grid[i:i + 4096])) for i in range(0, len(grid), 4096)]
-    rx, ry, rc, ug, vg, pg, px = (np.concatenate([np.asarray(part[k]) for part in parts])
-                                  for k in range(7))
+    rx, ry, rc, ug, vg, pg, px = residuals_at(config, field, params, grid)
     inertia, viscous = scaling_coefficients(config.reynolds, config.pressure_scaling)
     developed_px = -2.0 * viscous * developed_centreline
     outlet_px = px.reshape(config.nx, config.ny)[-1, config.ny // 2]
+    drift = float(np.max(np.abs(flux - flux[0])) / flux[0])
 
     metrics = {
         "name": config.name,
@@ -848,10 +924,12 @@ def evaluate(config: Config, params, last_batch_losses=None):
         "flux_at_inlet_station": float(flux[0]),
         "flux_at_outlet": flux_outlet,
         "flux_max_deviation_from_prescribed": float(np.max(np.abs(flux - INLET_FLUX)) / INLET_FLUX),
-        "mass_drift_from_first_station": float(np.max(np.abs(flux - flux[0])) / flux[0]),
+        "mass_drift_from_first_station": drift,
         "centreline_at_inlet": float(uc[0]),
         "centreline_developed": developed_centreline,
         "entrance_length": entrance,
+        "entrance_length_reliable": bool(drift < ENTRANCE_DRIFT_LIMIT and math.isfinite(entrance)),
+        "entrance_length_drift_limit": ENTRANCE_DRIFT_LIMIT,
         "entrance_length_correlation_flat_inlet": correlation_entrance_length(config.reynolds),
         "outlet_profile_relative_l2": float(np.linalg.norm(uo - parabola) / np.linalg.norm(parabola)),
         "outlet_max_abs_v": float(np.max(np.abs(vo))),
@@ -865,8 +943,9 @@ def evaluate(config: Config, params, last_batch_losses=None):
         "residual_momentum_y_rms": float(np.sqrt(np.mean(ry**2))),
         "residual_continuity_rms": float(np.sqrt(np.mean(rc**2))),
     }
-    if last_batch_losses is not None:
-        metrics.update(last_batch_losses)
+    if not math.isfinite(entrance):
+        metrics["entrance_length_note"] = (
+            "the centreline never reached 99% of its developed value inside the channel")
 
     arrays = {
         "stations": stations, "flux": flux, "xc": xc, "uc": uc, "pc": pc,
@@ -876,13 +955,6 @@ def evaluate(config: Config, params, last_batch_losses=None):
         "momentum_x": rx.reshape(config.nx, config.ny),
     }
     return metrics, arrays
-
-
-def _residual_bundle(config, field, params, points):
-    d = batched_derivatives(lambda xy: field(params, xy), points)
-    return (momentum_x(d, config.reynolds, config.pressure_scaling),
-            momentum_y(d, config.reynolds, config.pressure_scaling),
-            continuity(d), d.u, d.v, d.p, d.p_x)
 
 
 # --------------------------------------------------------------------------- #
@@ -1013,6 +1085,11 @@ def save_params(path, params):
 def load_run(directory):
     """A trained model as a callable: model(x, y) -> (u, v, p) arrays."""
     directory = pathlib.Path(directory)
+    if not (directory / "params.npz").is_file():
+        state = ("it was interrupted: only a checkpoint exists"
+                 if (directory / "checkpoint.npz").is_file() else "there are no parameters")
+        raise FileNotFoundError(f"{directory} is not a finished run: {state}. "
+                                "params.npz is written last, only when a run completes.")
     config = load_config(directory / "config.yaml")
     template = init_network(root_keys(config.seed)[0], config.width, config.depth)
     flat_template, unflatten = ravel_pytree(template)
@@ -1028,7 +1105,8 @@ def load_run(directory):
         x, y = np.broadcast_arrays(x, y)
         if np.any((x < 0) | (x > config.length) | (y < -1) | (y > 1)):
             raise ValueError(f"points must lie in x* in [0, {config.length}], y* in [-1, 1]")
-        return predict(field, params, np.stack([x.ravel(), y.ravel()], axis=-1))
+        u, v, p = predict(field, params, np.stack([x.ravel(), y.ravel()], axis=-1))
+        return u.reshape(x.shape), v.reshape(x.shape), p.reshape(x.shape)
 
     model.config = config
     return model
@@ -1037,6 +1115,10 @@ def load_run(directory):
 def run(config_path, out=None, verbose=True):
     config = load_config(config_path)
     directory = pathlib.Path(out) if out else HERE / "runs" / config.name
+    if directory.exists() and any(directory.iterdir()):
+        raise FileExistsError(
+            f"{directory} already holds files. A run never writes over another run: "
+            "delete it or pass a different --out.")
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "config.yaml").write_text(
         pathlib.Path(config_path).read_text(encoding="utf-8"), encoding="utf-8")
@@ -1051,19 +1133,18 @@ def run(config_path, out=None, verbose=True):
                  if config.rar_points else "")
               + f", {config.lbfgs_cycles} L-BFGS cycles of {config.lbfgs_iterations}")
 
-    params, history, info = train(config, verbose=verbose, checkpoint=directory / "params.npz")
-    save_params(directory / "params.npz", params)
+    checkpoint = directory / "checkpoint.npz"
+    params, history, info = train(config, verbose=verbose, checkpoint=checkpoint)
 
-    # Losses of the SELECTED parameters, on a fresh draw and on the held-out set.
+    # Losses of the SELECTED parameters on a fresh draw. The held-out loss was
+    # already measured, compiled, when train() selected them.
     field = make_field(config.length)
-    weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
-    loss_terms = make_loss_terms(config, field)
     _, _, heldout_key = root_keys(config.seed)
     fresh = sample_batch(jax.random.fold_in(heldout_key, 7), config, config.n_validation)
-    heldout = sample_batch(heldout_key, config, config.n_validation)
-    fresh_terms = loss_terms(params, fresh)
+    fresh_terms = jax.jit(make_loss_terms(config, field))(params, fresh)
+    weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
     losses = {
-        "loss_heldout": float(total_loss(loss_terms(params, heldout), weights)),
+        "loss_heldout": info["selected_heldout_loss"],
         "loss_fresh_points": float(total_loss(fresh_terms, weights)),
         **{f"loss_fresh_{k}": float(v) for k, v in fresh_terms.items()},
         **{f"info_{k}": v for k, v in info.items() if k != "lbfgs_cycles"},
@@ -1075,7 +1156,7 @@ def run(config_path, out=None, verbose=True):
         writer.writeheader()
         writer.writerows(history)
     with (directory / "metrics.json").open("w", encoding="utf-8") as handle:
-        json.dump(metrics, handle, indent=2)
+        json.dump(_json_safe(metrics), handle, indent=2, allow_nan=False)
     with (directory / "lbfgs_cycles.json").open("w", encoding="utf-8") as handle:
         json.dump(info["lbfgs_cycles"], handle, indent=2)
     with (directory / "environment.json").open("w", encoding="utf-8") as handle:
@@ -1083,9 +1164,25 @@ def run(config_path, out=None, verbose=True):
                    "jax": jax.__version__, "x64": bool(jax.config.jax_enable_x64)}, handle, indent=2)
     write_figures(config, params, metrics, arrays, history, directory)
 
+    # LAST: params.npz exists only once everything else is written, so its
+    # presence is what marks a run as finished (load_run checks for it).
+    save_params(directory / "params.npz", params)
+    checkpoint.unlink(missing_ok=True)
+
     if verbose:
         _print_summary(metrics, directory)
     return directory
+
+
+def _json_safe(value):
+    """Replace non-finite floats with None: NaN and Infinity are not JSON."""
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _print_summary(m, directory):
@@ -1095,6 +1192,10 @@ def _print_summary(m, directory):
           f"{m['centreline_developed']:.4f} developed")
     print(f"  entrance length (99%)   : {m['entrance_length']:.3f} half-heights "
           f"(Durst, flat inlet: {m['entrance_length_correlation_flat_inlet']:.3f})")
+    if not m["entrance_length_reliable"]:
+        print(f"  WARNING: flux drifts by {m['mass_drift_from_first_station']:.1e} along the "
+              f"channel (limit {m['entrance_length_drift_limit']:.0e}), so the centreline is "
+              "still creeping and the entrance length above is NOT reliable")
     print(f"  pressure drop, centre   : {m['pressure_drop_centreline']:.5f}")
     print(f"  outlet dp/dx            : {m['outlet_dp_dx']:.5f} "
           f"(developed value {m['developed_dp_dx_expected']:.5f})")

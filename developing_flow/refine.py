@@ -112,6 +112,8 @@ def make_residual_vector(config, batch, interior, inlet, outlet):
 
 def refine(run, out, n_points, n_boundary, iterations, seed, verbose=True):
     run, out = pathlib.Path(run), pathlib.Path(out)
+    if out.exists() and any(out.iterdir()):
+        raise FileExistsError(f"{out} already holds files; a run never writes over another run")
     config, params = load(run)
     field = pinn.make_field(config.length)
     loss_terms = pinn.make_loss_terms(config, field)
@@ -177,7 +179,6 @@ def refine(run, out, n_points, n_boundary, iterations, seed, verbose=True):
     refined = with_output(theta)
     out.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(run / "config.yaml", out / "config.yaml")
-    pinn.save_params(out / "params.npz", refined)
     summary = {
         "source_run": str(run),
         "method": "Levenberg-Marquardt on the output layer, hidden layers frozen",
@@ -191,6 +192,8 @@ def refine(run, out, n_points, n_boundary, iterations, seed, verbose=True):
     }
     with (out / "refine.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
+    # Last, so that a params.npz means the refined run is complete.
+    pinn.save_params(out / "params.npz", refined)
     if verbose:
         print(f"\n  held-out loss {before_heldout:.4e} -> {summary['heldout_loss_after']:.4e} "
               f"({before_heldout / summary['heldout_loss_after']:.2f}x)")

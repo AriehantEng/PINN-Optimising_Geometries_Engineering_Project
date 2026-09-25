@@ -217,7 +217,7 @@ def test_focus_points_crowd_the_inlet(config):
     assert near_inlet > 2.0 * uniform_share
 
 
-def test_held_out_points_are_a_different_draw_from_training(config):
+def test_held_out_points_are_a_different_draw_from_the_first_training_draw(config):
     _, sample_key, heldout_key = pinn.root_keys(config.seed)
     heldout = pinn.sample_batch(heldout_key, config, 256).interior
     _, draw = jax.random.split(sample_key)
@@ -241,7 +241,11 @@ def test_total_loss_is_the_weighted_sum_of_exactly_the_five_terms():
 
 
 @pytest.mark.slow
-def test_a_tiny_run_writes_everything_and_reloads_identically(tmp_path):
+def test_a_tiny_run_saves_the_parameters_training_selected(tmp_path):
+    """The saved model must be the one train() SELECTED, not merely whatever
+    params.npz contains. train() is deterministic, so a second training of the
+    same config must reproduce the saved parameters bitwise."""
+    import json
     config_path = tmp_path / "tiny.yaml"
     config_path.write_text(yaml.safe_dump(tiny_document()), encoding="utf-8")
     directory = pinn.run(config_path, out=tmp_path / "run", verbose=False)
@@ -249,23 +253,167 @@ def test_a_tiny_run_writes_everything_and_reloads_identically(tmp_path):
     for name in ("config.yaml", "params.npz", "history.csv", "metrics.json",
                  "profiles.png", "fields.png", "diagnostics.png"):
         assert (directory / name).is_file(), name
+    assert not (directory / "checkpoint.npz").exists(), "checkpoint left behind after a finished run"
 
-    import json
-    metrics = json.loads((directory / "metrics.json").read_text())
+    def refuse(token):
+        raise AssertionError(f"metrics.json contains the non-JSON token {token}")
+    metrics = json.loads((directory / "metrics.json").read_text(), parse_constant=refuse)
     for key in ("entrance_length_correlation_flat_inlet", "loss_heldout", "flux_at_outlet"):
         assert np.isfinite(metrics[key])
 
-    model = pinn.load_run(directory)
     config = pinn.parse_config(copy.deepcopy(tiny_document()))
-    template = pinn.init_network(pinn.root_keys(config.seed)[0], config.width, config.depth)
-    _, unflatten = ravel_pytree(template)
-    params = unflatten(jnp.asarray(np.load(directory / "params.npz")["flat"]))
+    selected, _, info = pinn.train(config, verbose=False)
+    saved = np.load(directory / "params.npz")["flat"]
+    assert np.array_equal(saved, np.asarray(ravel_pytree(selected)[0]))
+    assert metrics["loss_heldout"] == info["selected_heldout_loss"]
+
+    model = pinn.load_run(directory)
     x, y = np.array([0.0, 0.5, 2.0]), np.array([0.0, 0.3, -0.9])
-    expected = pinn.predict(pinn.make_field(config.length), params, np.stack([x, y], axis=-1))
+    expected = pinn.predict(pinn.make_field(config.length), selected, np.stack([x, y], axis=-1))
     for a, b in zip(model(x, y), expected):
         assert np.array_equal(a, b)
+    X, Y = np.meshgrid(np.linspace(0.0, 1.0, 4), np.linspace(-0.5, 0.5, 3))
+    assert all(part.shape == X.shape for part in model(X, Y))
     with pytest.raises(ValueError, match="points must lie"):
         model(np.array([config.length + 1.0]), np.array([0.0]))
+
+    with pytest.raises(FileExistsError, match="never writes over"):
+        pinn.run(config_path, out=directory, verbose=False)
+
+
+def test_an_unfinished_run_does_not_load(tmp_path):
+    run = tmp_path / "interrupted"
+    run.mkdir()
+    (run / "config.yaml").write_text(yaml.safe_dump(tiny_document()), encoding="utf-8")
+    (run / "checkpoint.npz").write_bytes(b"")
+    with pytest.raises(FileNotFoundError, match="interrupted"):
+        pinn.load_run(run)
+
+
+def test_a_non_finite_loss_stops_training_instead_of_saving_the_initial_network(monkeypatch):
+    config = pinn.parse_config(tiny_document())
+    monkeypatch.setattr(pinn, "total_loss", lambda terms, weights: jnp.nan * terms["inlet"])
+    with pytest.raises(FloatingPointError, match="non-finite"):
+        pinn.train(config, verbose=False)
+
+
+def test_training_never_draws_from_the_held_out_key(monkeypatch):
+    """Every sample_batch call train() makes is recorded. The held-out key must
+    be used exactly once, for the held-out set, and never for training."""
+    config = pinn.parse_config(tiny_document())
+    _, _, heldout_key = pinn.root_keys(config.seed)
+    calls = []
+    original = pinn.sample_batch
+
+    def recording(key, cfg, n):
+        calls.append((np.asarray(jax.random.key_data(key) if hasattr(jax.random, "key_data")
+                                 else key).tobytes(), n))
+        return original(key, cfg, n)
+
+    monkeypatch.setattr(pinn, "sample_batch", recording)
+    pinn.train(config, verbose=False)
+    held = np.asarray(heldout_key).tobytes()
+    uses = [n for key, n in calls if key == held]
+    assert uses == [config.n_validation]
+    expected_draws = (config.adam_steps // config.adam_resample_every) + config.lbfgs_cycles
+    assert len(calls) == 1 + expected_draws
+
+
+# -- the loss terms and the measurements, on fields known exactly ------------- #
+
+
+def _exact_developed(config):
+    _, viscous = pinn.scaling_coefficients(config.reynolds, config.pressure_scaling)
+    L = config.length
+
+    def field(params, xy):
+        x, y = xy[0], xy[1]
+        return jnp.stack([1.0 - y**2, 0.0 * x, 2.0 * viscous * (L - x)])
+    return field
+
+
+def test_loss_terms_on_the_exact_developed_field(config):
+    """Interior and outlet terms vanish; the inlet term is exactly the mismatch
+    between the parabola and the prescribed inlet, u first, v second."""
+    field = _exact_developed(config)
+    batch = pinn.sample_batch(jax.random.PRNGKey(4), config, 512)
+    terms = pinn.make_loss_terms(config, field)(None, batch)
+    for name in ("momentum_x", "momentum_y", "continuity", "outlet"):
+        assert float(terms[name]) < 1e-26, name
+    y_in = np.asarray(batch.inlet[:, 1])
+    expected = np.mean((1.0 - y_in**2 - pinn.inlet_profile(y_in, config.inlet_sharpness)) ** 2)
+    assert abs(float(terms["inlet"]) - expected) <= 1e-13 * expected
+
+
+def test_the_inlet_term_sees_v_separately_from_u(config):
+    """A field that matches the inlet in u but carries v = 1 must score exactly 1."""
+    def field(params, xy):
+        return jnp.stack([pinn.inlet_profile(xy[1], config.inlet_sharpness), 1.0 + 0.0 * xy[0], 0.0 * xy[0]])
+    batch = pinn.sample_batch(jax.random.PRNGKey(5), config, 64)
+    assert abs(float(pinn.make_loss_terms(config, field)(None, batch)["inlet"]) - 1.0) < 1e-14
+
+
+def test_measurements_on_the_exact_developed_field(config):
+    m, _ = pinn.measure_solution(config, _exact_developed(config), None)
+    assert abs(m["flux_at_inlet_station"] - pinn.INLET_FLUX) < 1e-12
+    assert m["mass_drift_from_first_station"] < 1e-12
+    assert m["outlet_profile_relative_l2"] < 1e-12
+    assert m["entrance_length"] == 0.0 and m["entrance_length_reliable"]
+    assert abs(m["outlet_dp_dx"] - m["developed_dp_dx_expected"]) < 1e-12
+    for name in ("residual_momentum_x_max", "residual_momentum_y_max", "residual_continuity_max"):
+        assert m[name] < 1e-12, name
+
+
+def test_a_drifting_flux_marks_the_entrance_length_unreliable(config):
+    def field(params, xy):
+        x, y = xy[0], xy[1]
+        return jnp.stack([(1.0 + 0.01 * x / config.length) * (1.0 - y**2), 0.0 * x, 0.0 * x])
+    m, _ = pinn.measure_solution(config, field, None)
+    assert m["mass_drift_from_first_station"] > pinn.ENTRANCE_DRIFT_LIMIT
+    assert not m["entrance_length_reliable"]
+
+
+def test_predict_compiles_once_whatever_the_number_of_points(config):
+    field = pinn.make_field(config.length)
+    assert pinn.make_field(config.length) is field
+    params = random_params(config, 0)
+    pinn.predict(field, params, np.zeros((1, 2)) + [1.0, 0.1])
+    # Other tests may already have compiled this field for other parameter
+    # SHAPES, which legitimately needs its own compile; count only what the
+    # varying point counts below add.
+    before = pinn._PREDICTORS[field]._cache_size()
+    for n in (3, 17, 9000):
+        u, v, p = pinn.predict(field, params, np.zeros((n, 2)) + [1.0, 0.1])
+        assert u.shape == (n,)
+    assert pinn._PREDICTORS[field]._cache_size() == before
+
+
+# -- configuration edge cases ------------------------------------------------- #
+
+
+@pytest.mark.parametrize("section, key, value, message", [
+    ("physics", "reynolds", float("nan"), "finite"),
+    ("physics", "reynolds", float("inf"), "finite"),
+    ("training.adam", "learning_rate", -1.0e-3, "learning_rate"),
+    ("training.adam", "decay_rate", 1.5, "decay_rate"),
+    ("training.lbfgs", "gtol", 0.0, "gtol"),
+])
+def test_config_refuses_values_that_cannot_describe_a_run(section, key, value, message):
+    document = base_document()
+    target = document
+    for part in section.split("."):
+        target = target[part]
+    target[key] = value
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+@pytest.mark.parametrize("station", [True, "a", float("nan")])
+def test_profile_stations_must_be_finite_numbers(station):
+    document = base_document()
+    document["evaluation"]["profile_stations"] = [station, 2.0]
+    with pytest.raises(pinn.ConfigError, match="profile_stations"):
+        pinn.parse_config(document)
 
 
 # -- residual-based adaptive refinement ------------------------------------- #
@@ -395,3 +543,30 @@ def test_refine_residual_vector_reproduces_the_training_loss_exactly():
     residual = refine.make_residual_vector(config, batch, interior, inlet, outlet)
     theta = jnp.concatenate([params["output"]["W"].ravel(), params["output"]["b"]])
     assert abs(float(jnp.sum(residual(theta) ** 2)) - expected) <= 1e-11 * expected
+
+
+# -- seeds and the scorecard ------------------------------------------------- #
+
+
+@pytest.mark.parametrize("seed", [1, 2])
+def test_seed_configs_differ_from_the_baseline_only_in_name_and_seed(seed):
+    with open(f"developing_flow/re10_seed{seed}.yaml", encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    base = base_document()
+    assert document.pop("seed") == seed and base.pop("seed") == 0
+    assert document.pop("name") == f"developing_re10_seed{seed}"
+    base.pop("name")
+    assert document == base
+
+
+def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():
+    from developing_flow import scorecard
+    keys = [k for k, _ in scorecard.METRICS]
+    row = lambda v: {k: v for k in keys}  # noqa: E731
+    groups = {"baseline": [row(1.0), row(3.0)], "a": [row(0.5)], "b": [row(2.0)], "c": [row(4.0)]}
+    summary, verdicts = scorecard.summarise(groups, "baseline")
+    assert summary["baseline"]["rms_x"] == {"mean": 2.0, "min": 1.0, "max": 3.0, "n": 2}
+    assert verdicts["a"]["rms_x"] == "better"
+    assert verdicts["b"]["rms_x"] == "within seed range"
+    assert verdicts["c"]["rms_x"] == "worse"
+    assert "minutes" not in verdicts["a"]
