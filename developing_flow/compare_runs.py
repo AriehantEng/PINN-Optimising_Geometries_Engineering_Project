@@ -56,7 +56,9 @@ def write_figures(runs, labels, out):
             ax.set_title(f"x* = {station:g}   developing: no exact solution", loc="left", fontsize=10)
         ax.set_xlabel("u*")
         ax.set_ylabel("y*")
-        ax.legend(frameon=False, fontsize=8, loc="upper right")
+        # Centre-left is empty for every profile shape here: the inlet sits at
+        # u ~ 0.7 and the parabolas at u ~ 0.8-1 across the middle.
+        ax.legend(frameon=False, fontsize=8, loc="center left")
         pinn._style(ax)
     for ax, station in zip(axes[2], exact_stations[:3]):
         exact = first["profiles"][station][5]
@@ -92,7 +94,7 @@ def write_figures(runs, labels, out):
         top.set_title(f"u against x at y* = {h:g}", loc="left", fontsize=10)
         top.set_xlabel("x*")
         top.set_ylabel("u*")
-        top.legend(frameon=False, fontsize=8, loc="center right")
+        top.legend(frameon=False, fontsize=8, loc="upper right" if h > 0.75 else "lower right")
         middle.axhline(DEVELOPED_WITHIN, color=pinn.MUTED, linewidth=1, linestyle=":", label="1%")
         middle.set_title(f"|u - exact developed| / exact, y* = {h:g}", loc="left", fontsize=10)
         middle.set_xlabel("x*")

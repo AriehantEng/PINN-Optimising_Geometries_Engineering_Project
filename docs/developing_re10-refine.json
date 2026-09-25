@@ -1,0 +1,95 @@
+{
+  "source_run": "developing_flow/runs/developing_re10",
+  "method": "Levenberg-Marquardt on the output layer, hidden layers frozen",
+  "unknowns": 387,
+  "fit_points": {
+    "interior": 16384,
+    "inlet": 1024,
+    "outlet": 1024,
+    "seed": 2024
+  },
+  "fit_loss_before": 9.26688117281169e-06,
+  "fit_loss_after": 7.585310265864215e-06,
+  "heldout_loss_before": 7.666741034908948e-06,
+  "heldout_loss_after": 6.810402875891825e-06,
+  "iterations": [
+    {
+      "iteration": 1,
+      "fit_loss": 8.286579942693988e-06,
+      "heldout_loss": 7.245633346699494e-06,
+      "damping": 0.0003333333333333333
+    },
+    {
+      "iteration": 2,
+      "fit_loss": 8.142037162336711e-06,
+      "heldout_loss": 7.186511441920164e-06,
+      "damping": 0.0001111111111111111
+    },
+    {
+      "iteration": 3,
+      "fit_loss": 8.010314130414266e-06,
+      "heldout_loss": 7.110618571911599e-06,
+      "damping": 3.7037037037037037e-05
+    },
+    {
+      "iteration": 4,
+      "fit_loss": 7.881051824318069e-06,
+      "heldout_loss": 7.019275194197885e-06,
+      "damping": 1.2345679012345678e-05
+    },
+    {
+      "iteration": 5,
+      "fit_loss": 7.760000787772801e-06,
+      "heldout_loss": 6.924440942895835e-06,
+      "damping": 4.115226337448559e-06
+    },
+    {
+      "iteration": 6,
+      "fit_loss": 7.667266433309132e-06,
+      "heldout_loss": 6.850956903484714e-06,
+      "damping": 1.371742112482853e-06
+    },
+    {
+      "iteration": 7,
+      "fit_loss": 7.61104701348137e-06,
+      "heldout_loss": 6.812468819964318e-06,
+      "damping": 4.5724737082761767e-07
+    },
+    {
+      "iteration": 8,
+      "fit_loss": 7.588922289408308e-06,
+      "heldout_loss": 6.805068701026223e-06,
+      "damping": 1.5241579027587256e-07
+    },
+    {
+      "iteration": 9,
+      "fit_loss": 7.5854499333377e-06,
+      "heldout_loss": 6.808817319858197e-06,
+      "damping": 5.0805263425290854e-08
+    },
+    {
+      "iteration": 10,
+      "fit_loss": 7.585311287971824e-06,
+      "heldout_loss": 6.810264251981061e-06,
+      "damping": 1.6935087808430285e-08
+    },
+    {
+      "iteration": 11,
+      "fit_loss": 7.585310266965383e-06,
+      "heldout_loss": 6.810398610565434e-06,
+      "damping": 5.645029269476761e-09
+    },
+    {
+      "iteration": 12,
+      "fit_loss": 7.585310265864312e-06,
+      "heldout_loss": 6.810402829377241e-06,
+      "damping": 1.8816764231589203e-09
+    },
+    {
+      "iteration": 13,
+      "fit_loss": 7.585310265864215e-06,
+      "heldout_loss": 6.810402875891825e-06,
+      "damping": 6.272254743863068e-10
+    }
+  ]
+}
