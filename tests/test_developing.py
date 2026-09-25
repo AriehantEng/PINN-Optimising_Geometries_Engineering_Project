@@ -570,3 +570,34 @@ def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():
     assert verdicts["b"]["rms_x"] == "within seed range"
     assert verdicts["c"]["rms_x"] == "worse"
     assert "minutes" not in verdicts["a"]
+
+
+# -- Step 1 experiment configs: each changes only what it says --------------- #
+
+
+def _flatten(document, prefix=""):
+    flat = {}
+    for key, value in document.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            flat.update(_flatten(value, path))
+        else:
+            flat[path] = value
+    return flat
+
+
+STEP1_EXPERIMENTS = {
+    "re10_lbfgs24.yaml": {"name", "training.lbfgs.cycles"},
+    "re10_m4.yaml": {"name", "physics.inlet_sharpness"},
+    "re10_m2.yaml": {"name", "physics.inlet_sharpness"},
+}
+
+
+@pytest.mark.parametrize("filename, allowed", sorted(STEP1_EXPERIMENTS.items()))
+def test_each_step1_config_changes_only_its_own_keys(filename, allowed):
+    with open(f"developing_flow/{filename}", encoding="utf-8") as handle:
+        experiment = _flatten(yaml.safe_load(handle))
+    base = _flatten(base_document())
+    changed = {k for k in set(experiment) | set(base) if experiment.get(k) != base.get(k)}
+    assert changed == allowed
+    pinn.load_config(f"developing_flow/{filename}")
