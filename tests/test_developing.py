@@ -28,13 +28,13 @@ def base_document():
 def tiny_document():
     document = base_document()
     document["name"] = "tiny"
-    document["model"] = {"width": 16, "depth": 2}
+    document["model"].update(width=16, depth=2)
     # RAR on, so the end-to-end run exercises the adaptive path too.
     document["sampling"].update(n_interior=256, n_inlet=32, n_outlet=32, n_validation=256,
                                 rar_points=32, rar_pool=512, rar_mode="top")
     document["training"] = {
-        "adam": {"steps": 60, "learning_rate": 1.0e-3, "decay_rate": 0.9,
-                 "decay_steps": 1000, "resample_every": 20},
+        "adam": {"steps": 60, "learning_rate": 1.0e-3, "schedule": "exponential",
+                 "decay_rate": 0.9, "decay_steps": 1000, "resample_every": 20},
         "lbfgs": {"cycles": 2, "iterations_per_cycle": 20, "gtol": 1.0e-14},
         "check_every": 10,
     }
@@ -539,7 +539,7 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
     (run / "config.yaml").write_text(
         "# provenance comment that must survive\n" + yaml.safe_dump(document, sort_keys=False),
         encoding="utf-8")
-    with pytest.raises(pinn.ConfigError, match="rar_points"):
+    with pytest.raises(pinn.ConfigError, match="missing required key"):
         pinn.load_config(run / "config.yaml")
     migrate.main(["--runs-root", str(tmp_path), "--write"])
     assert pinn.load_config(run / "config.yaml") == pinn.parse_config(base_document())
@@ -553,7 +553,7 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
 def test_apply_network_is_the_output_layer_over_hidden_features(config):
     params = random_params(config, 4)
     xi = jnp.array([0.3, -0.2])
-    direct = pinn.apply_network(params, xi)
+    direct = pinn.apply_network(params, xi, config.activation)
     layered = params["output"]["W"] @ pinn.hidden_features(params, xi, config.activation) + params["output"]["b"]
     assert np.array_equal(np.asarray(direct), np.asarray(layered))
 
