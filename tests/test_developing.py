@@ -29,7 +29,9 @@ def tiny_document():
     document = base_document()
     document["name"] = "tiny"
     document["model"] = {"width": 16, "depth": 2}
-    document["sampling"].update(n_interior=256, n_inlet=32, n_outlet=32, n_validation=256)
+    # RAR on, so the end-to-end run exercises the adaptive path too.
+    document["sampling"].update(n_interior=256, n_inlet=32, n_outlet=32, n_validation=256,
+                                rar_points=32, rar_pool=512)
     document["training"] = {
         "adam": {"steps": 60, "learning_rate": 1.0e-3, "decay_rate": 0.9,
                  "decay_steps": 1000, "resample_every": 20},
@@ -264,3 +266,132 @@ def test_a_tiny_run_writes_everything_and_reloads_identically(tmp_path):
         assert np.array_equal(a, b)
     with pytest.raises(ValueError, match="points must lie"):
         model(np.array([config.length + 1.0]), np.array([0.0]))
+
+
+# -- residual-based adaptive refinement ------------------------------------- #
+
+
+def test_rar_off_draws_exactly_the_ordinary_batch(config):
+    """rar_points = 0 must reproduce the pre-RAR draws, which is what makes
+    the migration's rar_points = 0 an honest description of old runs."""
+    assert config.rar_points == 0
+    params = random_params(config, 0)
+    draw = pinn.make_draw(config, pinn.make_field(config.length))
+    key = jax.random.PRNGKey(3)
+    a = draw(key, params)
+    b = pinn.sample_batch(key, config, config.n_interior)
+    for x, y in zip(a, b):
+        assert np.array_equal(np.asarray(x), np.asarray(y))
+
+
+def test_rar_adds_exactly_the_worst_residual_points_from_the_pool():
+    document = tiny_document()
+    config = pinn.parse_config(document)
+    params = pinn.init_network(jax.random.PRNGKey(0), config.width, config.depth)
+    field = pinn.make_field(config.length)
+    key = jax.random.PRNGKey(9)
+    batch = pinn.make_draw(config, field)(key, params)
+    ordinary = pinn.sample_batch(key, config, config.n_interior)
+    assert batch.interior.shape == (config.n_interior + config.rar_points, 2)
+    assert np.array_equal(np.asarray(batch.interior[: config.n_interior]),
+                          np.asarray(ordinary.interior))
+    pool = pinn.sample_uniform(jax.random.fold_in(key, 1), config, config.rar_pool)
+    scores = np.asarray(pinn.pointwise_residual(config, field, params, pool))
+    added = np.asarray(pinn.pointwise_residual(config, field, params,
+                                               batch.interior[config.n_interior:]))
+    threshold = np.sort(scores)[-config.rar_points]
+    assert np.all(added >= threshold * (1 - 1e-12))
+    assert np.isclose(added.max(), scores.max())
+
+
+def test_rar_pool_is_required_when_rar_is_on():
+    document = tiny_document()
+    del document["sampling"]["rar_pool"]
+    with pytest.raises(pinn.ConfigError, match="rar_pool"):
+        pinn.parse_config(document)
+
+
+def test_rar_pool_is_refused_when_rar_is_off():
+    document = base_document()
+    document["sampling"]["rar_pool"] = 1000
+    with pytest.raises(pinn.ConfigError, match="no effect"):
+        pinn.parse_config(document)
+
+
+def test_rar_pool_smaller_than_rar_points_is_refused():
+    document = tiny_document()
+    document["sampling"]["rar_pool"] = 16
+    with pytest.raises(pinn.ConfigError, match="at least"):
+        pinn.parse_config(document)
+
+
+def test_the_rar_config_differs_from_the_baseline_only_in_rar():
+    with open("developing_flow/re10_rar.yaml", encoding="utf-8") as handle:
+        rar = yaml.safe_load(handle)
+    base = base_document()
+    assert rar.pop("name") != base.pop("name")
+    rar_sampling, base_sampling = rar.pop("sampling"), base.pop("sampling")
+    assert rar == base
+    assert base_sampling.pop("rar_points") == 0
+    assert rar_sampling.pop("rar_points") > 0 and rar_sampling.pop("rar_pool") > 0
+    assert rar_sampling == base_sampling
+
+
+# -- stored runs and their migration ------------------------------------------ #
+
+
+def test_every_stored_developing_run_still_loads():
+    """The guard CLAUDE.md asks for: a newly required key must not lock out
+    finished runs. Run directories are untracked, so a fresh clone has none."""
+    import pathlib
+    root = pathlib.Path("developing_flow/runs")
+    for directory in sorted(root.glob("*/")) if root.is_dir() else []:
+        if (directory / "config.yaml").is_file() and (directory / "params.npz").is_file():
+            pinn.load_run(directory)
+
+
+def test_migration_records_rar_off_for_runs_that_predate_it(tmp_path):
+    from developing_flow import migrate
+    document = base_document()
+    del document["sampling"]["rar_points"]
+    run = tmp_path / "old_run"
+    run.mkdir()
+    (run / "config.yaml").write_text(
+        "# provenance comment that must survive\n" + yaml.safe_dump(document, sort_keys=False),
+        encoding="utf-8")
+    with pytest.raises(pinn.ConfigError, match="rar_points"):
+        pinn.load_config(run / "config.yaml")
+    migrate.main(["--runs-root", str(tmp_path), "--write"])
+    assert pinn.load_config(run / "config.yaml").rar_points == 0
+    assert (run / "config.yaml").read_text().startswith("# provenance comment")
+    assert (run / "config.migrated.json").is_file()
+
+
+# -- the output-layer re-solve ---------------------------------------------- #
+
+
+def test_apply_network_is_the_output_layer_over_hidden_features(config):
+    params = random_params(config, 4)
+    xi = jnp.array([0.3, -0.2])
+    direct = pinn.apply_network(params, xi)
+    layered = params["output"]["W"] @ pinn.hidden_features(params, xi) + params["output"]["b"]
+    assert np.array_equal(np.asarray(direct), np.asarray(layered))
+
+
+def test_refine_residual_vector_reproduces_the_training_loss_exactly():
+    """refine.py assembles every derivative by hand from frozen features; its
+    squared residual norm must equal the loss the trainer computes."""
+    from developing_flow import refine
+    config = pinn.parse_config(tiny_document())
+    params = pinn.init_network(jax.random.PRNGKey(1), config.width, config.depth)
+    field = pinn.make_field(config.length)
+    batch = pinn.sample_batch(jax.random.PRNGKey(2), config, 128)
+    weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
+    expected = float(pinn.total_loss(pinn.make_loss_terms(config, field)(params, batch), weights))
+    interior = refine.feature_derivatives(config, params, batch.interior)
+    inlet = jax.vmap(lambda xy: pinn.hidden_features(
+        params, jnp.stack([2.0 * xy[0] / config.length - 1.0, xy[1]])))(batch.inlet)
+    outlet = refine.feature_derivatives(config, params, batch.outlet)[:2]
+    residual = refine.make_residual_vector(config, batch, interior, inlet, outlet)
+    theta = jnp.concatenate([params["output"]["W"].ravel(), params["output"]["b"]])
+    assert abs(float(jnp.sum(residual(theta) ** 2)) - expected) <= 1e-11 * expected

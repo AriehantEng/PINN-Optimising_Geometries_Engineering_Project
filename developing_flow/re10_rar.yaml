@@ -1,0 +1,54 @@
+# Developing (not fully developed) channel flow with inertia, Re_h = 10,
+# WITH residual-based adaptive refinement (RAR). Identical to re10.yaml in
+# every other key, so the pair isolates the effect of RAR.
+#
+#
+# The fluid enters with a flat-topped profile, u*(0, y*) = U0 (1 - y*^16),
+# which is the flat inlet rounded off just enough to satisfy no-slip exactly
+# at the corners, and develops into the parabola along the channel. The
+# entrance length at this Reynolds number is roughly 1.9 half-heights
+# (Durst et al. 2005, flat inlet), so a channel of 10 leaves about 8 of
+# developed flow to check the outlet against.
+name: developing_re10_rar
+seed: 0
+physics:
+  reynolds: 10.0              # Re_h = U h / nu: developed centreline speed, half-height
+  pressure_scaling: inertial  # p* = p / (rho U^2); use viscous only for Re <= 1
+  inlet_sharpness: 8          # m in U0 (1 - y^(2m)); larger m = flatter inlet; m = 1 refused
+domain:
+  length: 10.0                # L*, in half-heights
+model:
+  width: 128
+  depth: 4
+sampling:
+  n_interior: 4096            # interior points per draw
+  focus_fraction: 0.5         # share of them concentrated near the inlet and walls
+  focus_length: 4.0           # focus points lie in x* < 4, crowded toward x* = 0
+  n_inlet: 256
+  n_outlet: 256
+  n_validation: 4096          # held-out points, never trained on
+  rar_points: 1024            # adaptive refinement: worst-residual points added per draw
+  rar_pool: 32768             # fresh unseen candidates scored at every redraw
+weights:
+  momentum_x: 1.0
+  momentum_y: 1.0
+  continuity: 1.0
+  inlet: 1.0
+  outlet: 1.0
+training:
+  adam:
+    steps: 3000
+    learning_rate: 1.0e-3
+    decay_rate: 0.9
+    decay_steps: 1000
+    resample_every: 250       # fresh points every 250 steps
+  lbfgs:
+    cycles: 12                # each cycle restarts L-BFGS on a fresh draw
+    iterations_per_cycle: 500
+    gtol: 1.0e-14
+  check_every: 100            # held-out loss is measured this often
+evaluation:
+  nx: 201
+  ny: 101
+  profile_stations: [0.0, 0.5, 1.0, 2.0, 4.0, 10.0]
+  n_flux_stations: 41

@@ -24,6 +24,7 @@ sampling:
   n_inlet: 256
   n_outlet: 256
   n_validation: 4096          # held-out points, never trained on
+  rar_points: 0               # residual-based adaptive refinement off
 weights:
   momentum_x: 1.0
   momentum_y: 1.0

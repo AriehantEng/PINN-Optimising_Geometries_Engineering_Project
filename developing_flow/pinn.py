@@ -137,6 +137,7 @@ SCHEMA = {
         "n_inlet": int,
         "n_outlet": int,
         "n_validation": int,
+        "rar_points": int,
     },
     "weights": {term: float for term in LOSS_TERMS},
     "training": {
@@ -193,6 +194,8 @@ class Config:
     n_inlet: int
     n_outlet: int
     n_validation: int
+    rar_points: int
+    rar_pool: int | None
     weights: dict
     adam_steps: int
     adam_learning_rate: float
@@ -210,8 +213,17 @@ class Config:
 
 
 def parse_config(document) -> Config:
-    """Validate a config mapping. Raises ConfigError; never fills a default."""
-    _check(document, SCHEMA)
+    """Validate a config mapping. Raises ConfigError; never fills a default.
+
+    `sampling.rar_pool` is required exactly when residual-based adaptive
+    refinement is on (`rar_points > 0`) and refused when it is off, because a
+    key that would have no effect is a setting nobody can see is ignored.
+    """
+    if not isinstance(document, dict) or not isinstance(document.get("sampling"), dict):
+        _check(document, SCHEMA)
+    sampling_view = dict(document["sampling"])
+    rar_pool = sampling_view.pop("rar_pool", None)
+    _check({**document, "sampling": sampling_view}, SCHEMA)
     physics, sampling = document["physics"], document["sampling"]
     adam, lbfgs = document["training"]["adam"], document["training"]["lbfgs"]
     evaluation = document["evaluation"]
@@ -231,6 +243,8 @@ def parse_config(document) -> Config:
         n_inlet=sampling["n_inlet"],
         n_outlet=sampling["n_outlet"],
         n_validation=sampling["n_validation"],
+        rar_points=sampling["rar_points"],
+        rar_pool=rar_pool,
         weights={term: float(document["weights"][term]) for term in LOSS_TERMS},
         adam_steps=adam["steps"],
         adam_learning_rate=float(adam["learning_rate"]),
@@ -266,6 +280,17 @@ def parse_config(document) -> Config:
                  "nx", "ny", "n_flux_stations"):
         if getattr(config, name) < 1:
             raise ConfigError(f"{name} must be at least 1")
+    if config.rar_points < 0:
+        raise ConfigError("sampling.rar_points must be >= 0 (0 turns adaptive refinement off)")
+    if config.rar_points > 0:
+        if rar_pool is None:
+            raise ConfigError("missing required key 'sampling.rar_pool' (rar_points > 0)")
+        if isinstance(rar_pool, bool) or not isinstance(rar_pool, int):
+            raise ConfigError(f"sampling.rar_pool must be an integer, got {rar_pool!r}")
+        if rar_pool < config.rar_points:
+            raise ConfigError("sampling.rar_pool must be at least sampling.rar_points")
+    elif rar_pool is not None:
+        raise ConfigError("sampling.rar_pool has no effect when rar_points is 0; remove it")
     if config.lbfgs_cycles < 0:
         raise ConfigError("training.lbfgs.cycles must be >= 0")
     if not 0.0 <= config.focus_fraction <= 1.0:
@@ -465,14 +490,19 @@ def _apply_dense(layer, x):
     return layer["W"] @ x + layer["b"]
 
 
-def apply_network(params, xi):
+def hidden_features(params, xi):
+    """The last hidden layer: the basis functions the output layer combines."""
     encoded_u = jnp.tanh(_apply_dense(params["encoder_u"], xi))
     encoded_v = jnp.tanh(_apply_dense(params["encoder_v"], xi))
     h = xi
     for layer in params["hidden"]:
         z = jnp.tanh(_apply_dense(layer, h))
         h = (1.0 - z) * encoded_u + z * encoded_v
-    return _apply_dense(params["output"], h)
+    return h
+
+
+def apply_network(params, xi):
+    return _apply_dense(params["output"], hidden_features(params, xi))
 
 
 def wall_factor(y):
@@ -548,6 +578,49 @@ def sample_batch(key, config: Config, n_interior: int) -> Batch:
     )
 
 
+def sample_uniform(key, config: Config, n: int):
+    """n points uniform over the whole channel: the RAR candidate pool."""
+    k_x, k_y = jax.random.split(key)
+    return jnp.stack([
+        jax.random.uniform(k_x, (n,), minval=0.0, maxval=config.length, dtype=jnp.float64),
+        jax.random.uniform(k_y, (n,), minval=-1.0, maxval=1.0, dtype=jnp.float64),
+    ], axis=-1)
+
+
+def pointwise_residual(config: Config, field, params, points):
+    """R_x^2 + R_y^2 + R_c^2 at each point: where the equations are worst broken.
+
+    Unweighted on purpose: this ranks locations for refinement, it is not a
+    loss, so it does not touch the loss weights.
+    """
+    d = batched_derivatives(lambda xy: field(params, xy), points)
+    return (momentum_x(d, config.reynolds, config.pressure_scaling) ** 2
+            + momentum_y(d, config.reynolds, config.pressure_scaling) ** 2
+            + continuity(d) ** 2)
+
+
+def make_draw(config: Config, field):
+    """draw(key, params) -> a training batch, with RAR points when enabled.
+
+    Residual-based adaptive refinement: a fresh pool of `rar_pool` uniform
+    points, never trained on, is scored by the current residual, and the
+    `rar_points` worst are ADDED to the ordinary draw. With rar_points = 0 the
+    batch is exactly `sample_batch(key, ...)`, so a config without RAR draws
+    the same points it always did.
+    """
+    if config.rar_points == 0:
+        return lambda key, params: sample_batch(key, config, config.n_interior)
+    score = jax.jit(lambda p, pts: pointwise_residual(config, field, p, pts))
+
+    def draw(key, params):
+        batch = sample_batch(key, config, config.n_interior)
+        pool = sample_uniform(jax.random.fold_in(key, 1), config, config.rar_pool)
+        _, worst = jax.lax.top_k(score(params, pool), config.rar_points)
+        return batch._replace(interior=jnp.concatenate([batch.interior, pool[worst]], axis=0))
+
+    return draw
+
+
 def root_keys(seed):
     """(model key, training-sample key, held-out key) from one seed."""
     return jax.random.split(jax.random.PRNGKey(seed), 3)
@@ -602,6 +675,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         return total_loss(terms, weights), terms
 
     heldout_batch = sample_batch(heldout_key, config, config.n_validation)
+    draw_batch = make_draw(config, field)
     heldout_loss = jax.jit(lambda p: objective(p, heldout_batch)[0])
     train_terms = jax.jit(objective)
 
@@ -649,7 +723,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
     for step in range(config.adam_steps):
         if step % config.adam_resample_every == 0:
             key, draw = jax.random.split(key)
-            batch = sample_batch(draw, config, config.n_interior)
+            batch = draw_batch(draw, params)
         params, state, _ = adam_step(params, state, batch)
         if (step + 1) % config.check_every == 0 or step + 1 == config.adam_steps:
             record(params, batch, "adam", step // config.adam_resample_every,
@@ -664,7 +738,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
     cycle_log = []
     for cycle in range(config.lbfgs_cycles):
         key, draw = jax.random.split(key)
-        batch = sample_batch(draw, config, config.n_interior)
+        batch = draw_batch(draw, unflatten(flat))
 
         def fun(vector):
             value, grad = value_and_grad(jnp.asarray(vector), batch)
@@ -972,8 +1046,10 @@ def run(config_path, out=None, verbose=True):
               f"({config.pressure_scaling} pressure), inlet sharpness m = {config.inlet_sharpness}, "
               f"L* = {config.length:g}")
         print(f"[{config.name}] inertial terms ON; no-slip and pressure gauge exact; "
-              f"{config.n_interior} points per draw, {config.lbfgs_cycles} L-BFGS cycles "
-              f"of {config.lbfgs_iterations}")
+              f"{config.n_interior} points per draw"
+              + (f" + {config.rar_points} worst of {config.rar_pool} by residual (RAR)"
+                 if config.rar_points else "")
+              + f", {config.lbfgs_cycles} L-BFGS cycles of {config.lbfgs_iterations}")
 
     params, history, info = train(config, verbose=verbose, checkpoint=directory / "params.npz")
     save_params(directory / "params.npz", params)
