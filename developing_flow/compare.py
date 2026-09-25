@@ -75,7 +75,8 @@ def relative_l2(a, b):
     return float(np.linalg.norm(a - b) / np.linalg.norm(b))
 
 
-def main(directory) -> int:
+def measure(directory):
+    """Every line quantity the figures and tables use, for one run."""
     directory = pathlib.Path(directory)
     config, params = load(directory)
     evaluate = make_evaluator(config)
@@ -151,9 +152,22 @@ def main(directory) -> int:
             "centre_developed": float(np.sqrt(np.mean(centre[developed_region] ** 2))),
         })
 
-    write_figures(config, directory, y, profiles, x, along, flux_x, flux_along,
-                  rxc, ryc, rcc, developed_from)
-    tables = format_tables(config, station_rows, height_rows, equation_rows, developed_from)
+    return {
+        "config": config, "y": y, "profiles": profiles, "station_rows": station_rows,
+        "x": x, "along": along, "height_rows": height_rows,
+        "flux_x": flux_x, "flux_along": flux_along, "rxc": rxc, "ryc": ryc, "rcc": rcc,
+        "equation_rows": equation_rows, "developed_from": developed_from,
+    }
+
+
+def main(directory) -> int:
+    directory = pathlib.Path(directory)
+    m = measure(directory)
+    config, developed_from = m["config"], m["developed_from"]
+    write_figures(config, directory, m["y"], m["profiles"], m["x"], m["along"],
+                  m["flux_x"], m["flux_along"], m["rxc"], m["ryc"], m["rcc"], developed_from)
+    tables = format_tables(config, m["station_rows"], m["height_rows"], m["equation_rows"],
+                           developed_from)
     (directory / "comparison_tables.md").write_text(tables, encoding="utf-8")
     print(tables)
     return 0
