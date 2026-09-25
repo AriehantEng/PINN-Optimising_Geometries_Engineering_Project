@@ -41,14 +41,14 @@ DEVELOPED_WITHIN = 0.01
 
 def load(directory):
     config = pinn.load_config(directory / "config.yaml")
-    template = pinn.init_network(pinn.root_keys(config.seed)[0], config.width, config.depth)
+    template = pinn.init_params(config, pinn.root_keys(config.seed)[0])
     _, unflatten = ravel_pytree(template)
     params = unflatten(jnp.asarray(np.load(directory / "params.npz")["flat"]))
     return config, params
 
 
 def make_evaluator(config):
-    field = pinn.make_field(config.length)
+    field = pinn.make_field(config)
 
     def bundle(params, points):
         d = pinn.batched_derivatives(lambda xy: field(params, xy), points)

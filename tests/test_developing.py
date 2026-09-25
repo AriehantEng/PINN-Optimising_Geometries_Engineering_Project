@@ -31,7 +31,7 @@ def tiny_document():
     document["model"] = {"width": 16, "depth": 2}
     # RAR on, so the end-to-end run exercises the adaptive path too.
     document["sampling"].update(n_interior=256, n_inlet=32, n_outlet=32, n_validation=256,
-                                rar_points=32, rar_pool=512)
+                                rar_points=32, rar_pool=512, rar_mode="top")
     document["training"] = {
         "adam": {"steps": 60, "learning_rate": 1.0e-3, "decay_rate": 0.9,
                  "decay_steps": 1000, "resample_every": 20},
@@ -49,7 +49,7 @@ def config():
 
 
 def random_params(config, seed):
-    return pinn.init_network(jax.random.PRNGKey(seed), config.width, config.depth)
+    return pinn.init_params(config, jax.random.PRNGKey(seed))
 
 
 # -- configuration ---------------------------------------------------------- #
@@ -94,7 +94,7 @@ def test_a_boolean_is_not_accepted_as_an_integer():
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_no_slip_is_exactly_zero_on_both_walls(config, seed):
     params = random_params(config, seed)
-    field = pinn.make_field(config.length)
+    field = pinn.make_field(config)
     x = np.linspace(0.0, config.length, 17)
     for wall in (-1.0, 1.0):
         u, v, _ = pinn.predict(field, params, np.stack([x, np.full_like(x, wall)], axis=-1))
@@ -104,7 +104,7 @@ def test_no_slip_is_exactly_zero_on_both_walls(config, seed):
 @pytest.mark.parametrize("seed", [0, 1])
 def test_pressure_gauge_is_exactly_zero_at_the_outlet(config, seed):
     params = random_params(config, seed)
-    field = pinn.make_field(config.length)
+    field = pinn.make_field(config)
     y = np.linspace(-1.0, 1.0, 17)
     _, _, p = pinn.predict(field, params, np.stack([np.full_like(y, config.length), y], axis=-1))
     assert np.all(p == 0.0)
@@ -180,9 +180,34 @@ def test_y_inertia_matches_a_hand_derivation():
 # -- the fast batched derivatives equal the single-point reference ----------- #
 
 
-def test_batched_derivatives_match_the_point_reference(config):
+ANSATZ_VARIANTS = [
+    {},
+    {"physics.inlet_condition": "hard"},
+    {"physics.formulation": "stream_pressure"},
+    {"physics.formulation": "stream_pressure", "physics.inlet_condition": "hard"},
+    {"model.activation": "silu"},
+]
+
+
+def variant_config(changes):
+    """The baseline config with `changes` applied and the loss weights made to
+    match: the stream function has no continuity term, a hard inlet no inlet term."""
+    document = base_document()
+    for dotted, value in changes.items():
+        section, key = dotted.split(".")
+        document[section][key] = value
+    if document["physics"]["formulation"] == "stream_pressure":
+        document["weights"].pop("continuity")
+    if document["physics"]["inlet_condition"] == "hard":
+        document["weights"].pop("inlet")
+    return pinn.parse_config(document)
+
+
+@pytest.mark.parametrize("changes", ANSATZ_VARIANTS, ids=lambda c: "-".join(c.values()) or "baseline")
+def test_batched_derivatives_match_the_point_reference(changes):
+    config = variant_config(changes)
     params = random_params(config, 3)
-    field = pinn.make_field(config.length)
+    field = pinn.make_field(config)
     f = lambda xy: field(params, xy)  # noqa: E731
     points = pinn.sample_batch(jax.random.PRNGKey(5), config, 32).interior
     batched = pinn.batched_derivatives(f, points)
@@ -269,7 +294,7 @@ def test_a_tiny_run_saves_the_parameters_training_selected(tmp_path):
 
     model = pinn.load_run(directory)
     x, y = np.array([0.0, 0.5, 2.0]), np.array([0.0, 0.3, -0.9])
-    expected = pinn.predict(pinn.make_field(config.length), selected, np.stack([x, y], axis=-1))
+    expected = pinn.predict(pinn.make_field(config), selected, np.stack([x, y], axis=-1))
     for a, b in zip(model(x, y), expected):
         assert np.array_equal(a, b)
     X, Y = np.meshgrid(np.linspace(0.0, 1.0, 4), np.linspace(-0.5, 0.5, 3))
@@ -374,8 +399,8 @@ def test_a_drifting_flux_marks_the_entrance_length_unreliable(config):
 
 
 def test_predict_compiles_once_whatever_the_number_of_points(config):
-    field = pinn.make_field(config.length)
-    assert pinn.make_field(config.length) is field
+    field = pinn.make_field(config)
+    assert pinn.make_field(config) is field
     params = random_params(config, 0)
     pinn.predict(field, params, np.zeros((1, 2)) + [1.0, 0.1])
     # Other tests may already have compiled this field for other parameter
@@ -424,7 +449,7 @@ def test_rar_off_draws_exactly_the_ordinary_batch(config):
     the migration's rar_points = 0 an honest description of old runs."""
     assert config.rar_points == 0
     params = random_params(config, 0)
-    draw = pinn.make_draw(config, pinn.make_field(config.length))
+    draw = pinn.make_draw(config, pinn.make_field(config))
     key = jax.random.PRNGKey(3)
     a = draw(key, params)
     b = pinn.sample_batch(key, config, config.n_interior)
@@ -435,8 +460,8 @@ def test_rar_off_draws_exactly_the_ordinary_batch(config):
 def test_rar_adds_exactly_the_worst_residual_points_from_the_pool():
     document = tiny_document()
     config = pinn.parse_config(document)
-    params = pinn.init_network(jax.random.PRNGKey(0), config.width, config.depth)
-    field = pinn.make_field(config.length)
+    params = pinn.init_params(config, jax.random.PRNGKey(0))
+    field = pinn.make_field(config)
     key = jax.random.PRNGKey(9)
     batch = pinn.make_draw(config, field)(key, params)
     ordinary = pinn.sample_batch(key, config, config.n_interior)
@@ -482,6 +507,7 @@ def test_the_rar_config_differs_from_the_baseline_only_in_rar():
     assert rar == base
     assert base_sampling.pop("rar_points") == 0
     assert rar_sampling.pop("rar_points") > 0 and rar_sampling.pop("rar_pool") > 0
+    assert rar_sampling.pop("rar_mode") == "top"
     assert rar_sampling == base_sampling
 
 
@@ -498,10 +524,16 @@ def test_every_stored_developing_run_still_loads():
             pinn.load_run(directory)
 
 
-def test_migration_records_rar_off_for_runs_that_predate_it(tmp_path):
+def test_migration_records_what_old_runs_actually_did(tmp_path):
+    """A run from before every later key: after migration it must load and
+    describe exactly the baseline behaviour."""
     from developing_flow import migrate
     document = base_document()
-    del document["sampling"]["rar_points"]
+    for section, key in (("sampling", "rar_points"), ("sampling", "inlet_points"),
+                         ("physics", "inlet_condition"), ("physics", "formulation"),
+                         ("model", "activation")):
+        del document[section][key]
+    del document["training"]["adam"]["schedule"]
     run = tmp_path / "old_run"
     run.mkdir()
     (run / "config.yaml").write_text(
@@ -510,7 +542,7 @@ def test_migration_records_rar_off_for_runs_that_predate_it(tmp_path):
     with pytest.raises(pinn.ConfigError, match="rar_points"):
         pinn.load_config(run / "config.yaml")
     migrate.main(["--runs-root", str(tmp_path), "--write"])
-    assert pinn.load_config(run / "config.yaml").rar_points == 0
+    assert pinn.load_config(run / "config.yaml") == pinn.parse_config(base_document())
     assert (run / "config.yaml").read_text().startswith("# provenance comment")
     assert (run / "config.migrated.json").is_file()
 
@@ -522,7 +554,7 @@ def test_apply_network_is_the_output_layer_over_hidden_features(config):
     params = random_params(config, 4)
     xi = jnp.array([0.3, -0.2])
     direct = pinn.apply_network(params, xi)
-    layered = params["output"]["W"] @ pinn.hidden_features(params, xi) + params["output"]["b"]
+    layered = params["output"]["W"] @ pinn.hidden_features(params, xi, config.activation) + params["output"]["b"]
     assert np.array_equal(np.asarray(direct), np.asarray(layered))
 
 
@@ -531,14 +563,14 @@ def test_refine_residual_vector_reproduces_the_training_loss_exactly():
     squared residual norm must equal the loss the trainer computes."""
     from developing_flow import refine
     config = pinn.parse_config(tiny_document())
-    params = pinn.init_network(jax.random.PRNGKey(1), config.width, config.depth)
-    field = pinn.make_field(config.length)
+    params = pinn.init_params(config, jax.random.PRNGKey(1))
+    field = pinn.make_field(config)
     batch = pinn.sample_batch(jax.random.PRNGKey(2), config, 128)
     weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
     expected = float(pinn.total_loss(pinn.make_loss_terms(config, field)(params, batch), weights))
     interior = refine.feature_derivatives(config, params, batch.interior)
     inlet = jax.vmap(lambda xy: pinn.hidden_features(
-        params, jnp.stack([2.0 * xy[0] / config.length - 1.0, xy[1]])))(batch.inlet)
+        params, jnp.stack([2.0 * xy[0] / config.length - 1.0, xy[1]]), config.activation))(batch.inlet)
     outlet = refine.feature_derivatives(config, params, batch.outlet)[:2]
     residual = refine.make_residual_vector(config, batch, interior, inlet, outlet)
     theta = jnp.concatenate([params["output"]["W"].ravel(), params["output"]["b"]])
@@ -588,6 +620,15 @@ def _flatten(document, prefix=""):
 
 STEP1_EXPERIMENTS = {
     "re10_lbfgs24.yaml": {"name", "training.lbfgs.cycles"},
+    "re10_adam10k.yaml": {"name", "training.adam.steps", "training.adam.schedule",
+                          "training.adam.decay_rate", "training.adam.decay_steps",
+                          "training.adam.final_learning_rate"},
+    "re10_inletgrid.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points", "weights.inlet"},
+    "re10_rad.yaml": {"name", "sampling.rar_points", "sampling.rar_pool", "sampling.rar_mode",
+                      "sampling.rar_exponent", "sampling.rar_floor"},
+    "re10_hardinlet.yaml": {"name", "physics.inlet_condition", "weights.inlet"},
+    "re10_silu.yaml": {"name", "model.activation"},
+    "re10_stream.yaml": {"name", "physics.formulation", "weights.continuity"},
     "re10_m4.yaml": {"name", "physics.inlet_sharpness"},
     "re10_m2.yaml": {"name", "physics.inlet_sharpness"},
 }
@@ -601,3 +642,133 @@ def test_each_step1_config_changes_only_its_own_keys(filename, allowed):
     changed = {k for k in set(experiment) | set(base) if experiment.get(k) != base.get(k)}
     assert changed == allowed
     pinn.load_config(f"developing_flow/{filename}")
+
+
+# -- Step 1 options --------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("formulation", ["velocity_pressure", "stream_pressure"])
+def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation):
+    config = variant_config({"physics.formulation": formulation, "physics.inlet_condition": "hard"})
+    y = np.linspace(-0.999, 0.999, 41)
+    for seed in (0, 1):
+        u, v, _ = pinn.predict(pinn.make_field(config), random_params(config, seed),
+                               np.stack([np.zeros_like(y), y], axis=-1))
+        assert np.max(np.abs(u - pinn.inlet_profile(y, config.inlet_sharpness))) <= 1e-15
+        assert np.all(v == 0.0)
+
+
+@pytest.mark.parametrize("inlet", ["soft", "hard"])
+def test_the_stream_function_conserves_mass_and_satisfies_no_slip(inlet):
+    config = variant_config({"physics.formulation": "stream_pressure", "physics.inlet_condition": inlet})
+    params = random_params(config, 2)
+    field = pinn.make_field(config)
+    nodes, weights = np.polynomial.legendre.leggauss(200)
+    for x in (0.0, 1.3, 7.7, config.length):
+        u, _, _ = pinn.predict(field, params, np.stack([np.full_like(nodes, x), nodes], axis=-1))
+        assert abs(float(u @ weights) - pinn.INLET_FLUX) < 1e-12
+    xs = np.linspace(0.0, config.length, 9)
+    for wall in (-1.0, 1.0):
+        u, v, _ = pinn.predict(field, params, np.stack([xs, np.full_like(xs, wall)], axis=-1))
+        assert np.max(np.abs(u)) <= 1e-15 and np.max(np.abs(v)) <= 1e-15
+    points = np.asarray(pinn.sample_batch(jax.random.PRNGKey(8), config, 64).interior)
+    _, _, rc, *_ = pinn.residuals_at(config, field, params, points)
+    assert np.max(np.abs(rc)) < 1e-12
+
+
+def test_loss_terms_follow_the_formulation_and_inlet():
+    stream = variant_config({"physics.formulation": "stream_pressure"})
+    hard = variant_config({"physics.inlet_condition": "hard"})
+    assert "continuity" not in stream.loss_terms and "inlet" in stream.loss_terms
+    assert "inlet" not in hard.loss_terms and "continuity" in hard.loss_terms
+    for config in (stream, hard):
+        batch = pinn.sample_batch(jax.random.PRNGKey(1), config, 32)
+        terms = pinn.make_loss_terms(config, pinn.make_field(config))(random_params(config, 0), batch)
+        assert set(terms) == set(config.loss_terms) == set(config.weights)
+    with pytest.raises(KeyError, match="disagree"):
+        pinn.total_loss({"momentum_x": 1.0}, {"momentum_y": 1.0})
+
+
+def test_silu_changes_the_network():
+    tanh, silu = variant_config({}), variant_config({"model.activation": "silu"})
+    params = random_params(tanh, 0)
+    xi = jnp.array([0.2, -0.4])
+    assert not np.allclose(np.asarray(pinn.apply_network(params, xi, "tanh")),
+                           np.asarray(pinn.apply_network(params, xi, "silu")))
+
+
+def test_cosine_schedule_runs_from_the_learning_rate_to_the_final_rate():
+    with open("developing_flow/re10_adam10k.yaml", encoding="utf-8") as handle:
+        config = pinn.parse_config(yaml.safe_load(handle))
+    schedule = pinn.adam_schedule(config)
+    assert float(schedule(0)) == config.adam_learning_rate
+    assert abs(float(schedule(config.adam_steps)) - config.adam_final_learning_rate) < 1e-18
+
+
+def test_a_fixed_inlet_grid_is_the_same_for_every_draw_and_crowds_the_corners():
+    with open("developing_flow/re10_inletgrid.yaml", encoding="utf-8") as handle:
+        config = pinn.parse_config(yaml.safe_load(handle))
+    draw = pinn.make_draw(config, pinn.make_field(config))
+    params = random_params(config, 0)
+    a, b = draw(jax.random.PRNGKey(1), params), draw(jax.random.PRNGKey(2), params)
+    assert np.array_equal(np.asarray(a.inlet), np.asarray(b.inlet))
+    assert not np.array_equal(np.asarray(a.interior), np.asarray(b.interior))
+    y = np.asarray(a.inlet[:, 1])
+    assert len(y) == config.n_inlet and np.all(np.abs(y) < 1.0)
+    assert np.mean(np.abs(y) > 0.9) > 0.2  # uniform would give 0.1
+    heldout = pinn.sample_batch(pinn.root_keys(config.seed)[2], config, 16).inlet
+    assert not np.array_equal(np.asarray(heldout), np.asarray(a.inlet[:16]))
+
+
+def test_proportional_rar_picks_distinct_pool_points_weighted_toward_large_residuals():
+    document = tiny_document()
+    document["sampling"].update(rar_mode="proportional", rar_exponent=2.0, rar_floor=0.0)
+    config = pinn.parse_config(document)
+    field = pinn.make_field(config)
+    params = random_params(config, 0)
+    key = jax.random.PRNGKey(4)
+    batch = pinn.make_draw(config, field)(key, params)
+    added = np.asarray(batch.interior[config.n_interior:])
+    pool = np.asarray(pinn.sample_uniform(jax.random.fold_in(key, 1), config, config.rar_pool))
+    assert len(added) == config.rar_points
+    assert len({tuple(p) for p in added}) == config.rar_points
+    assert all(tuple(p) in {tuple(q) for q in pool} for p in added)
+    scores = np.asarray(pinn.pointwise_residual(config, field, params, pool))
+    chosen = np.asarray(pinn.pointwise_residual(config, field, params, added))
+    assert chosen.mean() > 2.0 * scores.mean()
+    top = np.sort(scores)[-config.rar_points:]
+    assert chosen.mean() < top.mean(), "proportional sampling should not reduce to taking the maximum"
+
+
+@pytest.mark.parametrize("changes, removed, message", [
+    # decay_rate is refused or final_learning_rate is demanded; both name the schedule
+    ({"training.adam.schedule": "cosine"}, (), "schedule"),
+    ({"physics.formulation": "stream_pressure"}, (), "continuity"),
+    ({"physics.inlet_condition": "hard"}, (), "weights.inlet"),
+    ({"sampling.rar_points": 16}, (), "rar_pool"),
+    ({"model.activation": "relu"}, (), "activation"),
+])
+def test_conditional_keys_are_required_or_refused_with_their_choice(changes, removed, message):
+    document = base_document()
+    for dotted, value in changes.items():
+        *path, key = dotted.split(".")
+        node = document
+        for part in path:
+            node = node[part]
+        node[key] = value
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+def test_top_rar_refuses_the_proportional_settings():
+    document = tiny_document()
+    document["sampling"]["rar_exponent"] = 1.0
+    with pytest.raises(pinn.ConfigError, match="no effect"):
+        pinn.parse_config(document)
+
+
+def test_the_stream_function_is_measured_like_any_other_field():
+    config = variant_config({"physics.formulation": "stream_pressure"})
+    m, _ = pinn.measure_solution(config, pinn.make_field(config), random_params(config, 1))
+    assert abs(m["flux_at_inlet_station"] - pinn.INLET_FLUX) < 1e-12
+    assert m["residual_continuity_max"] < 1e-12

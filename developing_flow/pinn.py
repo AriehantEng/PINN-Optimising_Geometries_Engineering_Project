@@ -78,6 +78,7 @@ import jax
 jax.config.update("jax_enable_x64", True)
 
 import argparse  # noqa: E402
+import copy  # noqa: E402
 import csv  # noqa: E402
 import json  # noqa: E402
 import math  # noqa: E402
@@ -131,13 +132,26 @@ class ConfigError(ValueError):
     """A config that cannot describe a run unambiguously."""
 
 
-#: The config schema. A leaf is the expected type; `float` also accepts int.
+#: The choices each named option may take.
+CHOICES = {
+    "physics.pressure_scaling": ("inertial", "viscous"),
+    "physics.inlet_condition": ("soft", "hard"),
+    "physics.formulation": ("velocity_pressure", "stream_pressure"),
+    "model.activation": ("tanh", "silu"),
+    "sampling.inlet_points": ("random", "fixed"),
+    "sampling.rar_mode": ("top", "proportional"),
+    "training.adam.schedule": ("exponential", "cosine"),
+}
+
+#: Keys required under every choice. A leaf is the expected type; `float`
+#: also accepts int.
 SCHEMA = {
     "name": str,
     "seed": int,
-    "physics": {"reynolds": float, "pressure_scaling": str, "inlet_sharpness": int},
+    "physics": {"reynolds": float, "pressure_scaling": str, "inlet_sharpness": int,
+                "inlet_condition": str, "formulation": str},
     "domain": {"length": float},
-    "model": {"width": int, "depth": int},
+    "model": {"width": int, "depth": int, "activation": str},
     "sampling": {
         "n_interior": int,
         "focus_fraction": float,
@@ -146,21 +160,44 @@ SCHEMA = {
         "n_outlet": int,
         "n_validation": int,
         "rar_points": int,
+        "inlet_points": str,
     },
-    "weights": {term: float for term in LOSS_TERMS},
+    "weights": {"momentum_x": float, "momentum_y": float, "outlet": float},
     "training": {
-        "adam": {
-            "steps": int,
-            "learning_rate": float,
-            "decay_rate": float,
-            "decay_steps": int,
-            "resample_every": int,
-        },
+        "adam": {"steps": int, "learning_rate": float, "schedule": str, "resample_every": int},
         "lbfgs": {"cycles": int, "iterations_per_cycle": int, "gtol": float},
         "check_every": int,
     },
     "evaluation": {"nx": int, "ny": int, "profile_stations": list, "n_flux_stations": int},
 }
+
+#: Keys required under some choices and REFUSED under the others, because a
+#: key that has no effect is a setting nobody can see is being ignored.
+CONDITIONAL = {
+    ("sampling", "rar_pool"): int,          # rar_points > 0
+    ("sampling", "rar_mode"): str,          # rar_points > 0
+    ("sampling", "rar_exponent"): float,    # rar_mode = proportional
+    ("sampling", "rar_floor"): float,       # rar_mode = proportional
+    ("training.adam", "decay_rate"): float,           # schedule = exponential
+    ("training.adam", "decay_steps"): int,            # schedule = exponential
+    ("training.adam", "final_learning_rate"): float,  # schedule = cosine
+    ("weights", "continuity"): float,       # formulation = velocity_pressure
+    ("weights", "inlet"): float,            # inlet_condition = soft
+}
+
+
+def _check_value(where, value, expected):
+    if expected is float:
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value)):
+            raise ConfigError(f"{where} must be a finite number, got {value!r}")
+    elif expected is int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ConfigError(f"{where} must be an integer, got {value!r}")
+    elif not isinstance(value, expected):
+        raise ConfigError(f"{where} must be {expected.__name__}, got {value!r}")
+    if where in CHOICES and value not in CHOICES[where]:
+        raise ConfigError(f"{where} must be one of {list(CHOICES[where])}, got {value!r}")
 
 
 def _check(document, schema, path=""):
@@ -170,18 +207,10 @@ def _check(document, schema, path=""):
         where = f"{path}.{key}" if path else key
         if key not in document:
             raise ConfigError(f"missing required key {where!r}")
-        value = document[key]
         if isinstance(expected, dict):
-            _check(value, expected, where)
-        elif expected is float:
-            if (isinstance(value, bool) or not isinstance(value, (int, float))
-                    or not math.isfinite(value)):
-                raise ConfigError(f"{where} must be a finite number, got {value!r}")
-        elif expected is int:
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise ConfigError(f"{where} must be an integer, got {value!r}")
-        elif not isinstance(value, expected):
-            raise ConfigError(f"{where} must be {expected.__name__}, got {value!r}")
+            _check(document[key], expected, where)
+        else:
+            _check_value(where, document[key], expected)
     unknown = set(document) - set(schema)
     if unknown:
         raise ConfigError(f"unknown key(s) under {path or 'config'}: {sorted(unknown)}")
@@ -194,9 +223,12 @@ class Config:
     reynolds: float
     pressure_scaling: str
     inlet_sharpness: int
+    inlet_condition: str
+    formulation: str
     length: float
     width: int
     depth: int
+    activation: str
     n_interior: int
     focus_fraction: float
     focus_length: float
@@ -205,11 +237,18 @@ class Config:
     n_validation: int
     rar_points: int
     rar_pool: int | None
+    rar_mode: str | None
+    rar_exponent: float | None
+    rar_floor: float | None
+    inlet_points: str
     weights: dict
+    loss_terms: tuple
     adam_steps: int
     adam_learning_rate: float
-    adam_decay_rate: float
-    adam_decay_steps: int
+    adam_schedule: str
+    adam_decay_rate: float | None
+    adam_decay_steps: int | None
+    adam_final_learning_rate: float | None
     adam_resample_every: int
     lbfgs_cycles: int
     lbfgs_iterations: int
@@ -220,19 +259,52 @@ class Config:
     profile_stations: tuple
     n_flux_stations: int
 
+    @property
+    def n_outputs(self) -> int:
+        """Raw network outputs: (N_u, N_v, N_p), or (N_psi, N_p) for the stream function."""
+        return 3 if self.formulation == "velocity_pressure" else 2
+
+
+def _node(document, dotted):
+    node = document
+    for part in dotted.split("."):
+        node = node[part]
+    return node
+
 
 def parse_config(document) -> Config:
     """Validate a config mapping. Raises ConfigError; never fills a default.
 
-    `sampling.rar_pool` is required exactly when residual-based adaptive
-    refinement is on (`rar_points > 0`) and refused when it is off, because a
-    key that would have no effect is a setting nobody can see is ignored.
+    Keys in CONDITIONAL are required exactly when the choice that uses them is
+    made and refused otherwise, e.g. `sampling.rar_pool` only when
+    `rar_points > 0`, `weights.inlet` only when the inlet is a soft condition.
     """
-    if not isinstance(document, dict) or not isinstance(document.get("sampling"), dict):
-        _check(document, SCHEMA)
-    sampling_view = dict(document["sampling"])
-    rar_pool = sampling_view.pop("rar_pool", None)
-    _check({**document, "sampling": sampling_view}, SCHEMA)
+    if not isinstance(document, dict):
+        raise ConfigError("config must be a mapping")
+    view = copy.deepcopy(document)
+    extras = {}
+    for (section, key) in CONDITIONAL:
+        try:
+            container = _node(view, section)
+        except (KeyError, TypeError):
+            continue  # the missing section is reported by _check below
+        if isinstance(container, dict) and key in container:
+            extras[(section, key)] = container.pop(key)
+    _check(view, SCHEMA)
+
+    def take(section, key, needed, condition):
+        where = f"{section}.{key}"
+        present = (section, key) in extras
+        if needed and not present:
+            raise ConfigError(f"missing required key {where!r} (required when {condition})")
+        if present and not needed:
+            raise ConfigError(f"{where} has no effect unless {condition}; remove it")
+        if not present:
+            return None
+        value = extras[(section, key)]
+        _check_value(where, value, CONDITIONAL[(section, key)])
+        return value
+
     physics, sampling = document["physics"], document["sampling"]
     adam, lbfgs = document["training"]["adam"], document["training"]["lbfgs"]
     for station in document["evaluation"]["profile_stations"]:
@@ -242,15 +314,45 @@ def parse_config(document) -> Config:
                 f"evaluation.profile_stations entries must be finite numbers, got {station!r}")
     evaluation = document["evaluation"]
 
+    rar_on = sampling["rar_points"] > 0
+    rar_pool = take("sampling", "rar_pool", rar_on, "rar_points > 0")
+    rar_mode = take("sampling", "rar_mode", rar_on, "rar_points > 0")
+    proportional = rar_mode == "proportional"
+    rar_exponent = take("sampling", "rar_exponent", proportional, "rar_mode is 'proportional'")
+    rar_floor = take("sampling", "rar_floor", proportional, "rar_mode is 'proportional'")
+    exponential = adam["schedule"] == "exponential"
+    decay_rate = take("training.adam", "decay_rate", exponential, "schedule is 'exponential'")
+    decay_steps = take("training.adam", "decay_steps", exponential, "schedule is 'exponential'")
+    final_lr = take("training.adam", "final_learning_rate", not exponential, "schedule is 'cosine'")
+    with_continuity = physics["formulation"] == "velocity_pressure"
+    soft_inlet = physics["inlet_condition"] == "soft"
+    w_continuity = take("weights", "continuity", with_continuity,
+                        "formulation is 'velocity_pressure' (the stream function "
+                        "satisfies continuity identically)")
+    w_inlet = take("weights", "inlet", soft_inlet,
+                   "inlet_condition is 'soft' (a hard inlet holds exactly)")
+
+    raw_weights = dict(document["weights"])
+    raw_weights.pop("continuity", None)
+    raw_weights.pop("inlet", None)
+    if w_continuity is not None:
+        raw_weights["continuity"] = w_continuity
+    if w_inlet is not None:
+        raw_weights["inlet"] = w_inlet
+    loss_terms = tuple(term for term in LOSS_TERMS if term in raw_weights)
+
     config = Config(
         name=document["name"],
         seed=document["seed"],
         reynolds=float(physics["reynolds"]),
         pressure_scaling=physics["pressure_scaling"],
         inlet_sharpness=physics["inlet_sharpness"],
+        inlet_condition=physics["inlet_condition"],
+        formulation=physics["formulation"],
         length=float(document["domain"]["length"]),
         width=document["model"]["width"],
         depth=document["model"]["depth"],
+        activation=document["model"]["activation"],
         n_interior=sampling["n_interior"],
         focus_fraction=float(sampling["focus_fraction"]),
         focus_length=float(sampling["focus_length"]),
@@ -259,11 +361,18 @@ def parse_config(document) -> Config:
         n_validation=sampling["n_validation"],
         rar_points=sampling["rar_points"],
         rar_pool=rar_pool,
-        weights={term: float(document["weights"][term]) for term in LOSS_TERMS},
+        rar_mode=rar_mode,
+        rar_exponent=None if rar_exponent is None else float(rar_exponent),
+        rar_floor=None if rar_floor is None else float(rar_floor),
+        inlet_points=sampling["inlet_points"],
+        weights={term: float(raw_weights[term]) for term in loss_terms},
+        loss_terms=loss_terms,
         adam_steps=adam["steps"],
         adam_learning_rate=float(adam["learning_rate"]),
-        adam_decay_rate=float(adam["decay_rate"]),
-        adam_decay_steps=adam["decay_steps"],
+        adam_schedule=adam["schedule"],
+        adam_decay_rate=None if decay_rate is None else float(decay_rate),
+        adam_decay_steps=decay_steps,
+        adam_final_learning_rate=None if final_lr is None else float(final_lr),
         adam_resample_every=adam["resample_every"],
         lbfgs_cycles=lbfgs["cycles"],
         lbfgs_iterations=lbfgs["iterations_per_cycle"],
@@ -277,8 +386,6 @@ def parse_config(document) -> Config:
 
     if config.reynolds <= 0:
         raise ConfigError("physics.reynolds must be positive")
-    if config.pressure_scaling not in ("inertial", "viscous"):
-        raise ConfigError("physics.pressure_scaling must be 'inertial' or 'viscous'")
     if config.inlet_sharpness == 1:
         raise ConfigError(
             "physics.inlet_sharpness = 1 is the developed parabola: the flow "
@@ -290,27 +397,30 @@ def parse_config(document) -> Config:
         raise ConfigError("domain.length must be positive")
     if config.adam_learning_rate <= 0:
         raise ConfigError("training.adam.learning_rate must be positive")
-    if not 0.0 < config.adam_decay_rate <= 1.0:
-        raise ConfigError("training.adam.decay_rate must lie in (0, 1]")
+    if exponential:
+        if not 0.0 < config.adam_decay_rate <= 1.0:
+            raise ConfigError("training.adam.decay_rate must lie in (0, 1]")
+        if config.adam_decay_steps < 1:
+            raise ConfigError("training.adam.decay_steps must be at least 1")
+    elif not 0.0 < config.adam_final_learning_rate <= config.adam_learning_rate:
+        raise ConfigError(
+            "training.adam.final_learning_rate must lie in (0, learning_rate]")
     if config.lbfgs_gtol <= 0:
         raise ConfigError("training.lbfgs.gtol must be positive")
     for name in ("width", "depth", "n_interior", "n_inlet", "n_outlet",
-                 "n_validation", "adam_steps", "adam_decay_steps",
-                 "adam_resample_every", "lbfgs_iterations", "check_every",
-                 "nx", "ny", "n_flux_stations"):
+                 "n_validation", "adam_steps", "adam_resample_every",
+                 "lbfgs_iterations", "check_every", "nx", "ny", "n_flux_stations"):
         if getattr(config, name) < 1:
             raise ConfigError(f"{name} must be at least 1")
     if config.rar_points < 0:
         raise ConfigError("sampling.rar_points must be >= 0 (0 turns adaptive refinement off)")
-    if config.rar_points > 0:
-        if rar_pool is None:
-            raise ConfigError("missing required key 'sampling.rar_pool' (rar_points > 0)")
-        if isinstance(rar_pool, bool) or not isinstance(rar_pool, int):
-            raise ConfigError(f"sampling.rar_pool must be an integer, got {rar_pool!r}")
-        if rar_pool < config.rar_points:
-            raise ConfigError("sampling.rar_pool must be at least sampling.rar_points")
-    elif rar_pool is not None:
-        raise ConfigError("sampling.rar_pool has no effect when rar_points is 0; remove it")
+    if rar_on and rar_pool < config.rar_points:
+        raise ConfigError("sampling.rar_pool must be at least sampling.rar_points")
+    if proportional:
+        if config.rar_exponent <= 0:
+            raise ConfigError("sampling.rar_exponent must be positive")
+        if config.rar_floor < 0:
+            raise ConfigError("sampling.rar_floor must be >= 0")
     if config.lbfgs_cycles < 0:
         raise ConfigError("training.lbfgs.cycles must be >= 0")
     if not 0.0 <= config.focus_fraction <= 1.0:
@@ -493,36 +603,47 @@ def _dense(key, n_in, n_out):
     return {"W": _glorot(key, n_out, n_in), "b": jnp.zeros((n_out,), dtype=jnp.float64)}
 
 
-def init_network(key, width, depth):
+def init_network(key, width, depth, n_out):
     """Modified MLP (Wang, Teng & Perdikaris 2021): two input encoders blended
-    into every hidden layer. Inputs (x, y); outputs the raw (N_u, N_v, N_p)."""
+    into every hidden layer. Inputs (x, y); `n_out` raw outputs."""
     keys = jax.random.split(key, depth + 3)
     return {
         "encoder_u": _dense(keys[0], 2, width),
         "encoder_v": _dense(keys[1], 2, width),
         "hidden": [_dense(keys[2], 2, width)]
         + [_dense(keys[3 + i], width, width) for i in range(depth - 1)],
-        "output": _dense(keys[depth + 2], width, 3),
+        "output": _dense(keys[depth + 2], width, n_out),
     }
+
+
+def init_params(config: Config, key):
+    """The network a config describes, initialised from `key`."""
+    return init_network(key, config.width, config.depth, config.n_outputs)
+
+
+#: Activation functions by config name. Applied everywhere in the modified
+#: MLP, as in Wang, Teng & Perdikaris (2021), who define it for a generic one.
+ACTIVATIONS = {"tanh": jnp.tanh, "silu": jax.nn.silu}
 
 
 def _apply_dense(layer, x):
     return layer["W"] @ x + layer["b"]
 
 
-def hidden_features(params, xi):
+def hidden_features(params, xi, activation):
     """The last hidden layer: the basis functions the output layer combines."""
-    encoded_u = jnp.tanh(_apply_dense(params["encoder_u"], xi))
-    encoded_v = jnp.tanh(_apply_dense(params["encoder_v"], xi))
+    sigma = ACTIVATIONS[activation]
+    encoded_u = sigma(_apply_dense(params["encoder_u"], xi))
+    encoded_v = sigma(_apply_dense(params["encoder_v"], xi))
     h = xi
     for layer in params["hidden"]:
-        z = jnp.tanh(_apply_dense(layer, h))
+        z = sigma(_apply_dense(layer, h))
         h = (1.0 - z) * encoded_u + z * encoded_v
     return h
 
 
-def apply_network(params, xi):
-    return _apply_dense(params["output"], hidden_features(params, xi))
+def apply_network(params, xi, activation):
+    return _apply_dense(params["output"], hidden_features(params, xi, activation))
 
 
 def wall_factor(y):
@@ -530,28 +651,81 @@ def wall_factor(y):
     return 1.0 - y**2
 
 
-@functools.lru_cache(maxsize=None)
-def make_field(length):
-    """field(params, xy) -> (u, v, p) at one point.
+def inlet_stream(y, sharpness):
+    """The stream function of the inlet profile: d/dy of it is inlet_profile.
 
-        u = phi(y) N_u,   v = phi(y) N_v,   p = (1 - x/L) N_p
-
-    phi vanishes on both walls, so no-slip holds exactly for ANY parameters,
-    and the pressure factor vanishes at the outlet, so the gauge holds exactly.
-    Inputs are mapped to [-1, 1]^2 before entering the network.
-
-    The gauge factor is written (L - x)/L, not 1 - x/L: under jit the compiler
-    may evaluate x/L as x * (1/L), and 1 - L*(1/L) is then ~1e-17 rather than
-    zero. L - L is exactly zero whatever the compiler does.
+    U0 (y - y^(2m+1)/(2m+1)). Its values at y = +-1 differ by exactly the flux
+    4/3, and its slope vanishes at both walls, so used as the lift of a stream
+    function it carries the flux and satisfies no-slip for any network output.
     """
+    return inlet_peak(sharpness) * (y - y ** (2 * sharpness + 1) / (2 * sharpness + 1))
 
-    def field(params, xy):
-        x, y = xy[0], xy[1]
-        raw = apply_network(params, jnp.stack([2.0 * x / length - 1.0, y]))
-        wall = wall_factor(y)
-        return jnp.stack([wall * raw[0], wall * raw[1], ((length - x) / length) * raw[2]])
 
-    return field
+def make_field(config: Config):
+    """field(params, xy) -> (u, v, p) at one point, for the config's ansatz.
+
+    Cached per ansatz, so the same config always yields the same function
+    object and anything compiled against it is reused.
+    """
+    return _make_field(config.length, config.activation, config.formulation,
+                       config.inlet_condition, config.inlet_sharpness)
+
+
+@functools.lru_cache(maxsize=None)
+def _make_field(length, activation, formulation, inlet_condition, sharpness):
+    """The boundary-condition ansatz. In every variant:
+
+    * no-slip holds EXACTLY on both walls, for any parameters;
+    * the pressure gauge p(L, y) = 0 holds exactly: p = ((L - x)/L) N_p. It is
+      written (L - x)/L, not 1 - x/L, because under jit x/L may become
+      x * (1/L), and 1 - L*(1/L) is ~1e-17 rather than zero;
+    * inputs are mapped to [-1, 1]^2 before entering the network.
+
+    velocity_pressure, soft inlet:  u = phi N_u,  v = phi N_v
+    velocity_pressure, hard inlet:  u = g(y) + phi (x/L) N_u,  v = phi (x/L) N_v
+        with g the inlet profile, so u(0, y) = g(y) and v(0, y) = 0 exactly.
+    stream_pressure:  u = d(psi)/dy,  v = -d(psi)/dx,  continuity holds identically;
+        soft inlet:  psi = G(y) + phi^2 N_psi
+        hard inlet:  psi = G(y) + phi^2 (x/L)^2 N_psi
+        with G = inlet_stream. The squared ramp makes BOTH u(0, y) = g(y) and
+        v(0, y) = 0 exact. psi(x, 1) - psi(x, -1) = 4/3 for every x, so the
+        flux is exact by construction and cannot be tested.
+    """
+    L = length
+
+    def inputs(xy):
+        return jnp.stack([2.0 * xy[0] / L - 1.0, xy[1]])
+
+    def gauge(x):
+        return (L - x) / L
+
+    if formulation == "velocity_pressure":
+        def field(params, xy):
+            x, y = xy[0], xy[1]
+            raw = apply_network(params, inputs(xy), activation)
+            wall = wall_factor(y)
+            if inlet_condition == "soft":
+                u, v = wall * raw[0], wall * raw[1]
+            else:
+                ramp = x / L
+                u = inlet_profile(y, sharpness) + wall * ramp * raw[0]
+                v = wall * ramp * raw[1]
+            return jnp.stack([u, v, gauge(x) * raw[2]])
+        return field
+
+    if formulation == "stream_pressure":
+        def field(params, xy):
+            def psi(point):
+                x, y = point[0], point[1]
+                raw = apply_network(params, inputs(point), activation)
+                ramp = 1.0 if inlet_condition == "soft" else (x / L) ** 2
+                return inlet_stream(y, sharpness) + wall_factor(y) ** 2 * ramp * raw[0], raw
+
+            gradient, raw = jax.grad(psi, has_aux=True)(xy)
+            return jnp.stack([gradient[1], -gradient[0], gauge(xy[0]) * raw[1]])
+        return field
+
+    raise ValueError(f"unknown formulation {formulation!r}")
 
 
 # --------------------------------------------------------------------------- #
@@ -620,24 +794,59 @@ def pointwise_residual(config: Config, field, params, points):
             + continuity(d) ** 2)
 
 
-def make_draw(config: Config, field):
-    """draw(key, params) -> a training batch, with RAR points when enabled.
+def fixed_inlet_points(config: Config):
+    """A static inlet grid: n_inlet points crowded toward both corners.
 
-    Residual-based adaptive refinement: a fresh pool of `rar_pool` uniform
-    points, never trained on, is scored by the current residual, and the
-    `rar_points` worst are ADDED to the ordinary draw. With rar_points = 0 the
-    batch is exactly `sample_batch(key, ...)`, so a config without RAR draws
-    the same points it always did.
+    y = sin(pi t / 2) on a uniform t grid, endpoints excluded (the walls, where
+    u = v = 0 holds exactly anyway). Used for every training draw when
+    sampling.inlet_points is 'fixed'.
     """
-    if config.rar_points == 0:
-        return lambda key, params: sample_batch(key, config, config.n_interior)
-    score = jax.jit(lambda p, pts: pointwise_residual(config, field, p, pts))
+    t = jnp.linspace(-1.0, 1.0, config.n_inlet + 2, dtype=jnp.float64)[1:-1]
+    y = jnp.sin(0.5 * jnp.pi * t)
+    return jnp.stack([jnp.zeros_like(y), y], axis=-1)
+
+
+def make_draw(config: Config, field):
+    """draw(key, params) -> a training batch.
+
+    The ordinary draw is `sample_batch(key, ...)`. Two optional changes, each
+    only when its config asks for it, so a config using neither draws exactly
+    the points it always did:
+
+    * sampling.inlet_points = 'fixed': the inlet points are replaced by one
+      static grid for every draw (`fixed_inlet_points`).
+    * rar_points > 0, residual-based adaptive refinement: a fresh pool of
+      `rar_pool` uniform points, never trained on, is scored by the current
+      residual, and `rar_points` of them are ADDED to the interior:
+        'top'           the worst ones;
+        'proportional'  sampled without replacement with probability
+                        proportional to score^k / mean(score^k) + c, with
+                        k = rar_exponent and c = rar_floor (the RAD scheme of
+                        Wu et al. 2023), so points concentrate where the
+                        residual is large without all landing on the maximum.
+    The HELD-OUT set never goes through this: it is always `sample_batch`.
+    """
+    fixed_inlet = fixed_inlet_points(config) if config.inlet_points == "fixed" else None
+    score = (jax.jit(lambda p, pts: pointwise_residual(config, field, p, pts))
+             if config.rar_points else None)
 
     def draw(key, params):
         batch = sample_batch(key, config, config.n_interior)
+        if fixed_inlet is not None:
+            batch = batch._replace(inlet=fixed_inlet)
+        if score is None:
+            return batch
         pool = sample_uniform(jax.random.fold_in(key, 1), config, config.rar_pool)
-        _, worst = jax.lax.top_k(score(params, pool), config.rar_points)
-        return batch._replace(interior=jnp.concatenate([batch.interior, pool[worst]], axis=0))
+        values = score(params, pool)
+        if config.rar_mode == "top":
+            _, chosen = jax.lax.top_k(values, config.rar_points)
+        else:
+            weighted = values ** config.rar_exponent
+            density = weighted / jnp.mean(weighted) + config.rar_floor
+            chosen = jax.random.choice(jax.random.fold_in(key, 2), config.rar_pool,
+                                       shape=(config.rar_points,), replace=False,
+                                       p=density / jnp.sum(density))
+        return batch._replace(interior=jnp.concatenate([batch.interior, pool[chosen]], axis=0))
 
     return draw
 
@@ -656,26 +865,41 @@ def make_loss_terms(config: Config, field):
     """loss_terms(params, batch) -> {term: unweighted mean-squared residual}."""
     reynolds, scaling, sharpness = config.reynolds, config.pressure_scaling, config.inlet_sharpness
 
+    active = config.loss_terms
+
     def loss_terms(params, batch: Batch):
         f = lambda xy: field(params, xy)  # noqa: E731
         d = batched_derivatives(f, batch.interior)
-        inlet_values = jax.vmap(f)(batch.inlet)
-        target = inlet_profile(batch.inlet[:, 1], sharpness)
         _, outlet_dx = batched_x_derivative(f, batch.outlet)
-        return {
+        terms = {
             "momentum_x": jnp.mean(momentum_x(d, reynolds, scaling) ** 2),
             "momentum_y": jnp.mean(momentum_y(d, reynolds, scaling) ** 2),
-            "continuity": jnp.mean(continuity(d) ** 2),
-            "inlet": jnp.mean((inlet_values[:, 0] - target) ** 2) + jnp.mean(inlet_values[:, 1] ** 2),
             "outlet": jnp.mean(outlet_dx[:, 0] ** 2) + jnp.mean(outlet_dx[:, 1] ** 2),
         }
+        # Continuity is identically satisfied by the stream function, and a
+        # hard inlet holds exactly: those terms are not in the loss at all.
+        if "continuity" in active:
+            terms["continuity"] = jnp.mean(continuity(d) ** 2)
+        if "inlet" in active:
+            inlet_values = jax.vmap(f)(batch.inlet)
+            target = inlet_profile(batch.inlet[:, 1], sharpness)
+            terms["inlet"] = (jnp.mean((inlet_values[:, 0] - target) ** 2)
+                              + jnp.mean(inlet_values[:, 1] ** 2))
+        return terms
 
     return loss_terms
 
 
 def total_loss(terms, weights):
-    """The ONLY place weights meet residuals."""
-    return sum(weights[name] * terms[name] for name in LOSS_TERMS)
+    """The ONLY place weights meet residuals.
+
+    Terms and weights must name the same set; a mismatch means the config's
+    active terms and the loss builder have drifted apart. Summed in the fixed
+    LOSS_TERMS order so the result does not depend on dict order.
+    """
+    if set(terms) != set(weights):
+        raise KeyError(f"loss terms and weights disagree: {sorted(set(terms) ^ set(weights))}")
+    return sum(weights[name] * terms[name] for name in LOSS_TERMS if name in terms)
 
 
 # --------------------------------------------------------------------------- #
@@ -683,13 +907,25 @@ def total_loss(terms, weights):
 # --------------------------------------------------------------------------- #
 
 
+def adam_schedule(config: Config):
+    """Learning rate against Adam step: exponential decay, or cosine annealing
+    from learning_rate to final_learning_rate over all Adam steps."""
+    if config.adam_schedule == "exponential":
+        return optax.exponential_decay(
+            config.adam_learning_rate, config.adam_decay_steps, config.adam_decay_rate)
+    return optax.cosine_decay_schedule(
+        config.adam_learning_rate, config.adam_steps,
+        alpha=config.adam_final_learning_rate / config.adam_learning_rate)
+
+
 def train(config: Config, verbose: bool = True, checkpoint=None):
     """Returns (best params, history rows, info dict)."""
-    field = make_field(config.length)
+    field = make_field(config)
     model_key, sample_key, heldout_key = root_keys(config.seed)
-    params = init_network(model_key, config.width, config.depth)
+    params = init_params(config, model_key)
     loss_terms = make_loss_terms(config, field)
-    weights = {name: jnp.asarray(config.weights[name], dtype=jnp.float64) for name in LOSS_TERMS}
+    weights = {name: jnp.asarray(config.weights[name], dtype=jnp.float64)
+               for name in config.loss_terms}
 
     def objective(p, batch):
         terms = loss_terms(p, batch)
@@ -732,8 +968,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
               f"{'held-out':>12} {'ratio':>10}", flush=True)
 
     # -- Adam, redrawing points every `resample_every` steps ---------------- #
-    schedule = optax.exponential_decay(
-        config.adam_learning_rate, config.adam_decay_steps, config.adam_decay_rate)
+    schedule = adam_schedule(config)
     optimiser = optax.adam(schedule)
     state = optimiser.init(params)
 
@@ -870,7 +1105,7 @@ def _crossing(x, values, target):
 
 def evaluate(config: Config, params, last_batch_losses=None):
     """Everything worth knowing about a trained solution, plus plot arrays."""
-    metrics, arrays = measure_solution(config, make_field(config.length), params)
+    metrics, arrays = measure_solution(config, make_field(config), params)
     if last_batch_losses is not None:
         metrics.update(last_batch_losses)
     return metrics, arrays
@@ -978,7 +1213,7 @@ def write_figures(config: Config, params, metrics, arrays, history, directory):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    field = make_field(config.length)
+    field = make_field(config)
     L = config.length
 
     # 1. Velocity profiles at stations, and centreline development.
@@ -1091,13 +1326,13 @@ def load_run(directory):
         raise FileNotFoundError(f"{directory} is not a finished run: {state}. "
                                 "params.npz is written last, only when a run completes.")
     config = load_config(directory / "config.yaml")
-    template = init_network(root_keys(config.seed)[0], config.width, config.depth)
+    template = init_params(config, root_keys(config.seed)[0])
     flat_template, unflatten = ravel_pytree(template)
     flat = np.load(directory / "params.npz")["flat"]
     if flat.shape != flat_template.shape:
         raise ValueError("saved parameters do not match the config's network")
     params = unflatten(jnp.asarray(flat))
-    field = make_field(config.length)
+    field = make_field(config)
 
     def model(x, y):
         x = np.atleast_1d(np.asarray(x, dtype=np.float64))
@@ -1128,9 +1363,12 @@ def run(config_path, out=None, verbose=True):
               f"({config.pressure_scaling} pressure), inlet sharpness m = {config.inlet_sharpness}, "
               f"L* = {config.length:g}")
         print(f"[{config.name}] inertial terms ON; no-slip and pressure gauge exact; "
-              f"{config.n_interior} points per draw"
+              f"{config.formulation}, {config.inlet_condition} inlet, {config.activation}, "
+              f"Adam {config.adam_steps} steps ({config.adam_schedule}), "
+              f"inlet points {config.inlet_points}")
+        print(f"[{config.name}] {config.n_interior} points per draw"
               + (f" + {config.rar_points} worst of {config.rar_pool} by residual (RAR)"
-                 if config.rar_points else "")
+                 f" ({config.rar_mode})" if config.rar_points else "")
               + f", {config.lbfgs_cycles} L-BFGS cycles of {config.lbfgs_iterations}")
 
     checkpoint = directory / "checkpoint.npz"
@@ -1138,7 +1376,7 @@ def run(config_path, out=None, verbose=True):
 
     # Losses of the SELECTED parameters on a fresh draw. The held-out loss was
     # already measured, compiled, when train() selected them.
-    field = make_field(config.length)
+    field = make_field(config)
     _, _, heldout_key = root_keys(config.seed)
     fresh = sample_batch(jax.random.fold_in(heldout_key, 7), config, config.n_validation)
     fresh_terms = jax.jit(make_loss_terms(config, field))(params, fresh)

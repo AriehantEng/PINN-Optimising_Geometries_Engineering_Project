@@ -15,11 +15,14 @@ physics:
   reynolds: 10.0              # Re_h = U h / nu: developed centreline speed, half-height
   pressure_scaling: inertial  # p* = p / (rho U^2); use viscous only for Re <= 1
   inlet_sharpness: 8          # m in U0 (1 - y^(2m)); larger m = flatter inlet; m = 1 refused
+  inlet_condition: soft       # soft: an inlet loss term; hard: the inlet built into the network
+  formulation: velocity_pressure  # or stream_pressure: u, v from a stream function
 domain:
   length: 10.0                # L*, in half-heights
 model:
   width: 128
   depth: 4
+  activation: tanh
 sampling:
   n_interior: 4096            # interior points per draw
   focus_fraction: 0.5         # share of them concentrated near the inlet and walls
@@ -28,7 +31,9 @@ sampling:
   n_outlet: 256
   n_validation: 4096          # held-out points, never trained on
   rar_points: 1024            # adaptive refinement: worst-residual points added per draw
+  inlet_points: random        # random: redrawn each time; fixed: one static grid
   rar_pool: 32768             # fresh unseen candidates scored at every redraw
+  rar_mode: top               # top: the worst points; proportional: sampled by residual
 weights:
   momentum_x: 1.0
   momentum_y: 1.0
@@ -39,6 +44,7 @@ training:
   adam:
     steps: 3000
     learning_rate: 1.0e-3
+    schedule: exponential     # or cosine
     decay_rate: 0.9
     decay_steps: 1000
     resample_every: 250       # fresh points every 250 steps

@@ -44,7 +44,8 @@ def feature_derivatives(config, params, points):
     L = config.length
 
     def features(xy):
-        return pinn.hidden_features(params, jnp.stack([2.0 * xy[0] / L - 1.0, xy[1]]))
+        return pinn.hidden_features(params, jnp.stack([2.0 * xy[0] / L - 1.0, xy[1]]),
+                                    config.activation)
 
     batched = jax.vmap(features)
     value, d_dx, d2_dx2 = pinn._directional(batched, points, pinn._EX)
@@ -115,7 +116,11 @@ def refine(run, out, n_points, n_boundary, iterations, seed, verbose=True):
     if out.exists() and any(out.iterdir()):
         raise FileExistsError(f"{out} already holds files; a run never writes over another run")
     config, params = load(run)
-    field = pinn.make_field(config.length)
+    if config.formulation != "velocity_pressure" or config.inlet_condition != "soft":
+        raise ValueError(
+            "the output-layer re-solve assembles the velocity-pressure, soft-inlet ansatz "
+            f"by hand; this run uses {config.formulation} with a {config.inlet_condition} inlet")
+    field = pinn.make_field(config)
     loss_terms = pinn.make_loss_terms(config, field)
     weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
     loss = jax.jit(lambda p, batch: pinn.total_loss(loss_terms(p, batch), weights))
@@ -129,7 +134,7 @@ def refine(run, out, n_points, n_boundary, iterations, seed, verbose=True):
 
     interior = feature_derivatives(config, params, batch.interior)
     inlet = jax.vmap(lambda xy: pinn.hidden_features(
-        params, jnp.stack([2.0 * xy[0] / config.length - 1.0, xy[1]])))(batch.inlet)
+        params, jnp.stack([2.0 * xy[0] / config.length - 1.0, xy[1]]), config.activation))(batch.inlet)
     out_value, out_dx = feature_derivatives(config, params, batch.outlet)[:2]
     residual = jax.jit(make_residual_vector(config, batch, interior, inlet, (out_value, out_dx)))
     jacobian = jax.jit(jax.jacfwd(residual))
