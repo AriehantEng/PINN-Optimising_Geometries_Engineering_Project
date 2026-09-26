@@ -21,7 +21,8 @@ import pathlib
 import numpy as np
 
 from developing_flow import pinn
-from developing_flow.compare import DEVELOPED_WITHIN, HEIGHTS, developed, measure, relative_l2
+from developing_flow.compare import (DEVELOPED_WITHIN, HEIGHTS, _settle, developed, measure,
+                                     relative_l2)
 
 
 def _e(value):
@@ -182,7 +183,7 @@ def format_tables(runs, labels, directories):
             r = run["height_rows"][i]
             lines.append(f"| {r['y']:g} | {label} | {r['inlet_exact']:.5f} | {r['inlet_pinn']:.5f} | "
                          f"{r['developed_exact']:.5f} | {r['outlet_pinn']:.5f} | {r['outlet_err']:.2e} | "
-                         f"{r['settle']:.3f} |")
+                         f"{_settle(r['settle'])} |")
     lines += [
         "",
         "## Table 3. The original equations (exact residual 0), on 80,601 grid points",

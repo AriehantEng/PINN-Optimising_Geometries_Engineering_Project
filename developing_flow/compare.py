@@ -117,7 +117,13 @@ def measure(directory):
         target = float(developed(np.array(h)))
         along[h] = u
         outside = np.abs(u - target) > DEVELOPED_WITHIN * target
-        settle = float(x[np.nonzero(outside)[0][-1] + 1]) if outside.any() else 0.0
+        # nan when u is still outside 1% at the outlet: it never settles in the channel.
+        if not outside.any():
+            settle = 0.0
+        elif outside[-1]:
+            settle = math.nan
+        else:
+            settle = float(x[np.nonzero(outside)[0][-1] + 1])
         height_rows.append({
             "y": h, "inlet_exact": float(pinn.inlet_profile(np.array(h), m)),
             "inlet_pinn": float(u[0]), "developed_exact": target, "outlet_pinn": float(u[-1]),
@@ -265,6 +271,10 @@ def write_figures(config, directory, y, profiles, x, along, flux_x, flux_along,
     plt.close(fig)
 
 
+def _settle(value):
+    return "never, inside the channel" if math.isnan(value) else f"{value:.3f}"
+
+
 def _e(value):
     return "n/a" if value is None else f"{value:.2e}"
 
@@ -298,7 +308,7 @@ def format_tables(config, station_rows, height_rows, equation_rows, developed_fr
     for r in height_rows:
         lines.append(
             f"| {r['y']:g} | {r['inlet_exact']:.5f} | {r['inlet_pinn']:.5f} | {r['developed_exact']:.5f} | "
-            f"{r['outlet_pinn']:.5f} | {r['outlet_err']:.2e} | {r['settle']:.3f} |")
+            f"{r['outlet_pinn']:.5f} | {r['outlet_err']:.2e} | {_settle(r['settle'])} |")
     lines += [
         "",
         "## Table 3. The original equations: how close each is to being satisfied (exact value 0)",
