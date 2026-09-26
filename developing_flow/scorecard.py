@@ -1,6 +1,7 @@
 """One fixed scorecard for every developing-flow run, so runs can be ranked.
 
     python -m developing_flow.scorecard --nx 2001 --ny 1001 --reference baseline \\
+        --solutions developing_flow/runs/reference_re10_m8 developing_flow/runs/reference_re10_m4 \\
         --out developing_flow/runs/scorecard \\
         baseline=developing_flow/runs/developing_re10 \\
         baseline=developing_flow/runs/developing_re10_seed1 \\
@@ -12,7 +13,20 @@ Every other setup is then compared with the reference setup's SEED RANGE: a
 value only counts as better or worse when it lies outside that range, because
 a difference smaller than seed-to-seed scatter is not an effect of the change.
 
-The metrics, all lower-is-better, never loss-based except the held-out loss:
+The metrics, all lower-is-better, never loss-based except the held-out loss.
+The first six are against the finite-element reference solution
+(developing_flow/reference.py) of the run's own problem, picked from
+--solutions by Reynolds number, pressure scaling, inlet sharpness and channel
+length, on the dense sweep grid. They cover the entrance region, where no
+closed-form solution exists:
+
+    u_error              u, relative L2, whole channel
+    u_error_entrance     u, relative L2, x* < 2 L_e (the entrance region)
+    u_error_developed    u, relative L2, x* >= 2 L_e
+    v_error, p_error     v and p, relative L2, whole channel
+    centreline_error     largest |u - u_ref| on the centreline
+
+and the rest as before:
 
     developed_u_error    u vs Poiseuille parabola, relative L2, dense sweep over x* >= 2 L_e
     inlet_u_error        u(0, y) vs the prescribed inlet, relative L2, 401 points
@@ -35,6 +49,12 @@ import numpy as np
 from developing_flow import pinn, verify
 
 METRICS = (
+    ("u_error", "u vs reference, whole channel (rel. L2)"),
+    ("u_error_entrance", "u vs reference, entrance region (rel. L2)"),
+    ("u_error_developed", "u vs reference, developed region (rel. L2)"),
+    ("v_error", "v vs reference (rel. L2)"),
+    ("p_error", "p vs reference (rel. L2)"),
+    ("centreline_error", "centreline u vs reference (max abs)"),
     ("developed_u_error", "u error, developed region (rel. L2)"),
     ("inlet_u_error", "u error at the inlet (rel. L2)"),
     ("wiggle_x4", "wiggle at x* = 4 (max abs error)"),
@@ -49,11 +69,31 @@ METRICS = (
 )
 
 
-def score(directory: pathlib.Path, nx: int, ny: int) -> dict:
+def pick_solution(config, solutions):
+    """The reference among `solutions` that solves the same problem as `config`."""
+    matches = []
+    for directory in solutions:
+        described = json.loads((pathlib.Path(directory) / "reference.json").read_text())
+        if (described["reynolds"] == config.reynolds
+                and described["pressure_scaling"] == config.pressure_scaling
+                and described["inlet_sharpness"] == config.inlet_sharpness
+                and described["length_sampled"] == config.length):
+            matches.append(directory)
+    if len(matches) != 1:
+        raise ValueError(
+            f"{config.name}: {len(matches)} references match Re = {config.reynolds:g}, "
+            f"{config.pressure_scaling} scaling, m = {config.inlet_sharpness}, "
+            f"L = {config.length:g}; need exactly one among {list(solutions)}")
+    return matches[0]
+
+
+def score(directory: pathlib.Path, nx: int, ny: int, solutions) -> dict:
+    solution = pick_solution(pinn.load_config(directory / "config.yaml"), solutions)
     sweep_path = directory / "verify.json"
     sweep = json.loads(sweep_path.read_text()) if sweep_path.is_file() else None
-    if sweep is None or sweep.get("grid") != [nx, ny]:
-        sweep = verify.sweep(directory, nx, ny, verbose=False)
+    if (sweep is None or sweep.get("grid") != [nx, ny]
+            or sweep.get("reference_identity") != verify.reference_identity(solution)):
+        sweep = verify.sweep(directory, nx, ny, solution, verbose=False)
     metrics = json.loads((directory / "metrics.json").read_text())
     model = pinn.load_run(directory)
     config = model.config
@@ -66,6 +106,12 @@ def score(directory: pathlib.Path, nx: int, ny: int) -> dict:
         return float(np.max(np.abs(model(np.full_like(y, x), y)[0] - parabola)))
 
     return {
+        "u_error": sweep["reference_u_relative_l2"],
+        "u_error_entrance": sweep["reference_u_relative_l2_entrance"],
+        "u_error_developed": sweep["reference_u_relative_l2_developed"],
+        "v_error": sweep["reference_v_relative_l2"],
+        "p_error": sweep["reference_p_relative_l2"],
+        "centreline_error": sweep["reference_centreline_max_abs_error"],
         "developed_u_error": sweep["developed_u_relative_l2"],
         "inlet_u_error": float(np.linalg.norm(u_in - inlet) / np.linalg.norm(inlet)),
         "wiggle_x4": wiggle(4.0),
@@ -141,6 +187,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("runs", nargs="+", help="label=path, one per run")
     parser.add_argument("--reference", required=True, help="label of the reference setup")
+    parser.add_argument("--solutions", nargs="+", required=True,
+                        help="finite-element reference directories (developing_flow.reference), "
+                             "sampled on the --nx x --ny grid; each run uses the one that "
+                             "solves its problem")
     parser.add_argument("--nx", type=int, required=True)
     parser.add_argument("--ny", type=int, required=True)
     parser.add_argument("--out", required=True)
@@ -152,7 +202,7 @@ def main(argv=None) -> int:
         if not path:
             parser.error(f"expected label=path, got {item!r}")
         directory = pathlib.Path(path)
-        row = score(directory, args.nx, args.ny)
+        row = score(directory, args.nx, args.ny, args.solutions)
         runs.append((label, directory, row))
         groups.setdefault(label, []).append(row)
     if args.reference not in groups:

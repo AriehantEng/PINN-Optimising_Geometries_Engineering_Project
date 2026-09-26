@@ -6,3 +6,4 @@ scipy>=1.11
 PyYAML>=6.0
 pytest>=7.4
 matplotlib>=3.8
+scikit-fem>=12.0

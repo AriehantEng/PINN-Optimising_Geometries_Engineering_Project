@@ -137,7 +137,9 @@ CHOICES = {
     "physics.pressure_scaling": ("inertial", "viscous"),
     "physics.inlet_condition": ("soft", "hard"),
     "physics.formulation": ("velocity_pressure", "stream_pressure"),
+    "physics.inlet_ramp": ("linear", "exponential"),
     "model.activation": ("tanh", "silu"),
+    "model.input_map": ("linear", "exponential"),
     "sampling.inlet_points": ("random", "fixed"),
     "sampling.rar_mode": ("top", "proportional"),
     "training.adam.schedule": ("exponential", "cosine"),
@@ -151,7 +153,8 @@ SCHEMA = {
     "physics": {"reynolds": float, "pressure_scaling": str, "inlet_sharpness": int,
                 "inlet_condition": str, "formulation": str},
     "domain": {"length": float},
-    "model": {"width": int, "depth": int, "activation": str},
+    "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
+              "input_map": str},
     "sampling": {
         "n_interior": int,
         "focus_fraction": float,
@@ -183,6 +186,9 @@ CONDITIONAL = {
     ("training.adam", "final_learning_rate"): float,  # schedule = cosine
     ("weights", "continuity"): float,       # formulation = velocity_pressure
     ("weights", "inlet"): float,            # inlet_condition = soft
+    ("physics", "inlet_ramp"): str,          # inlet_condition = hard
+    ("physics", "inlet_ramp_length"): float,  # inlet_ramp = exponential
+    ("model", "input_length"): float,        # input_map = exponential
 }
 
 
@@ -224,11 +230,16 @@ class Config:
     pressure_scaling: str
     inlet_sharpness: int
     inlet_condition: str
+    inlet_ramp: str | None
+    inlet_ramp_length: float | None
     formulation: str
     length: float
     width: int
     depth: int
     activation: str
+    init_gain: float
+    input_map: str
+    input_length: float | None
     n_interior: int
     focus_fraction: float
     focus_length: float
@@ -331,6 +342,12 @@ def parse_config(document) -> Config:
                         "satisfies continuity identically)")
     w_inlet = take("weights", "inlet", soft_inlet,
                    "inlet_condition is 'soft' (a hard inlet holds exactly)")
+    ramp = take("physics", "inlet_ramp", not soft_inlet, "inlet_condition is 'hard'")
+    ramp_length = take("physics", "inlet_ramp_length", ramp == "exponential",
+                       "inlet_ramp is 'exponential'")
+    model = document["model"]
+    input_length = take("model", "input_length", model["input_map"] == "exponential",
+                        "input_map is 'exponential'")
 
     raw_weights = dict(document["weights"])
     raw_weights.pop("continuity", None)
@@ -348,11 +365,16 @@ def parse_config(document) -> Config:
         pressure_scaling=physics["pressure_scaling"],
         inlet_sharpness=physics["inlet_sharpness"],
         inlet_condition=physics["inlet_condition"],
+        inlet_ramp=ramp,
+        inlet_ramp_length=None if ramp_length is None else float(ramp_length),
         formulation=physics["formulation"],
         length=float(document["domain"]["length"]),
-        width=document["model"]["width"],
-        depth=document["model"]["depth"],
-        activation=document["model"]["activation"],
+        width=model["width"],
+        depth=model["depth"],
+        activation=model["activation"],
+        init_gain=float(model["init_gain"]),
+        input_map=model["input_map"],
+        input_length=None if input_length is None else float(input_length),
         n_interior=sampling["n_interior"],
         focus_fraction=float(sampling["focus_fraction"]),
         focus_length=float(sampling["focus_length"]),
@@ -395,6 +417,12 @@ def parse_config(document) -> Config:
         raise ConfigError("physics.inlet_sharpness must be an integer >= 2")
     if config.length <= 0:
         raise ConfigError("domain.length must be positive")
+    if config.init_gain <= 0:
+        raise ConfigError("model.init_gain must be positive")
+    if config.inlet_ramp_length is not None and config.inlet_ramp_length <= 0:
+        raise ConfigError("physics.inlet_ramp_length must be positive")
+    if config.input_length is not None and config.input_length <= 0:
+        raise ConfigError("model.input_length must be positive")
     if config.adam_learning_rate <= 0:
         raise ConfigError("training.adam.learning_rate must be positive")
     if exponential:
@@ -595,30 +623,40 @@ def batched_x_derivative(field_fn, points):
 # --------------------------------------------------------------------------- #
 
 
-def _glorot(key, n_out, n_in):
-    return jnp.sqrt(2.0 / (n_in + n_out)) * jax.random.normal(key, (n_out, n_in), dtype=jnp.float64)
+def _glorot(key, n_out, n_in, gain):
+    return gain * jnp.sqrt(2.0 / (n_in + n_out)) * jax.random.normal(
+        key, (n_out, n_in), dtype=jnp.float64)
 
 
-def _dense(key, n_in, n_out):
-    return {"W": _glorot(key, n_out, n_in), "b": jnp.zeros((n_out,), dtype=jnp.float64)}
+def _dense(key, n_in, n_out, gain):
+    return {"W": _glorot(key, n_out, n_in, gain), "b": jnp.zeros((n_out,), dtype=jnp.float64)}
 
 
-def init_network(key, width, depth, n_out):
+def init_network(key, width, depth, n_out, gain):
     """Modified MLP (Wang, Teng & Perdikaris 2021): two input encoders blended
-    into every hidden layer. Inputs (x, y); `n_out` raw outputs."""
+    into every hidden layer. Inputs (x, y); `n_out` raw outputs.
+
+    Glorot-normal weights, scaled by `gain` on every layer an activation
+    follows (encoders and hidden layers) but not on the linear output layer.
+    Gain 1 is plain Glorot, right for tanh, whose slope at zero is 1. SiLU's
+    slope at zero is 1/2, so under gain 1 every layer halves the signal: a
+    SiLU network starts with half tanh's spatial variation and 12-32x less
+    curvature. Gain 2 = 1/silu'(0) gives it the same linearisation as the
+    tanh network at initialisation, so the two differ only in nonlinearity.
+    """
     keys = jax.random.split(key, depth + 3)
     return {
-        "encoder_u": _dense(keys[0], 2, width),
-        "encoder_v": _dense(keys[1], 2, width),
-        "hidden": [_dense(keys[2], 2, width)]
-        + [_dense(keys[3 + i], width, width) for i in range(depth - 1)],
-        "output": _dense(keys[depth + 2], width, n_out),
+        "encoder_u": _dense(keys[0], 2, width, gain),
+        "encoder_v": _dense(keys[1], 2, width, gain),
+        "hidden": [_dense(keys[2], 2, width, gain)]
+        + [_dense(keys[3 + i], width, width, gain) for i in range(depth - 1)],
+        "output": _dense(keys[depth + 2], width, n_out, 1.0),
     }
 
 
 def init_params(config: Config, key):
     """The network a config describes, initialised from `key`."""
-    return init_network(key, config.width, config.depth, config.n_outputs)
+    return init_network(key, config.width, config.depth, config.n_outputs, config.init_gain)
 
 
 #: Activation functions by config name. Applied everywhere in the modified
@@ -668,25 +706,69 @@ def make_field(config: Config):
     object and anything compiled against it is reused.
     """
     return _make_field(config.length, config.activation, config.formulation,
-                       config.inlet_condition, config.inlet_sharpness)
+                       config.inlet_condition, config.inlet_sharpness, config.inlet_ramp,
+                       config.inlet_ramp_length, config.input_map, config.input_length)
+
+
+def inlet_ramp(x, length, ramp, ramp_length):
+    """r(x): zero at the inlet, so a hard inlet holds whatever the network does.
+
+    linear       x / L. Its slope at the inlet is 1/L = 0.1, so near the inlet
+                 the network must output ~L times the correction it makes: at
+                 x* = 0.1, where the flow changes fastest, r = 0.01. This was
+                 E5, which failed at the inlet corners.
+    exponential  1 - exp(-x / l): slope 1/l at the inlet, tending to 1 over a
+                 few l. With l = 1 it is normalised to first order like a
+                 distance function (Sukumar & Srivastava 2022), so the network
+                 output near the inlet is the correction itself.
+    """
+    if ramp == "linear":
+        return x / length
+    if ramp == "exponential":
+        return -jnp.expm1(-x / ramp_length)
+    raise ValueError(f"unknown inlet_ramp {ramp!r}")
+
+
+def input_coordinates(xy, length, input_map, input_length):
+    """The point as the network sees it, in [-1, 1]^2.
+
+    linear       xi = 2x/L - 1. With L = 10 the network sees x compressed 5x
+                 relative to y, so the entrance region, the only place the
+                 flow varies in x, occupies a narrow band of its input.
+    exponential  xi = 2 (1 - exp(-x/l)) / (1 - exp(-L/l)) - 1. Deviations from
+                 developed flow decay like exp(-lambda x), so this spends the
+                 network's input range where the flow changes and compresses
+                 the developed region, where it does not. With l = 2 the map's
+                 slope at the inlet is 1, the same as y's: isotropic there.
+    """
+    x, y = xy[0], xy[1]
+    if input_map == "linear":
+        return jnp.stack([2.0 * x / length - 1.0, y])
+    if input_map == "exponential":
+        return jnp.stack([2.0 * jnp.expm1(-x / input_length) / jnp.expm1(-length / input_length)
+                          - 1.0, y])
+    raise ValueError(f"unknown input_map {input_map!r}")
 
 
 @functools.lru_cache(maxsize=None)
-def _make_field(length, activation, formulation, inlet_condition, sharpness):
+def _make_field(length, activation, formulation, inlet_condition, sharpness,
+                ramp, ramp_length, input_map, input_length):
     """The boundary-condition ansatz. In every variant:
 
     * no-slip holds EXACTLY on both walls, for any parameters;
     * the pressure gauge p(L, y) = 0 holds exactly: p = ((L - x)/L) N_p. It is
       written (L - x)/L, not 1 - x/L, because under jit x/L may become
       x * (1/L), and 1 - L*(1/L) is ~1e-17 rather than zero;
-    * inputs are mapped to [-1, 1]^2 before entering the network.
+    * inputs are mapped to [-1, 1]^2 before entering the network
+      (`input_coordinates`).
 
     velocity_pressure, soft inlet:  u = phi N_u,  v = phi N_v
-    velocity_pressure, hard inlet:  u = g(y) + phi (x/L) N_u,  v = phi (x/L) N_v
-        with g the inlet profile, so u(0, y) = g(y) and v(0, y) = 0 exactly.
+    velocity_pressure, hard inlet:  u = g(y) + phi r(x) N_u,  v = phi r(x) N_v
+        with g the inlet profile and r the inlet ramp (`inlet_ramp`), so
+        u(0, y) = g(y) and v(0, y) = 0 exactly.
     stream_pressure:  u = d(psi)/dy,  v = -d(psi)/dx,  continuity holds identically;
         soft inlet:  psi = G(y) + phi^2 N_psi
-        hard inlet:  psi = G(y) + phi^2 (x/L)^2 N_psi
+        hard inlet:  psi = G(y) + phi^2 r(x)^2 N_psi
         with G = inlet_stream. The squared ramp makes BOTH u(0, y) = g(y) and
         v(0, y) = 0 exact. psi(x, 1) - psi(x, -1) = 4/3 for every x, so the
         flux is exact by construction and cannot be tested.
@@ -694,7 +776,7 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness):
     L = length
 
     def inputs(xy):
-        return jnp.stack([2.0 * xy[0] / L - 1.0, xy[1]])
+        return input_coordinates(xy, L, input_map, input_length)
 
     def gauge(x):
         return (L - x) / L
@@ -707,9 +789,9 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness):
             if inlet_condition == "soft":
                 u, v = wall * raw[0], wall * raw[1]
             else:
-                ramp = x / L
-                u = inlet_profile(y, sharpness) + wall * ramp * raw[0]
-                v = wall * ramp * raw[1]
+                r = inlet_ramp(x, L, ramp, ramp_length)
+                u = inlet_profile(y, sharpness) + wall * r * raw[0]
+                v = wall * r * raw[1]
             return jnp.stack([u, v, gauge(x) * raw[2]])
         return field
 
@@ -718,8 +800,8 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness):
             def psi(point):
                 x, y = point[0], point[1]
                 raw = apply_network(params, inputs(point), activation)
-                ramp = 1.0 if inlet_condition == "soft" else (x / L) ** 2
-                return inlet_stream(y, sharpness) + wall_factor(y) ** 2 * ramp * raw[0], raw
+                r2 = 1.0 if inlet_condition == "soft" else inlet_ramp(x, L, ramp, ramp_length) ** 2
+                return inlet_stream(y, sharpness) + wall_factor(y) ** 2 * r2 * raw[0], raw
 
             gradient, raw = jax.grad(psi, has_aux=True)(xy)
             return jnp.stack([gradient[1], -gradient[0], gauge(xy[0]) * raw[1]])
@@ -1363,8 +1445,14 @@ def run(config_path, out=None, verbose=True):
               f"({config.pressure_scaling} pressure), inlet sharpness m = {config.inlet_sharpness}, "
               f"L* = {config.length:g}")
         print(f"[{config.name}] inertial terms ON; no-slip and pressure gauge exact; "
-              f"{config.formulation}, {config.inlet_condition} inlet, {config.activation}, "
-              f"Adam {config.adam_steps} steps ({config.adam_schedule}), "
+              f"{config.formulation}, {config.inlet_condition} inlet"
+              + (f" ({config.inlet_ramp} ramp"
+                 + (f", l = {config.inlet_ramp_length:g})" if config.inlet_ramp_length else ")")
+                 if config.inlet_ramp else "")
+              + f", {config.activation} (init gain {config.init_gain:g}), "
+              f"{config.input_map} input map"
+              + (f" (l = {config.input_length:g})" if config.input_length else "")
+              + f", Adam {config.adam_steps} steps ({config.adam_schedule}), "
               f"inlet points {config.inlet_points}")
         print(f"[{config.name}] {config.n_interior} points per draw"
               + (f" + {config.rar_points} worst of {config.rar_pool} by residual (RAR)"

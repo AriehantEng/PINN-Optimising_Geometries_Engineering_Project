@@ -18,6 +18,7 @@ physics:
   pressure_scaling: inertial  # p* = p / (rho U^2); use viscous only for Re <= 1
   inlet_sharpness: 8          # m in U0 (1 - y^(2m)); larger m = flatter inlet; m = 1 refused
   inlet_condition: hard       # soft: an inlet loss term; hard: the inlet built into the network
+  inlet_ramp: linear          # r(x) = x/L: slope 0.1 at the inlet
   formulation: velocity_pressure  # or stream_pressure: u, v from a stream function
 domain:
   length: 10.0                # L*, in half-heights
@@ -25,6 +26,8 @@ model:
   width: 128
   depth: 4
   activation: tanh
+  init_gain: 1.0              # Glorot scale on layers an activation follows; 1 = plain Glorot
+  input_map: linear           # or exponential: widen the entrance region in the network's input
 sampling:
   n_interior: 4096            # interior points per draw
   focus_fraction: 0.5         # share of them concentrated near the inlet and walls

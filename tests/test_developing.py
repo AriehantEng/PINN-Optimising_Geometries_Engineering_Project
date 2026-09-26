@@ -180,13 +180,27 @@ def test_y_inertia_matches_a_hand_derivation():
 # -- the fast batched derivatives equal the single-point reference ----------- #
 
 
+HARD_LINEAR = {"physics.inlet_condition": "hard", "physics.inlet_ramp": "linear"}
+HARD_EXPONENTIAL = {"physics.inlet_condition": "hard", "physics.inlet_ramp": "exponential",
+                    "physics.inlet_ramp_length": 1.0}
+STREAM = {"physics.formulation": "stream_pressure"}
+
 ANSATZ_VARIANTS = [
     {},
-    {"physics.inlet_condition": "hard"},
-    {"physics.formulation": "stream_pressure"},
-    {"physics.formulation": "stream_pressure", "physics.inlet_condition": "hard"},
+    HARD_LINEAR,
+    HARD_EXPONENTIAL,
+    STREAM,
+    {**STREAM, **HARD_LINEAR},
+    {**STREAM, **HARD_EXPONENTIAL},
     {"model.activation": "silu"},
+    {"model.activation": "silu", "model.init_gain": 2.0},
+    {"model.input_map": "exponential", "model.input_length": 2.0},
+    {**STREAM, **HARD_EXPONENTIAL, "model.input_map": "exponential", "model.input_length": 2.0},
 ]
+
+
+def _variant_id(changes):
+    return "-".join(str(v) for v in changes.values()) or "baseline"
 
 
 def variant_config(changes):
@@ -203,7 +217,7 @@ def variant_config(changes):
     return pinn.parse_config(document)
 
 
-@pytest.mark.parametrize("changes", ANSATZ_VARIANTS, ids=lambda c: "-".join(c.values()) or "baseline")
+@pytest.mark.parametrize("changes", ANSATZ_VARIANTS, ids=_variant_id)
 def test_batched_derivatives_match_the_point_reference(changes):
     config = variant_config(changes)
     params = random_params(config, 3)
@@ -531,7 +545,8 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
     document = base_document()
     for section, key in (("sampling", "rar_points"), ("sampling", "inlet_points"),
                          ("physics", "inlet_condition"), ("physics", "formulation"),
-                         ("model", "activation")):
+                         ("model", "activation"), ("model", "init_gain"),
+                         ("model", "input_map")):
         del document[section][key]
     del document["training"]["adam"]["schedule"]
     run = tmp_path / "old_run"
@@ -541,10 +556,41 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
         encoding="utf-8")
     with pytest.raises(pinn.ConfigError, match="missing required key"):
         pinn.load_config(run / "config.yaml")
+    (run / "params.npz").write_bytes(b"")  # a finished run; unfinished ones are skipped
     migrate.main(["--runs-root", str(tmp_path), "--write"])
     assert pinn.load_config(run / "config.yaml") == pinn.parse_config(base_document())
     assert (run / "config.yaml").read_text().startswith("# provenance comment")
     assert (run / "config.migrated.json").is_file()
+
+
+def test_migration_gives_an_old_hard_inlet_run_the_linear_ramp_it_used(tmp_path):
+    from developing_flow import migrate
+    with open("developing_flow/re10_hardinlet.yaml", encoding="utf-8") as handle:
+        text = handle.read()
+    run = tmp_path / "old_hard"
+    run.mkdir()
+    (run / "config.yaml").write_text(text, encoding="utf-8")
+    (run / "params.npz").write_bytes(b"")
+    assert pinn.load_config(run / "config.yaml").inlet_ramp == "linear"
+    old = "\n".join(line for line in text.splitlines() if "inlet_ramp" not in line) + "\n"
+    (run / "config.yaml").write_text(old, encoding="utf-8")
+    with pytest.raises(pinn.ConfigError, match="inlet_ramp"):
+        pinn.load_config(run / "config.yaml")
+    migrate.main(["--runs-root", str(tmp_path), "--write"])
+    assert pinn.load_config(run / "config.yaml") == pinn.load_config("developing_flow/re10_hardinlet.yaml")
+
+
+def test_migration_leaves_an_unfinished_run_alone(tmp_path):
+    from developing_flow import migrate
+    document = base_document()
+    del document["model"]["init_gain"]
+    run = tmp_path / "in_flight"
+    run.mkdir()
+    text = yaml.safe_dump(document, sort_keys=False)
+    (run / "config.yaml").write_text(text, encoding="utf-8")
+    migrate.main(["--runs-root", str(tmp_path), "--write"])
+    assert (run / "config.yaml").read_text(encoding="utf-8") == text
+    assert not (run / "config.migrated.json").exists()
 
 
 # -- the output-layer re-solve ---------------------------------------------- #
@@ -591,6 +637,52 @@ def test_seed_configs_differ_from_the_baseline_only_in_name_and_seed(seed):
     assert document == base
 
 
+@pytest.mark.parametrize("stem", ["re10_stream", "re10_lbfgs24"])
+@pytest.mark.parametrize("seed", [1, 2])
+def test_step2_seed_configs_differ_from_their_seed_zero_only_in_name_and_seed(stem, seed):
+    with open(f"developing_flow/{stem}_seed{seed}.yaml", encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    with open(f"developing_flow/{stem}.yaml", encoding="utf-8") as handle:
+        base = yaml.safe_load(handle)
+    assert document.pop("seed") == seed and base.pop("seed") == 0
+    assert document.pop("name") == base.pop("name") + f"_seed{seed}"
+    assert document == base
+
+
+def test_errors_against_a_reference_are_measured_on_its_own_grid(tmp_path):
+    from developing_flow import verify
+    x, y = np.linspace(0.0, 10.0, 11), np.linspace(-1.0, 1.0, 5)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    ru, rv, rp = 1.0 - Y**2, 0.1 * np.sin(X) * (1.0 - Y**2), 0.2 * (10.0 - X)
+    np.savez_compressed(tmp_path / "reference.npz", x=x, y=y, u=ru, v=rv, p=rp)
+    r = verify.against_reference(tmp_path, x, y, 1.01 * ru, rv, rp + 0.02 * (10.0 - X), 3.77)
+    assert abs(r["reference_u_relative_l2"] - 0.01) < 1e-14
+    assert abs(r["reference_u_relative_l2_entrance"] - 0.01) < 1e-14
+    assert abs(r["reference_u_relative_l2_developed"] - 0.01) < 1e-14
+    assert r["reference_v_relative_l2"] == 0.0
+    assert abs(r["reference_p_relative_l2"] - 0.1) < 1e-14
+    assert abs(r["reference_centreline_max_abs_error"] - 0.01) < 1e-15
+    # this reference IS the parabola scaled to flux 4/3, so its departure is zero
+    assert r["reference_departure_from_parabola_developed"] < 1e-15
+    with pytest.raises(ValueError, match="grid"):
+        verify.against_reference(tmp_path, x[:-1], y, ru[:-1], rv[:-1], rp[:-1], 3.77)
+
+
+def test_the_scorecard_measures_each_run_against_the_reference_for_its_own_problem(tmp_path):
+    from developing_flow import scorecard
+    for m in (8, 4):
+        (tmp_path / f"m{m}").mkdir()
+        (tmp_path / f"m{m}" / "reference.json").write_text(
+            '{"reynolds": 10.0, "pressure_scaling": "inertial", "inlet_sharpness": %d, '
+            '"length_sampled": 10.0}' % m)
+    solutions = [tmp_path / "m8", tmp_path / "m4"]
+    assert scorecard.pick_solution(pinn.load_config(CONFIG_PATH), solutions) == tmp_path / "m8"
+    assert scorecard.pick_solution(pinn.load_config("developing_flow/re10_m4.yaml"),
+                                   solutions) == tmp_path / "m4"
+    with pytest.raises(ValueError, match="0 references match"):
+        scorecard.pick_solution(pinn.load_config("developing_flow/re10_m2.yaml"), solutions)
+
+
 def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():
     from developing_flow import scorecard
     keys = [k for k, _ in scorecard.METRICS]
@@ -626,7 +718,7 @@ STEP1_EXPERIMENTS = {
     "re10_inletgrid.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points", "weights.inlet"},
     "re10_rad.yaml": {"name", "sampling.rar_points", "sampling.rar_pool", "sampling.rar_mode",
                       "sampling.rar_exponent", "sampling.rar_floor"},
-    "re10_hardinlet.yaml": {"name", "physics.inlet_condition", "weights.inlet"},
+    "re10_hardinlet.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp", "weights.inlet"},
     "re10_silu.yaml": {"name", "model.activation"},
     "re10_stream.yaml": {"name", "physics.formulation", "weights.continuity"},
     "re10_m4.yaml": {"name", "physics.inlet_sharpness"},
@@ -634,7 +726,20 @@ STEP1_EXPERIMENTS = {
 }
 
 
-@pytest.mark.parametrize("filename, allowed", sorted(STEP1_EXPERIMENTS.items()))
+STEP2_EXPERIMENTS = {
+    "re10_hardinlet_exp.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp",
+                                "physics.inlet_ramp_length", "weights.inlet"},
+    "re10_stream_hard.yaml": {"name", "physics.formulation", "physics.inlet_condition",
+                              "physics.inlet_ramp", "physics.inlet_ramp_length",
+                              "weights.continuity", "weights.inlet"},
+    "re10_silu_gain2.yaml": {"name", "model.activation", "model.init_gain"},
+    "re10_inputmap.yaml": {"name", "model.input_map", "model.input_length"},
+    "re10_inletgrid_w1.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points"},
+}
+
+
+@pytest.mark.parametrize("filename, allowed",
+                         sorted({**STEP1_EXPERIMENTS, **STEP2_EXPERIMENTS}.items()))
 def test_each_step1_config_changes_only_its_own_keys(filename, allowed):
     with open(f"developing_flow/{filename}", encoding="utf-8") as handle:
         experiment = _flatten(yaml.safe_load(handle))
@@ -647,9 +752,10 @@ def test_each_step1_config_changes_only_its_own_keys(filename, allowed):
 # -- Step 1 options --------------------------------------------------------- #
 
 
+@pytest.mark.parametrize("ramp", [HARD_LINEAR, HARD_EXPONENTIAL], ids=["linear", "exponential"])
 @pytest.mark.parametrize("formulation", ["velocity_pressure", "stream_pressure"])
-def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation):
-    config = variant_config({"physics.formulation": formulation, "physics.inlet_condition": "hard"})
+def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation, ramp):
+    config = variant_config({"physics.formulation": formulation, **ramp})
     y = np.linspace(-0.999, 0.999, 41)
     for seed in (0, 1):
         u, v, _ = pinn.predict(pinn.make_field(config), random_params(config, seed),
@@ -658,9 +764,10 @@ def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation):
         assert np.all(v == 0.0)
 
 
-@pytest.mark.parametrize("inlet", ["soft", "hard"])
+@pytest.mark.parametrize("inlet", [{}, HARD_LINEAR, HARD_EXPONENTIAL],
+                         ids=["soft", "hard-linear", "hard-exponential"])
 def test_the_stream_function_conserves_mass_and_satisfies_no_slip(inlet):
-    config = variant_config({"physics.formulation": "stream_pressure", "physics.inlet_condition": inlet})
+    config = variant_config({**STREAM, **inlet})
     params = random_params(config, 2)
     field = pinn.make_field(config)
     nodes, weights = np.polynomial.legendre.leggauss(200)
@@ -678,7 +785,7 @@ def test_the_stream_function_conserves_mass_and_satisfies_no_slip(inlet):
 
 def test_loss_terms_follow_the_formulation_and_inlet():
     stream = variant_config({"physics.formulation": "stream_pressure"})
-    hard = variant_config({"physics.inlet_condition": "hard"})
+    hard = variant_config(HARD_EXPONENTIAL)
     assert "continuity" not in stream.loss_terms and "inlet" in stream.loss_terms
     assert "inlet" not in hard.loss_terms and "continuity" in hard.loss_terms
     for config in (stream, hard):
@@ -687,6 +794,50 @@ def test_loss_terms_follow_the_formulation_and_inlet():
         assert set(terms) == set(config.loss_terms) == set(config.weights)
     with pytest.raises(KeyError, match="disagree"):
         pinn.total_loss({"momentum_x": 1.0}, {"momentum_y": 1.0})
+
+
+def test_init_gain_scales_every_layer_an_activation_follows_but_not_the_output():
+    key = jax.random.PRNGKey(0)
+    one, two = pinn.init_network(key, 8, 3, 3, 1.0), pinn.init_network(key, 8, 3, 3, 2.0)
+    scaled = [(one["encoder_u"], two["encoder_u"]), (one["encoder_v"], two["encoder_v"])]
+    scaled += list(zip(one["hidden"], two["hidden"]))
+    for a, b in scaled:
+        assert np.array_equal(2.0 * np.asarray(a["W"]), np.asarray(b["W"]))
+        assert np.array_equal(np.asarray(a["b"]), np.asarray(b["b"]))
+    assert np.array_equal(np.asarray(one["output"]["W"]), np.asarray(two["output"]["W"]))
+
+
+def test_gain_one_is_plain_glorot():
+    """Stored runs were initialised before init_gain existed; gain 1 must be that."""
+    key = jax.random.PRNGKey(3)
+    params = pinn.init_network(key, 8, 2, 3, 1.0)
+    keys = jax.random.split(key, 2 + 3)
+    expected = np.sqrt(2.0 / (2 + 8)) * np.asarray(jax.random.normal(keys[0], (8, 2), dtype=jnp.float64))
+    assert np.array_equal(np.asarray(params["encoder_u"]["W"]), expected)
+
+
+def test_the_exponential_ramp_vanishes_at_the_inlet_with_slope_one_over_its_length():
+    for length in (0.5, 1.0, 3.0):
+        assert float(pinn.inlet_ramp(0.0, 10.0, "exponential", length)) == 0.0
+        slope = jax.grad(lambda x: pinn.inlet_ramp(x, 10.0, "exponential", length))(0.0)
+        assert abs(float(slope) - 1.0 / length) < 1e-15
+        assert abs(float(pinn.inlet_ramp(20.0 * length, 10.0, "exponential", length)) - 1.0) < 1e-8
+    assert float(pinn.inlet_ramp(0.0, 10.0, "linear", None)) == 0.0
+    assert float(pinn.inlet_ramp(10.0, 10.0, "linear", None)) == 1.0
+
+
+def test_the_exponential_input_map_spans_the_input_range_and_stretches_the_inlet():
+    L, ell = 10.0, 2.0
+    x = np.linspace(0.0, L, 401)
+    xi = np.array([float(pinn.input_coordinates(jnp.array([xv, 0.3]), L, "exponential", ell)[0])
+                   for xv in x])
+    assert abs(xi[0] + 1.0) < 1e-15 and abs(xi[-1] - 1.0) < 1e-15
+    assert np.all(np.diff(xi) > 0)
+    slope = jax.grad(lambda xv: pinn.input_coordinates(jnp.array([xv, 0.3]), L, "exponential", ell)[0])(0.0)
+    assert abs(float(slope) - 2.0 / (ell * -np.expm1(-L / ell))) < 1e-14
+    assert float(slope) > 4.9 * 2.0 / L  # at least 5x the linear map's slope at the inlet
+    eta = pinn.input_coordinates(jnp.array([1.0, 0.3]), L, "exponential", ell)[1]
+    assert float(eta) == 0.3
 
 
 def test_silu_changes_the_network():
@@ -756,6 +907,47 @@ def test_conditional_keys_are_required_or_refused_with_their_choice(changes, rem
         for part in path:
             node = node[part]
         node[key] = value
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+def _hard_document(**physics):
+    document = base_document()
+    del document["weights"]["inlet"]
+    document["physics"]["inlet_condition"] = "hard"
+    document["physics"].update(physics)
+    return document
+
+
+@pytest.mark.parametrize("document, message", [
+    (_hard_document(), "inlet_ramp"),                                   # hard needs a ramp
+    (_hard_document(inlet_ramp="exponential"), "inlet_ramp_length"),    # which needs a length
+    (_hard_document(inlet_ramp="linear", inlet_ramp_length=1.0), "no effect"),
+    (_hard_document(inlet_ramp="cubic"), "inlet_ramp"),
+    (_hard_document(inlet_ramp="exponential", inlet_ramp_length=0.0), "inlet_ramp_length"),
+], ids=["no-ramp", "no-length", "linear-with-length", "unknown-ramp", "zero-length"])
+def test_the_hard_inlet_ramp_is_required_and_checked(document, message):
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+def test_a_soft_inlet_refuses_a_ramp():
+    document = base_document()
+    document["physics"]["inlet_ramp"] = "linear"
+    with pytest.raises(pinn.ConfigError, match="no effect"):
+        pinn.parse_config(document)
+
+
+@pytest.mark.parametrize("model, message", [
+    ({"input_map": "exponential"}, "input_length"),
+    ({"input_length": 2.0}, "no effect"),
+    ({"input_map": "log"}, "input_map"),
+    ({"init_gain": 0.0}, "init_gain"),
+    ({"init_gain": -1.0}, "init_gain"),
+])
+def test_the_model_options_are_checked(model, message):
+    document = base_document()
+    document["model"].update(model)
     with pytest.raises(pinn.ConfigError, match=message):
         pinn.parse_config(document)
 

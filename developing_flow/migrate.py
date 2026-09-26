@@ -15,6 +15,9 @@ describes what the run ACTUALLY did, from the MIGRATIONS table below:
     physics.formulation = velocity_pressure the network always output u, v, p
     model.activation = tanh                 the only activation there was
     training.adam.schedule = exponential    the only schedule there was
+    model.init_gain = 1.0                   plain Glorot was the only initialisation
+    model.input_map = linear                the network always saw xi = 2x/L - 1
+    physics.inlet_ramp = linear             (hard-inlet runs only) the ramp was x/L
 
 The edit is a targeted text insertion, not a YAML round-trip, so comments in
 the stored config survive, and each migrated run gets a config.migrated.json
@@ -63,6 +66,16 @@ MIGRATIONS = (
     ("training.adam.schedule", "exponential", r"^    learning_rate: .*$",
      lambda d: "schedule" not in d.get("training", {}).get("adam", {}),
      "before training.adam.schedule existed the learning rate always decayed exponentially"),
+    ("model.init_gain", 1.0, r"^  activation: .*$",
+     lambda d: "init_gain" not in d.get("model", {}),
+     "before model.init_gain existed every layer used plain Glorot initialisation (gain 1)"),
+    ("model.input_map", "linear", r"^  init_gain: .*$",
+     lambda d: "input_map" not in d.get("model", {}),
+     "before model.input_map existed the network always saw xi = 2x/L - 1"),
+    ("physics.inlet_ramp", "linear", r"^  inlet_condition: .*$",
+     lambda d: d.get("physics", {}).get("inlet_condition") == "hard"
+     and "inlet_ramp" not in d.get("physics", {}),
+     "before physics.inlet_ramp existed a hard inlet always used the linear ramp x/L"),
 )
 
 
@@ -120,6 +133,11 @@ def main(argv=None) -> int:
             continue
         additions = plan(directory)
         if additions is None:
+            continue
+        if not (directory / "params.npz").is_file():
+            # params.npz is written last, so this run is unfinished and may be
+            # training right now; its config is migrated once it has finished.
+            print(f"{directory.name}: unfinished, skipped")
             continue
         if not additions:
             print(f"{directory.name}: already complete")

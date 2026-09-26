@@ -1,7 +1,7 @@
 """Plot a scorecard: each setup against the reference setup's seed range.
 
     python -m developing_flow.plot_scorecard developing_flow/runs/scorecard_step1/scorecard.json \\
-        --out developing_flow/runs/scorecard_step1/scorecard.png
+        --out developing_flow/runs/scorecard_step1/scorecard.png --title "Step 1: ..."
 
 One panel per metric, setups down the side, value along a log axis, and the
 reference seeds' range as a grey band. A point inside the band is not an
@@ -20,9 +20,12 @@ import numpy as np
 from developing_flow import pinn
 
 PANELS = (
-    ("developed_u_error", "u error, developed region"),
+    ("u_error", "u vs reference, whole channel"),
+    ("u_error_entrance", "u vs reference, entrance region"),
+    ("u_error_developed", "u vs reference, developed region"),
+    ("v_error", "v vs reference"),
+    ("p_error", "p vs reference"),
     ("inlet_u_error", "u error at the inlet"),
-    ("wiggle_x10", "wiggle at the outlet (x* = 10)"),
     ("flux_error", "worst flux error"),
     ("rms_x", "RMS x-momentum residual"),
     ("max_residual", "largest residual"),
@@ -34,6 +37,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scorecard")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--title", required=True)
     args = parser.parse_args(argv)
     data = json.loads(pathlib.Path(args.scorecard).read_text())
     summary, reference = data["summary"], data["reference"]
@@ -45,7 +49,7 @@ def main(argv=None) -> int:
     import matplotlib.pyplot as plt
     import matplotlib.ticker
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9), sharey=True)
+    fig, axes = plt.subplots(3, 3, figsize=(15, 3.2 + 0.32 * len(setups) * 3), sharey=True)
     y = np.arange(len(setups))[::-1]
     for ax, (key, title) in zip(axes.ravel(), PANELS):
         ref = summary[reference][key]
@@ -87,9 +91,8 @@ def main(argv=None) -> int:
         plt.Rectangle((0, 0), 1, 1, color=pinn.GRID, label=f"{reference} seed range"),
     ]
     fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=10)
-    fig.suptitle("Step 1: each change against the baseline's seed-to-seed range (lower is better)",
-                 x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    fig.suptitle(args.title, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(args.out, dpi=150)
     print(f"wrote {args.out}")
     return 0
