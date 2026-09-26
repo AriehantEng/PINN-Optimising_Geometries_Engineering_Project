@@ -53,6 +53,8 @@ training:
     iterations_per_cycle: 500
     gtol: 1.0e-14
   check_every: 100            # held-out loss is measured this often
+  lm:
+    iterations: 0             # Levenberg-Marquardt after L-BFGS; 0 = off
 evaluation:
   nx: 201
   ny: 101

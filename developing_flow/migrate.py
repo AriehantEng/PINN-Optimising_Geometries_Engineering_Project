@@ -20,6 +20,7 @@ describes what the run ACTUALLY did, from the MIGRATIONS table below:
     physics.inlet_ramp = linear             (hard-inlet runs only) the ramp was x/L
     physics.lift = inlet                    (stream-function and hard-inlet runs only)
                                             the lift was the inlet profile
+    training.lm = {iterations: 0}           there was no Levenberg-Marquardt stage
 
 The edit is a targeted text insertion, not a YAML round-trip, so comments in
 the stored config survive, and each migrated run gets a config.migrated.json
@@ -84,6 +85,9 @@ MIGRATIONS = (
      and "lift" not in d.get("physics", {}),
      "before physics.lift existed the lift was always the inlet profile, "
      "carried unchanged down the channel"),
+    ("training.lm", {"iterations": 0}, r"^  check_every: .*$",
+     lambda d: "lm" not in d.get("training", {}),
+     "before training.lm existed there was no Levenberg-Marquardt stage"),
 )
 
 

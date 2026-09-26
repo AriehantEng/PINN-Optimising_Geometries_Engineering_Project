@@ -551,7 +551,7 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
     for section, key in (("sampling", "rar_points"), ("sampling", "inlet_points"),
                          ("physics", "inlet_condition"), ("physics", "formulation"),
                          ("model", "activation"), ("model", "init_gain"),
-                         ("model", "input_map")):
+                         ("model", "input_map"), ("training", "lm")):
         del document[section][key]
     del document["training"]["adam"]["schedule"]
     run = tmp_path / "old_run"
@@ -748,6 +748,14 @@ STEP2_EXPERIMENTS = {
     "re10_silu_gain2.yaml": {"name", "model.activation", "model.init_gain"},
     "re10_inputmap.yaml": {"name", "model.input_map", "model.input_length"},
     "re10_inletgrid_w1.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points"},
+    "re10_w40.yaml": {"name", "model.width"},
+    "re10_lm.yaml": {"name", "model.width", "training.lbfgs.cycles", "training.lm.iterations",
+                     "training.lm.damping", "training.lm.resample_every"},
+    "re10_stream_lm.yaml": {"name", "physics.formulation", "physics.inlet_condition",
+                            "physics.inlet_ramp", "physics.inlet_ramp_length", "physics.lift",
+                            "physics.lift_length", "weights.continuity", "weights.inlet",
+                            "model.width", "training.lbfgs.cycles", "training.lm.iterations",
+                            "training.lm.damping", "training.lm.resample_every"},
 }
 
 
@@ -999,6 +1007,108 @@ def test_the_inlet_lift_keeps_old_runs_bit_identical():
                 expected_u = pinn.inlet_profile(y, m) + pinn.wall_factor(y) * ramp * raw[0]
                 assert got[0] == float(expected_u)
             assert got[2] == float((L - x) / L * raw[-1])
+
+
+# -- Levenberg-Marquardt ------------------------------------------------------ #
+
+
+def _small_config(changes=None, **training_lm):
+    document = base_document()
+    document["model"].update(width=8, depth=2)
+    document["sampling"].update(n_interior=128, n_inlet=16, n_outlet=16, n_validation=64)
+    for dotted, value in (changes or {}).items():
+        section, key = dotted.split(".")
+        document[section][key] = value
+    if document["physics"]["formulation"] == "stream_pressure":
+        document["weights"].pop("continuity")
+    if document["physics"]["inlet_condition"] == "hard":
+        document["weights"].pop("inlet")
+    document["training"]["lm"].update(training_lm)
+    return pinn.parse_config(document)
+
+
+@pytest.mark.parametrize("changes", [{}, {**STREAM, **HARD_EXPONENTIAL, **BLENDED_LIFT},
+                                     HARD_LINEAR], ids=["velocity-soft", "stream-hard-blended",
+                                                        "velocity-hard"])
+def test_the_least_squares_residuals_are_exactly_the_training_loss(changes):
+    """||r||^2 must be the weighted loss and 2 J^T r its gradient, or
+    Levenberg-Marquardt minimises something other than what training does."""
+    config = _small_config(changes)
+    field = pinn.make_field(config)
+    flat, unflatten = ravel_pytree(random_params(config, 1))
+    batch = pinn.sample_batch(jax.random.PRNGKey(2), config, config.n_interior)
+    objective = lambda v: pinn.total_loss(  # noqa: E731
+        pinn.make_loss_terms(config, field)(unflatten(v), batch), config.weights)
+    normal_equations, lm_loss = pinn.make_gauss_newton(config, field, unflatten, chunk=64)
+    A, g, rr = normal_equations(flat, batch)
+    loss = float(objective(flat))
+    assert abs(rr - loss) <= 1e-12 * loss
+    assert abs(lm_loss(flat, batch) - loss) <= 1e-12 * loss
+    grad = jax.grad(objective)(flat)
+    assert float(jnp.linalg.norm(2.0 * g - grad)) <= 1e-12 * float(jnp.linalg.norm(grad))
+    assert float(jnp.max(jnp.abs(A - A.T))) <= 1e-12 * float(jnp.max(jnp.abs(A)))
+
+
+def test_levenberg_marquardt_steps_only_ever_lower_the_loss():
+    config = _small_config()
+    field = pinn.make_field(config)
+    flat, unflatten = ravel_pytree(random_params(config, 3))
+    batch = pinn.sample_batch(jax.random.PRNGKey(4), config, config.n_interior)
+    normal_equations, lm_loss = pinn.make_gauss_newton(config, field, unflatten, chunk=64)
+    A, g, loss = normal_equations(flat, batch)
+    lam, nu, losses = 1e-3 * float(jnp.mean(jnp.diag(A))), 2.0, [loss]
+    for _ in range(8):
+        A, g, loss = normal_equations(flat, batch)
+        delta, new, lam, nu, _ = pinn.levenberg_marquardt_step(
+            A, g, loss, lambda d: lm_loss(flat + jnp.asarray(d), batch), lam, nu)
+        assert delta is not None
+        flat = flat + jnp.asarray(delta)
+        assert abs(lm_loss(flat, batch) - new) <= 1e-12 * new
+        losses.append(new)
+    assert all(b < a for a, b in zip(losses, losses[1:]))
+    assert losses[-1] < 0.1 * losses[0]
+
+
+def test_a_rejected_step_is_retried_with_more_damping():
+    A, g = np.eye(2), np.array([1.0, 0.0])
+    calls = []
+
+    def trial(delta):  # the first two trial steps fail to lower the loss
+        calls.append(delta.copy())
+        return 2.0 if len(calls) <= 2 else 0.5
+
+    delta, new, lam, nu, attempts = pinn.levenberg_marquardt_step(A, g, 1.0, trial, 1.0, 2.0)
+    assert attempts == 3 and new == 0.5 and nu == 2.0
+    # damping went 1 -> 2 -> 8 before the accepted step, so each retry is shorter
+    assert np.linalg.norm(calls[1]) < np.linalg.norm(calls[0])
+    assert np.allclose(calls[2], -g / (1.0 + 8.0))
+
+
+@pytest.mark.parametrize("lm, message", [
+    ({"iterations": 5}, "damping"),
+    ({"iterations": 5, "damping": 1e-3}, "resample_every"),
+    ({"iterations": 0, "damping": 1e-3}, "no effect"),
+    ({"iterations": -1}, "iterations"),
+    ({"iterations": 5, "damping": 0.0, "resample_every": 2}, "damping"),
+    ({"iterations": 5, "damping": 1e-3, "resample_every": 0}, "resample_every"),
+])
+def test_the_lm_settings_are_required_and_checked(lm, message):
+    document = base_document()
+    document["training"]["lm"] = lm
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+@pytest.mark.slow
+def test_a_tiny_run_with_levenberg_marquardt_is_deterministic():
+    document = tiny_document()
+    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2}
+    config = pinn.parse_config(document)
+    first, history, info = pinn.train(config, verbose=False)
+    second, _, _ = pinn.train(config, verbose=False)
+    assert np.array_equal(np.asarray(ravel_pytree(first)[0]), np.asarray(ravel_pytree(second)[0]))
+    assert sum(row["phase"] == "lm" for row in history) == 4
+    assert info["levenberg_marquardt"]["iterations"] == 4
 
 
 def test_a_soft_inlet_refuses_a_ramp():

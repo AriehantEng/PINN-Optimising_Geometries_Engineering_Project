@@ -170,6 +170,7 @@ SCHEMA = {
     "training": {
         "adam": {"steps": int, "learning_rate": float, "schedule": str, "resample_every": int},
         "lbfgs": {"cycles": int, "iterations_per_cycle": int, "gtol": float},
+        "lm": {"iterations": int},
         "check_every": int,
     },
     "evaluation": {"nx": int, "ny": int, "profile_stations": list, "n_flux_stations": int},
@@ -192,6 +193,8 @@ CONDITIONAL = {
     ("model", "input_length"): float,        # input_map = exponential
     ("physics", "lift"): str,                # formulation = stream_pressure or inlet = hard
     ("physics", "lift_length"): float,       # lift = blended
+    ("training.lm", "damping"): float,        # lm.iterations > 0
+    ("training.lm", "resample_every"): int,   # lm.iterations > 0
 }
 
 
@@ -269,6 +272,9 @@ class Config:
     lbfgs_cycles: int
     lbfgs_iterations: int
     lbfgs_gtol: float
+    lm_iterations: int
+    lm_damping: float | None
+    lm_resample_every: int | None
     check_every: int
     nx: int
     ny: int
@@ -323,6 +329,7 @@ def parse_config(document) -> Config:
 
     physics, sampling = document["physics"], document["sampling"]
     adam, lbfgs = document["training"]["adam"], document["training"]["lbfgs"]
+    lm = document["training"]["lm"]
     for station in document["evaluation"]["profile_stations"]:
         if (isinstance(station, bool) or not isinstance(station, (int, float))
                 or not math.isfinite(station)):
@@ -355,6 +362,9 @@ def parse_config(document) -> Config:
                 "formulation is 'stream_pressure' or inlet_condition is 'hard' "
                 "(a soft velocity inlet has no lift)")
     lift_length = take("physics", "lift_length", lift == "blended", "lift is 'blended'")
+    lm_on = lm["iterations"] > 0
+    lm_damping = take("training.lm", "damping", lm_on, "lm.iterations > 0")
+    lm_resample = take("training.lm", "resample_every", lm_on, "lm.iterations > 0")
     model = document["model"]
     input_length = take("model", "input_length", model["input_map"] == "exponential",
                         "input_map is 'exponential'")
@@ -411,6 +421,9 @@ def parse_config(document) -> Config:
         lbfgs_cycles=lbfgs["cycles"],
         lbfgs_iterations=lbfgs["iterations_per_cycle"],
         lbfgs_gtol=float(lbfgs["gtol"]),
+        lm_iterations=lm["iterations"],
+        lm_damping=None if lm_damping is None else float(lm_damping),
+        lm_resample_every=lm_resample,
         check_every=document["training"]["check_every"],
         nx=evaluation["nx"],
         ny=evaluation["ny"],
@@ -465,6 +478,12 @@ def parse_config(document) -> Config:
             raise ConfigError("sampling.rar_floor must be >= 0")
     if config.lbfgs_cycles < 0:
         raise ConfigError("training.lbfgs.cycles must be >= 0")
+    if config.lm_iterations < 0:
+        raise ConfigError("training.lm.iterations must be >= 0 (0 turns Levenberg-Marquardt off)")
+    if lm_on and config.lm_damping <= 0:
+        raise ConfigError("training.lm.damping must be positive")
+    if lm_on and config.lm_resample_every < 1:
+        raise ConfigError("training.lm.resample_every must be at least 1")
     if not 0.0 <= config.focus_fraction <= 1.0:
         raise ConfigError("sampling.focus_fraction must lie in [0, 1]")
     if not 0.0 < config.focus_length <= config.length:
@@ -1037,6 +1056,131 @@ def make_loss_terms(config: Config, field):
     return loss_terms
 
 
+def make_point_residuals(config: Config, field):
+    """The loss's residuals one point at a time, scaled for least squares.
+
+    Returns three functions (interior, inlet, outlet), each
+    f(params, xy, n) -> the scaled residuals at one point of a group of n
+    points, such that summing their squares over a batch gives exactly the
+    weighted loss of `make_loss_terms` + `total_loss` (up to the ~1e-12
+    difference between point and batched derivatives). Levenberg-Marquardt
+    differentiates these with respect to the parameters, one point at a time.
+    `inlet` is None when the inlet is not a loss term.
+    """
+    reynolds, scaling, sharpness = config.reynolds, config.pressure_scaling, config.inlet_sharpness
+    active, w = config.loss_terms, config.weights
+
+    def interior(params, xy, n):
+        d = point_derivatives(lambda q: field(params, q), xy)
+        values = [jnp.sqrt(w["momentum_x"] / n) * momentum_x(d, reynolds, scaling),
+                  jnp.sqrt(w["momentum_y"] / n) * momentum_y(d, reynolds, scaling)]
+        if "continuity" in active:
+            values.append(jnp.sqrt(w["continuity"] / n) * continuity(d))
+        return jnp.stack(values)
+
+    def inlet(params, xy, n):
+        value = field(params, xy)
+        scale = jnp.sqrt(w["inlet"] / n)
+        return scale * jnp.stack([value[0] - inlet_profile(xy[1], sharpness), value[1]])
+
+    def outlet(params, xy, n):
+        _, d_dx = jax.jvp(lambda q: field(params, q), (xy,), (_EX,))
+        scale = jnp.sqrt(w["outlet"] / n)
+        return scale * jnp.stack([d_dx[0], d_dx[1]])
+
+    return interior, (inlet if "inlet" in active else None), outlet
+
+
+#: Nielsen's damping update for Levenberg-Marquardt (Nielsen 1999; Madsen,
+#: Nielsen & Tingleff 2004, eq. 2.21): after an accepted step with gain ratio
+#: rho, lambda *= max(1/3, 1 - (2 rho - 1)^3); after a rejected one lambda *=
+#: nu and nu doubles. Part of the algorithm's definition, not a tuning knob.
+LM_MAX_ATTEMPTS = 30
+
+
+def make_gauss_newton(config: Config, field, unflatten, chunk=512):
+    """(normal_equations, loss) for Levenberg-Marquardt on flat parameters.
+
+    normal_equations(theta, batch) -> (J^T J, J^T r, r.r), accumulated over
+    chunks of points so the full Jacobian J is never held at once.
+    loss(theta, batch) -> r.r only, for testing a trial step.
+    """
+    interior, inlet, outlet = make_point_residuals(config, field)
+
+    def groups(batch):
+        out = [(interior, batch.interior), (outlet, batch.outlet)]
+        if inlet is not None:
+            out.append((inlet, batch.inlet))
+        return out
+
+    @functools.partial(jax.jit, static_argnums=(0, 3))
+    def block(fn, theta, points, n):
+        def rows(vector, xy):
+            value = fn(unflatten(vector), xy, n)
+            return value, value
+
+        jac, value = jax.vmap(jax.jacrev(rows, has_aux=True), in_axes=(None, 0))(theta, points)
+        jac = jac.reshape(-1, theta.shape[0])
+        value = value.reshape(-1)
+        return jac.T @ jac, jac.T @ value, value @ value
+
+    @functools.partial(jax.jit, static_argnums=(0, 3))
+    def values(fn, theta, points, n):
+        return jax.vmap(lambda xy: fn(unflatten(theta), xy, n))(points).reshape(-1)
+
+    def normal_equations(theta, batch):
+        size = theta.shape[0]
+        A = jnp.zeros((size, size))
+        g = jnp.zeros(size)
+        rr = 0.0
+        for fn, points in groups(batch):
+            n = int(points.shape[0])
+            for start in range(0, n, chunk):
+                a, b, c = block(fn, theta, points[start:start + chunk], n)
+                A, g, rr = A + a, g + b, rr + c
+        return A, g, float(rr)
+
+    def loss(theta, batch):
+        total = 0.0
+        for fn, points in groups(batch):
+            n = int(points.shape[0])
+            for start in range(0, n, chunk):
+                r = values(fn, theta, points[start:start + chunk], n)
+                total += float(r @ r)
+        return total
+
+    return normal_equations, loss
+
+
+def levenberg_marquardt_step(A, g, loss_now, trial_loss, lam, nu):
+    """One accepted Levenberg-Marquardt step, retrying with more damping.
+
+    Solves (A + lam I) delta = -g by Cholesky, accepts when the actual
+    reduction is positive, and updates lam by Nielsen's rule. Returns
+    (delta or None, new loss, lam, nu, attempts); delta is None when no
+    damping in LM_MAX_ATTEMPTS attempts reduced the loss.
+    """
+    import scipy.linalg
+
+    A = np.asarray(A)
+    g = np.asarray(g)
+    diagonal = np.diag_indices_from(A)
+    for attempt in range(1, LM_MAX_ATTEMPTS + 1):
+        damped = A.copy()
+        damped[diagonal] += lam
+        factor = scipy.linalg.cho_factor(damped, lower=False, overwrite_a=True)
+        delta = scipy.linalg.cho_solve(factor, -g)
+        predicted = -(2.0 * g @ delta + delta @ (A @ delta))
+        new_loss = trial_loss(delta)
+        if predicted > 0 and new_loss < loss_now:
+            rho = (loss_now - new_loss) / predicted
+            lam *= max(1.0 / 3.0, 1.0 - (2.0 * rho - 1.0) ** 3)
+            return delta, new_loss, lam, 2.0, attempt
+        lam *= nu
+        nu *= 2.0
+    return None, loss_now, lam, nu, LM_MAX_ATTEMPTS
+
+
 def total_loss(terms, weights):
     """The ONLY place weights meet residuals.
 
@@ -1172,6 +1316,39 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         cycle_log.append({"cycle": cycle, "iterations": int(result.nit),
                           "message": str(result.message)})
 
+    # -- Levenberg-Marquardt on the full network ---------------------------- #
+    # Gauss-Newton with trust-region damping (Levenberg 1944; Marquardt 1963)
+    # on the residuals themselves: for a least-squares loss it is the natural
+    # gradient in function space, the method Jnini, Vella & Zeinhofer (2024)
+    # used to solve Navier-Stokes PINNs to near single-precision accuracy.
+    # J^T J is P x P, so this suits networks of a few thousand parameters.
+    lm_log = {"iterations": 0, "rejected": 0, "stalled": 0}
+    if config.lm_iterations > 0:
+        normal_equations, lm_loss = make_gauss_newton(config, field, unflatten)
+        lam, nu = None, 2.0
+        for step in range(config.lm_iterations):
+            if step % config.lm_resample_every == 0:
+                key, draw = jax.random.split(key)
+                batch = draw_batch(draw, unflatten(flat))
+            A, g, loss_now = normal_equations(flat, batch)
+            if lam is None:
+                lam = config.lm_damping * float(jnp.mean(jnp.diag(A)))
+            delta, _, lam, nu, attempts = levenberg_marquardt_step(
+                A, g, loss_now, lambda d: lm_loss(flat + jnp.asarray(d), batch), lam, nu)
+            lm_log["rejected"] += attempts - 1
+            if delta is None:
+                lm_log["stalled"] += 1
+                # No damping reduced the loss on this draw: the step is
+                # skipped and the next draw is taken at once.
+                key, draw = jax.random.split(key)
+                batch = draw_batch(draw, unflatten(flat))
+                lam, nu = config.lm_damping * float(jnp.mean(jnp.diag(A))), 2.0
+            else:
+                flat = flat + jnp.asarray(delta)
+            iteration += 1
+            lm_log["iterations"] += 1
+            record(unflatten(flat), batch, "lm", step // config.lm_resample_every, iteration, lam)
+
     if best["where"] == "initial":
         raise RuntimeError(
             "no trained parameters beat the untrained network on the held-out points; "
@@ -1183,6 +1360,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         "selected": best["where"],
         "selected_heldout_loss": best["heldout"],
         "lbfgs_cycles": cycle_log,
+        "levenberg_marquardt": lm_log,
     }
     return best["params"], history, info
 
