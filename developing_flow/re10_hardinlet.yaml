@@ -20,6 +20,7 @@ physics:
   inlet_condition: hard       # soft: an inlet loss term; hard: the inlet built into the network
   inlet_ramp: linear          # r(x) = x/L: slope 0.1 at the inlet
   formulation: velocity_pressure  # or stream_pressure: u, v from a stream function
+  lift: inlet                 # the inlet profile, carried unchanged down the channel
 domain:
   length: 10.0                # L*, in half-heights
 model:

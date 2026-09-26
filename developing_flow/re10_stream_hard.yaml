@@ -26,6 +26,7 @@ physics:
   inlet_ramp: exponential     # r(x) = 1 - exp(-x/l): slope 1/l at the inlet
   inlet_ramp_length: 1.0      # l = 1: normalised like a distance function
   formulation: stream_pressure    # or velocity_pressure
+  lift: inlet                 # the inlet profile, carried unchanged down the channel
 domain:
   length: 10.0                # L*, in half-heights
 model:

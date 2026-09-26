@@ -180,10 +180,12 @@ def test_y_inertia_matches_a_hand_derivation():
 # -- the fast batched derivatives equal the single-point reference ----------- #
 
 
-HARD_LINEAR = {"physics.inlet_condition": "hard", "physics.inlet_ramp": "linear"}
+INLET_LIFT = {"physics.lift": "inlet"}
+BLENDED_LIFT = {"physics.lift": "blended", "physics.lift_length": 0.5}
+HARD_LINEAR = {"physics.inlet_condition": "hard", "physics.inlet_ramp": "linear", **INLET_LIFT}
 HARD_EXPONENTIAL = {"physics.inlet_condition": "hard", "physics.inlet_ramp": "exponential",
-                    "physics.inlet_ramp_length": 1.0}
-STREAM = {"physics.formulation": "stream_pressure"}
+                    "physics.inlet_ramp_length": 1.0, **INLET_LIFT}
+STREAM = {"physics.formulation": "stream_pressure", **INLET_LIFT}
 
 ANSATZ_VARIANTS = [
     {},
@@ -196,6 +198,9 @@ ANSATZ_VARIANTS = [
     {"model.activation": "silu", "model.init_gain": 2.0},
     {"model.input_map": "exponential", "model.input_length": 2.0},
     {**STREAM, **HARD_EXPONENTIAL, "model.input_map": "exponential", "model.input_length": 2.0},
+    {**STREAM, **BLENDED_LIFT},
+    {**STREAM, **HARD_EXPONENTIAL, **BLENDED_LIFT},
+    {**HARD_EXPONENTIAL, **BLENDED_LIFT},
 ]
 
 
@@ -718,9 +723,10 @@ STEP1_EXPERIMENTS = {
     "re10_inletgrid.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points", "weights.inlet"},
     "re10_rad.yaml": {"name", "sampling.rar_points", "sampling.rar_pool", "sampling.rar_mode",
                       "sampling.rar_exponent", "sampling.rar_floor"},
-    "re10_hardinlet.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp", "weights.inlet"},
+    "re10_hardinlet.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp", "physics.lift",
+                            "weights.inlet"},
     "re10_silu.yaml": {"name", "model.activation"},
-    "re10_stream.yaml": {"name", "physics.formulation", "weights.continuity"},
+    "re10_stream.yaml": {"name", "physics.formulation", "physics.lift", "weights.continuity"},
     "re10_m4.yaml": {"name", "physics.inlet_sharpness"},
     "re10_m2.yaml": {"name", "physics.inlet_sharpness"},
 }
@@ -728,10 +734,17 @@ STEP1_EXPERIMENTS = {
 
 STEP2_EXPERIMENTS = {
     "re10_hardinlet_exp.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp",
-                                "physics.inlet_ramp_length", "weights.inlet"},
+                                "physics.inlet_ramp_length", "physics.lift", "weights.inlet"},
     "re10_stream_hard.yaml": {"name", "physics.formulation", "physics.inlet_condition",
-                              "physics.inlet_ramp", "physics.inlet_ramp_length",
+                              "physics.inlet_ramp", "physics.inlet_ramp_length", "physics.lift",
                               "weights.continuity", "weights.inlet"},
+    "re10_stream_hard_lift.yaml": {"name", "physics.formulation", "physics.inlet_condition",
+                                   "physics.inlet_ramp", "physics.inlet_ramp_length",
+                                   "physics.lift", "physics.lift_length",
+                                   "weights.continuity", "weights.inlet"},
+    "re10_hardinlet_lift.yaml": {"name", "physics.inlet_condition", "physics.inlet_ramp",
+                                 "physics.inlet_ramp_length", "physics.lift",
+                                 "physics.lift_length", "weights.inlet"},
     "re10_silu_gain2.yaml": {"name", "model.activation", "model.init_gain"},
     "re10_inputmap.yaml": {"name", "model.input_map", "model.input_length"},
     "re10_inletgrid_w1.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points"},
@@ -752,7 +765,8 @@ def test_each_step1_config_changes_only_its_own_keys(filename, allowed):
 # -- Step 1 options --------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("ramp", [HARD_LINEAR, HARD_EXPONENTIAL], ids=["linear", "exponential"])
+@pytest.mark.parametrize("ramp", [HARD_LINEAR, HARD_EXPONENTIAL, {**HARD_EXPONENTIAL, **BLENDED_LIFT}],
+                         ids=["linear", "exponential", "exponential-blended"])
 @pytest.mark.parametrize("formulation", ["velocity_pressure", "stream_pressure"])
 def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation, ramp):
     config = variant_config({"physics.formulation": formulation, **ramp})
@@ -764,8 +778,10 @@ def test_a_hard_inlet_holds_exactly_for_any_parameters(formulation, ramp):
         assert np.all(v == 0.0)
 
 
-@pytest.mark.parametrize("inlet", [{}, HARD_LINEAR, HARD_EXPONENTIAL],
-                         ids=["soft", "hard-linear", "hard-exponential"])
+@pytest.mark.parametrize("inlet", [{}, HARD_LINEAR, HARD_EXPONENTIAL, BLENDED_LIFT,
+                                   {**HARD_EXPONENTIAL, **BLENDED_LIFT}],
+                         ids=["soft", "hard-linear", "hard-exponential", "soft-blended",
+                              "hard-exponential-blended"])
 def test_the_stream_function_conserves_mass_and_satisfies_no_slip(inlet):
     config = variant_config({**STREAM, **inlet})
     params = random_params(config, 2)
@@ -784,7 +800,7 @@ def test_the_stream_function_conserves_mass_and_satisfies_no_slip(inlet):
 
 
 def test_loss_terms_follow_the_formulation_and_inlet():
-    stream = variant_config({"physics.formulation": "stream_pressure"})
+    stream = variant_config(STREAM)
     hard = variant_config(HARD_EXPONENTIAL)
     assert "continuity" not in stream.loss_terms and "inlet" in stream.loss_terms
     assert "inlet" not in hard.loss_terms and "continuity" in hard.loss_terms
@@ -914,7 +930,7 @@ def test_conditional_keys_are_required_or_refused_with_their_choice(changes, rem
 def _hard_document(**physics):
     document = base_document()
     del document["weights"]["inlet"]
-    document["physics"]["inlet_condition"] = "hard"
+    document["physics"].update(inlet_condition="hard", lift="inlet")
     document["physics"].update(physics)
     return document
 
@@ -929,6 +945,60 @@ def _hard_document(**physics):
 def test_the_hard_inlet_ramp_is_required_and_checked(document, message):
     with pytest.raises(pinn.ConfigError, match=message):
         pinn.parse_config(document)
+
+
+@pytest.mark.parametrize("physics, message", [
+    ({"lift": "inlet"}, "no effect"),                       # a soft velocity inlet has no lift
+    ({"formulation": "stream_pressure"}, "physics.lift"),   # the stream function needs one
+    ({"formulation": "stream_pressure", "lift": "blended"}, "lift_length"),
+    ({"formulation": "stream_pressure", "lift": "inlet", "lift_length": 0.5}, "no effect"),
+    ({"formulation": "stream_pressure", "lift": "blended", "lift_length": -1.0}, "lift_length"),
+    ({"formulation": "stream_pressure", "lift": "parabola"}, "physics.lift"),
+], ids=["soft-velocity", "stream-without", "blended-without-length", "inlet-with-length",
+        "negative-length", "unknown"])
+def test_the_lift_is_required_exactly_where_there_is_one(physics, message):
+    document = base_document()
+    if physics.get("formulation") == "stream_pressure":
+        del document["weights"]["continuity"]
+    document["physics"].update(physics)
+    with pytest.raises(pinn.ConfigError, match=message):
+        pinn.parse_config(document)
+
+
+def test_the_blended_lift_is_the_inlet_at_the_inlet_and_the_parabola_downstream():
+    m, ell = 8, 0.5
+    y = np.linspace(-1.0, 1.0, 41)
+    lift = lambda x: np.array([float(pinn.lift_stream(x, yy, m, "blended", ell)) for yy in y])  # noqa: E731
+    assert np.array_equal(lift(0.0), np.asarray(pinn.inlet_stream(y, m)))
+    assert np.array_equal(lift(40.0 * ell), np.asarray(pinn.developed_stream(y)))
+    for x in (0.0, 0.3, 1.0, 5.0):
+        walls = [float(pinn.lift_stream(x, w, m, "blended", ell)) for w in (-1.0, 1.0)]
+        assert abs(walls[1] - walls[0] - pinn.INLET_FLUX) < 1e-15
+    slope = jax.grad(lambda x: pinn.lift_stream(x, 0.4, m, "blended", ell))
+    assert float(slope(0.0)) == 0.0  # so v(0, y) = 0: the inlet stays exact
+    assert float(slope(0.5)) != 0.0
+    # d/dy of G_dev is the developed parabola
+    u = jax.grad(lambda yy: pinn.developed_stream(yy))
+    assert abs(float(u(0.3)) - float(pinn.developed_profile(0.3, pinn.INLET_FLUX))) < 1e-15
+
+
+def test_the_inlet_lift_keeps_old_runs_bit_identical():
+    """lift = inlet must be exactly the ansatz the stored E5 and E7 runs used."""
+    for changes in (STREAM, HARD_LINEAR):
+        config = variant_config(changes)
+        field = pinn.make_field(config)
+        params = random_params(config, 5)
+        points = np.asarray(pinn.sample_batch(jax.random.PRNGKey(2), config, 16).interior)
+        L, m = config.length, config.inlet_sharpness
+        for point in points:
+            x, y = point
+            raw = pinn.apply_network(params, jnp.array([2.0 * x / L - 1.0, y]), config.activation)
+            got = np.asarray(field(params, jnp.asarray(point)))
+            if config.formulation == "velocity_pressure":
+                ramp = x / L
+                expected_u = pinn.inlet_profile(y, m) + pinn.wall_factor(y) * ramp * raw[0]
+                assert got[0] == float(expected_u)
+            assert got[2] == float((L - x) / L * raw[-1])
 
 
 def test_a_soft_inlet_refuses_a_ramp():
@@ -960,7 +1030,7 @@ def test_top_rar_refuses_the_proportional_settings():
 
 
 def test_the_stream_function_is_measured_like_any_other_field():
-    config = variant_config({"physics.formulation": "stream_pressure"})
+    config = variant_config(STREAM)
     m, _ = pinn.measure_solution(config, pinn.make_field(config), random_params(config, 1))
     assert abs(m["flux_at_inlet_station"] - pinn.INLET_FLUX) < 1e-12
     assert m["residual_continuity_max"] < 1e-12

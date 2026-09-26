@@ -22,6 +22,7 @@ physics:
   inlet_sharpness: 8          # m in U0 (1 - y^(2m)); larger m = flatter inlet; m = 1 refused
   inlet_condition: soft       # soft: an inlet loss term; hard: the inlet built into the network
   formulation: stream_pressure    # or velocity_pressure
+  lift: inlet                 # the inlet profile, carried unchanged down the channel
 domain:
   length: 10.0                # L*, in half-heights
 model:

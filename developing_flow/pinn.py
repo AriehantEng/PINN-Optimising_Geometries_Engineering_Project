@@ -138,6 +138,7 @@ CHOICES = {
     "physics.inlet_condition": ("soft", "hard"),
     "physics.formulation": ("velocity_pressure", "stream_pressure"),
     "physics.inlet_ramp": ("linear", "exponential"),
+    "physics.lift": ("inlet", "blended"),
     "model.activation": ("tanh", "silu"),
     "model.input_map": ("linear", "exponential"),
     "sampling.inlet_points": ("random", "fixed"),
@@ -189,6 +190,8 @@ CONDITIONAL = {
     ("physics", "inlet_ramp"): str,          # inlet_condition = hard
     ("physics", "inlet_ramp_length"): float,  # inlet_ramp = exponential
     ("model", "input_length"): float,        # input_map = exponential
+    ("physics", "lift"): str,                # formulation = stream_pressure or inlet = hard
+    ("physics", "lift_length"): float,       # lift = blended
 }
 
 
@@ -233,6 +236,8 @@ class Config:
     inlet_ramp: str | None
     inlet_ramp_length: float | None
     formulation: str
+    lift: str | None
+    lift_length: float | None
     length: float
     width: int
     depth: int
@@ -345,6 +350,11 @@ def parse_config(document) -> Config:
     ramp = take("physics", "inlet_ramp", not soft_inlet, "inlet_condition is 'hard'")
     ramp_length = take("physics", "inlet_ramp_length", ramp == "exponential",
                        "inlet_ramp is 'exponential'")
+    has_lift = physics["formulation"] == "stream_pressure" or not soft_inlet
+    lift = take("physics", "lift", has_lift,
+                "formulation is 'stream_pressure' or inlet_condition is 'hard' "
+                "(a soft velocity inlet has no lift)")
+    lift_length = take("physics", "lift_length", lift == "blended", "lift is 'blended'")
     model = document["model"]
     input_length = take("model", "input_length", model["input_map"] == "exponential",
                         "input_map is 'exponential'")
@@ -368,6 +378,8 @@ def parse_config(document) -> Config:
         inlet_ramp=ramp,
         inlet_ramp_length=None if ramp_length is None else float(ramp_length),
         formulation=physics["formulation"],
+        lift=lift,
+        lift_length=None if lift_length is None else float(lift_length),
         length=float(document["domain"]["length"]),
         width=model["width"],
         depth=model["depth"],
@@ -423,6 +435,8 @@ def parse_config(document) -> Config:
         raise ConfigError("physics.inlet_ramp_length must be positive")
     if config.input_length is not None and config.input_length <= 0:
         raise ConfigError("model.input_length must be positive")
+    if config.lift_length is not None and config.lift_length <= 0:
+        raise ConfigError("physics.lift_length must be positive")
     if config.adam_learning_rate <= 0:
         raise ConfigError("training.adam.learning_rate must be positive")
     if exponential:
@@ -699,6 +713,47 @@ def inlet_stream(y, sharpness):
     return inlet_peak(sharpness) * (y - y ** (2 * sharpness + 1) / (2 * sharpness + 1))
 
 
+def developed_stream(y):
+    """The stream function of the developed parabola 1 - y^2: y - y^3/3.
+
+    Like inlet_stream it is +-2/3 at the walls, so the two differ by the same
+    flux, 4/3, and any blend of them is a valid lift.
+    """
+    return y - y**3 / 3.0
+
+
+def lift_blend(x, length):
+    """s(x) = (1 - exp(-x/l))^2: 0 at the inlet with zero slope there, -> 1 downstream."""
+    return jnp.expm1(-x / length) ** 2
+
+
+def lift_stream(x, y, sharpness, lift, lift_length):
+    """The stream function the network corrects: what the flow is assumed to
+    be before the network says anything.
+
+    inlet    G_in(y), the inlet profile carried unchanged down the whole
+             channel. Downstream the network must then produce the steep
+             near-wall difference between the parabola and the y^(2m) inlet,
+             at every x, just to express developed flow.
+    blended  (1 - s) G_in(y) + s G_dev(y), s = (1 - exp(-x/l))^2: the inlet at
+             the inlet, the developed parabola downstream, so the network
+             learns only the departure from it, which is small everywhere and
+             tends to zero where the flow is developed. s'(0) = 0 keeps
+             v(0, y) = 0. It is divergence-free, carries flux 4/3 at every x
+             and satisfies no-slip, since both G's do.
+
+    Because the blended lift contains the exact developed solution, accuracy
+    in the developed region partly measures the lift; only the entrance region
+    measures the method.
+    """
+    if lift == "inlet":
+        return inlet_stream(y, sharpness)
+    if lift == "blended":
+        s = lift_blend(x, lift_length)
+        return (1.0 - s) * inlet_stream(y, sharpness) + s * developed_stream(y)
+    raise ValueError(f"unknown lift {lift!r}")
+
+
 def make_field(config: Config):
     """field(params, xy) -> (u, v, p) at one point, for the config's ansatz.
 
@@ -707,7 +762,8 @@ def make_field(config: Config):
     """
     return _make_field(config.length, config.activation, config.formulation,
                        config.inlet_condition, config.inlet_sharpness, config.inlet_ramp,
-                       config.inlet_ramp_length, config.input_map, config.input_length)
+                       config.inlet_ramp_length, config.input_map, config.input_length,
+                       config.lift, config.lift_length)
 
 
 def inlet_ramp(x, length, ramp, ramp_length):
@@ -752,7 +808,7 @@ def input_coordinates(xy, length, input_map, input_length):
 
 @functools.lru_cache(maxsize=None)
 def _make_field(length, activation, formulation, inlet_condition, sharpness,
-                ramp, ramp_length, input_map, input_length):
+                ramp, ramp_length, input_map, input_length, lift, lift_length):
     """The boundary-condition ansatz. In every variant:
 
     * no-slip holds EXACTLY on both walls, for any parameters;
@@ -763,15 +819,17 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness,
       (`input_coordinates`).
 
     velocity_pressure, soft inlet:  u = phi N_u,  v = phi N_v
-    velocity_pressure, hard inlet:  u = g(y) + phi r(x) N_u,  v = phi r(x) N_v
-        with g the inlet profile and r the inlet ramp (`inlet_ramp`), so
-        u(0, y) = g(y) and v(0, y) = 0 exactly.
+    velocity_pressure, hard inlet:  u = u_0 + phi r(x) N_u,  v = v_0 + phi r(x) N_v
+        with r the inlet ramp (`inlet_ramp`) and (u_0, v_0) the lift's
+        velocity: (g(y), 0), g the inlet profile, for the 'inlet' lift, or
+        the curl of the blended lift stream function. u(0, y) = g(y) and
+        v(0, y) = 0 exactly either way.
     stream_pressure:  u = d(psi)/dy,  v = -d(psi)/dx,  continuity holds identically;
-        soft inlet:  psi = G(y) + phi^2 N_psi
-        hard inlet:  psi = G(y) + phi^2 r(x)^2 N_psi
-        with G = inlet_stream. The squared ramp makes BOTH u(0, y) = g(y) and
-        v(0, y) = 0 exact. psi(x, 1) - psi(x, -1) = 4/3 for every x, so the
-        flux is exact by construction and cannot be tested.
+        soft inlet:  psi = G(x, y) + phi^2 N_psi
+        hard inlet:  psi = G(x, y) + phi^2 r(x)^2 N_psi
+        with G the lift (`lift_stream`). The squared ramp makes BOTH
+        u(0, y) = g(y) and v(0, y) = 0 exact. psi(x, 1) - psi(x, -1) = 4/3 for
+        every x, so the flux is exact by construction and cannot be tested.
     """
     L = length
 
@@ -790,8 +848,14 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness,
                 u, v = wall * raw[0], wall * raw[1]
             else:
                 r = inlet_ramp(x, L, ramp, ramp_length)
-                u = inlet_profile(y, sharpness) + wall * r * raw[0]
-                v = wall * r * raw[1]
+                if lift == "inlet":
+                    u0, v0 = inlet_profile(y, sharpness), 0.0
+                else:
+                    slope = jax.grad(lambda point: lift_stream(
+                        point[0], point[1], sharpness, lift, lift_length))(xy)
+                    u0, v0 = slope[1], -slope[0]
+                u = u0 + wall * r * raw[0]
+                v = v0 + wall * r * raw[1]
             return jnp.stack([u, v, gauge(x) * raw[2]])
         return field
 
@@ -801,7 +865,8 @@ def _make_field(length, activation, formulation, inlet_condition, sharpness,
                 x, y = point[0], point[1]
                 raw = apply_network(params, inputs(point), activation)
                 r2 = 1.0 if inlet_condition == "soft" else inlet_ramp(x, L, ramp, ramp_length) ** 2
-                return inlet_stream(y, sharpness) + wall_factor(y) ** 2 * r2 * raw[0], raw
+                return (lift_stream(x, y, sharpness, lift, lift_length)
+                        + wall_factor(y) ** 2 * r2 * raw[0]), raw
 
             gradient, raw = jax.grad(psi, has_aux=True)(xy)
             return jnp.stack([gradient[1], -gradient[0], gauge(xy[0]) * raw[1]])
@@ -1445,7 +1510,11 @@ def run(config_path, out=None, verbose=True):
               f"({config.pressure_scaling} pressure), inlet sharpness m = {config.inlet_sharpness}, "
               f"L* = {config.length:g}")
         print(f"[{config.name}] inertial terms ON; no-slip and pressure gauge exact; "
-              f"{config.formulation}, {config.inlet_condition} inlet"
+              f"{config.formulation}"
+              + (f" ({config.lift} lift"
+                 + (f", l = {config.lift_length:g})" if config.lift_length else ")")
+                 if config.lift else "")
+              + f", {config.inlet_condition} inlet"
               + (f" ({config.inlet_ramp} ramp"
                  + (f", l = {config.inlet_ramp_length:g})" if config.inlet_ramp_length else ")")
                  if config.inlet_ramp else "")

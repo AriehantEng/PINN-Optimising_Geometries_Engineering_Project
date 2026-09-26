@@ -18,6 +18,8 @@ describes what the run ACTUALLY did, from the MIGRATIONS table below:
     model.init_gain = 1.0                   plain Glorot was the only initialisation
     model.input_map = linear                the network always saw xi = 2x/L - 1
     physics.inlet_ramp = linear             (hard-inlet runs only) the ramp was x/L
+    physics.lift = inlet                    (stream-function and hard-inlet runs only)
+                                            the lift was the inlet profile
 
 The edit is a targeted text insertion, not a YAML round-trip, so comments in
 the stored config survive, and each migrated run gets a config.migrated.json
@@ -76,6 +78,12 @@ MIGRATIONS = (
      lambda d: d.get("physics", {}).get("inlet_condition") == "hard"
      and "inlet_ramp" not in d.get("physics", {}),
      "before physics.inlet_ramp existed a hard inlet always used the linear ramp x/L"),
+    ("physics.lift", "inlet", r"^  formulation: .*$",
+     lambda d: (d.get("physics", {}).get("formulation") == "stream_pressure"
+                or d.get("physics", {}).get("inlet_condition") == "hard")
+     and "lift" not in d.get("physics", {}),
+     "before physics.lift existed the lift was always the inlet profile, "
+     "carried unchanged down the channel"),
 )
 
 
