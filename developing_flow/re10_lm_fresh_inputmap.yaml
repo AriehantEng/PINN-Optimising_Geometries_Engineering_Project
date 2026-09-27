@@ -1,0 +1,67 @@
+# STEP 3, G5: G3 (Levenberg-Marquardt, fresh points every iteration) with
+# E8's exponential input map. E8 alone beat every baseline seed on four of
+# five measures against the reference (u 1.98e-4 vs 2.45-3.28e-4, v 3.3e-3
+# vs 5.6-6.1e-3) at no cost, so it is the first change to combine with LM.
+#
+# Developing (not fully developed) channel flow with inertia, Re_h = 10.
+#
+# The fluid enters with a flat-topped profile, u*(0, y*) = U0 (1 - y*^16),
+# which is the flat inlet rounded off just enough to satisfy no-slip exactly
+# at the corners, and develops into the parabola along the channel. The
+# entrance length at this Reynolds number is roughly 1.9 half-heights
+# (Durst et al. 2005, flat inlet), so a channel of 10 leaves about 8 of
+# developed flow to check the outlet against.
+name: developing_re10_lm_fresh_inputmap
+seed: 0
+physics:
+  reynolds: 10.0              # Re_h = U h / nu: developed centreline speed, half-height
+  pressure_scaling: inertial  # p* = p / (rho U^2); use viscous only for Re <= 1
+  inlet_sharpness: 8          # m in U0 (1 - y^(2m)); larger m = flatter inlet; m = 1 refused
+  inlet_condition: soft       # soft: an inlet loss term; hard: the inlet built into the network
+  formulation: velocity_pressure  # or stream_pressure: u, v from a stream function
+domain:
+  length: 10.0                # L*, in half-heights
+model:
+  width: 40                   # P = 5,403 parameters, so J^T J is 5,403 x 5,403
+  depth: 4
+  activation: tanh
+  init_gain: 1.0              # Glorot scale on layers an activation follows; 1 = plain Glorot
+  input_map: exponential      # xi = 2 (1 - exp(-x/l)) / (1 - exp(-L/l)) - 1
+  input_length: 2.0           # l = 2: slope 1 at the inlet, the same as y's
+sampling:
+  n_interior: 4096            # interior points per draw
+  focus_fraction: 0.5         # share of them concentrated near the inlet and walls
+  focus_length: 4.0           # focus points lie in x* < 4, crowded toward x* = 0
+  n_inlet: 256
+  n_outlet: 256
+  n_validation: 4096          # held-out points, never trained on
+  rar_points: 0               # residual-based adaptive refinement off
+  inlet_points: random        # random: redrawn each time; fixed: one static grid
+weights:
+  momentum_x: 1.0
+  momentum_y: 1.0
+  continuity: 1.0
+  inlet: 1.0
+  outlet: 1.0
+training:
+  adam:
+    steps: 3000
+    learning_rate: 1.0e-3
+    schedule: exponential     # or cosine
+    decay_rate: 0.9
+    decay_steps: 1000
+    resample_every: 250       # fresh points every 250 steps
+  lbfgs:
+    cycles: 4                 # L-BFGS to get close, then Levenberg-Marquardt
+    iterations_per_cycle: 500
+    gtol: 1.0e-14
+  check_every: 100            # held-out loss is measured this often
+  lm:
+    iterations: 800           # Levenberg-Marquardt after L-BFGS
+    damping: 1.0e-3           # initial lambda, relative to the mean diagonal of J^T J
+    resample_every: 1         # fresh points at EVERY iteration
+evaluation:
+  nx: 201
+  ny: 101
+  profile_stations: [0.0, 0.5, 1.0, 2.0, 4.0, 10.0]
+  n_flux_stations: 41
