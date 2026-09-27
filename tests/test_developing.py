@@ -689,6 +689,25 @@ def test_the_scorecard_measures_each_run_against_the_reference_for_its_own_probl
         scorecard.pick_solution(pinn.load_config("developing_flow/re10_m2.yaml"), solutions)
 
 
+def test_the_reference_floor_is_the_last_change_over_its_observed_order(tmp_path):
+    import json
+    from developing_flow import summary_reference
+    x, y = np.linspace(0.0, 10.0, 5), np.linspace(-1.0, 1.0, 3)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    u, v = 1.0 - Y**2 + 0.0 * X, 0.5 * (1.0 - Y**2) + 0.0 * X   # |u| / |v| = 2 exactly
+    np.savez_compressed(tmp_path / "reference.npz", x=x, y=y, u=u, v=v, p=10.0 - X)
+    last = {"u_l2_change": 7e-6, "u_observed_order": 3.0, "v_l2_change": 3e-6,
+            "v_observed_order": 2.0, "p_l2_change": 3e-5, "p_observed_order": 2.0,
+            "entrance_length_change": -2e-6}
+    (tmp_path / "reference.json").write_text(json.dumps(
+        {"convergence": [{}, last], "entrance_length": 2.0}))
+    floor = summary_reference.reference_floor(tmp_path)
+    assert abs(floor["u"] - 1e-6) < 1e-18 and floor["u_entrance"] == floor["u"]
+    assert abs(floor["v"] - 2.0 * 3e-6 / 3.0) < 1e-18   # rescaled from |u| to |v|
+    assert abs(floor["p"] - 1e-5) < 1e-18
+    assert abs(floor["entrance_length"] - 1e-6) < 1e-18
+
+
 def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():
     from developing_flow import scorecard
     keys = [k for k, _ in scorecard.METRICS]
