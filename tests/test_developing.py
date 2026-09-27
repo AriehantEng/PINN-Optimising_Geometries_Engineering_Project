@@ -36,6 +36,7 @@ def tiny_document():
         "adam": {"steps": 60, "learning_rate": 1.0e-3, "schedule": "exponential",
                  "decay_rate": 0.9, "decay_steps": 1000, "resample_every": 20},
         "lbfgs": {"cycles": 2, "iterations_per_cycle": 20, "gtol": 1.0e-14},
+        "lm": {"iterations": 0},
         "check_every": 10,
     }
     document["evaluation"] = {"nx": 21, "ny": 11, "profile_stations": [0.0, 1.0],
@@ -999,8 +1000,11 @@ def test_the_inlet_lift_keeps_old_runs_bit_identical():
         points = np.asarray(pinn.sample_batch(jax.random.PRNGKey(2), config, 16).interior)
         L, m = config.length, config.inlet_sharpness
         for point in points:
-            x, y = point
-            raw = pinn.apply_network(params, jnp.array([2.0 * x / L - 1.0, y]), config.activation)
+            # The pre-lift ansatz, rebuilt with the same JAX operations in the
+            # same order: numpy's y**16 (pow) and JAX's (repeated squaring)
+            # differ in the last bit, so a numpy rebuild cannot be bitwise.
+            x, y = jnp.asarray(point)
+            raw = pinn.apply_network(params, jnp.stack([2.0 * x / L - 1.0, y]), config.activation)
             got = np.asarray(field(params, jnp.asarray(point)))
             if config.formulation == "velocity_pressure":
                 ramp = x / L
