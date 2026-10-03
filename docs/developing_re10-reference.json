@@ -32,10 +32,10 @@
           "update": 1.34745638412175e-15
         }
       ],
-      "seconds": 0.5945162330000358,
+      "seconds": 0.5639749069996469,
       "unknowns": 5713,
       "elements": 600,
-      "entrance_length": 1.7776993900729319,
+      "entrance_length": 1.777699165902127,
       "energy": {
         "flux_in": 1.3331032814848236,
         "flux_out": 1.3331032814848203,
@@ -53,12 +53,12 @@
       "newton": [
         {
           "iteration": 1,
-          "residual": 0.00884574753182562,
+          "residual": 0.008845747531825621,
           "update": 0.04145220657374165
         },
         {
           "iteration": 2,
-          "residual": 0.00020288330989183222,
+          "residual": 0.00020288330989183225,
           "update": 0.0007502975158177817
         },
         {
@@ -68,14 +68,14 @@
         },
         {
           "iteration": 4,
-          "residual": 1.0814556028789602e-14,
+          "residual": 1.0814556028789604e-14,
           "update": 1.256814636280722e-15
         }
       ],
-      "seconds": 3.7519156350000458,
+      "seconds": 3.569217066999954,
       "unknowns": 22223,
       "elements": 2400,
-      "entrance_length": 1.7793317703976632,
+      "entrance_length": 1.7793315023374427,
       "energy": {
         "flux_in": 1.3333183296709077,
         "flux_out": 1.333318329670901,
@@ -98,24 +98,24 @@
         },
         {
           "iteration": 2,
-          "residual": 0.00010175707813980803,
+          "residual": 0.00010175707813980805,
           "update": 0.000746132339221993
         },
         {
           "iteration": 3,
-          "residual": 3.899683553870936e-09,
+          "residual": 3.899683553870939e-09,
           "update": 1.8404299990858397e-08
         },
         {
           "iteration": 4,
-          "residual": 2.273202047380259e-14,
+          "residual": 2.2732020473802592e-14,
           "update": 1.6483291552401094e-15
         }
       ],
-      "seconds": 33.39438481399998,
+      "seconds": 30.541916856999705,
       "unknowns": 87643,
       "elements": 9600,
-      "entrance_length": 1.7794138871492517,
+      "entrance_length": 1.779413575962734,
       "energy": {
         "flux_in": 1.333332385316876,
         "flux_out": 1.3333323853168642,
@@ -133,29 +133,29 @@
       "newton": [
         {
           "iteration": 1,
-          "residual": 0.0022168581855153842,
+          "residual": 0.002216858185515385,
           "update": 0.0414537175202605
         },
         {
           "iteration": 2,
-          "residual": 5.091784880236691e-05,
+          "residual": 5.0917848802366935e-05,
           "update": 0.0007462841562151752
         },
         {
           "iteration": 3,
-          "residual": 1.952809195917302e-09,
+          "residual": 1.9528091959173092e-09,
           "update": 1.8517662945074273e-08
         },
         {
           "iteration": 4,
-          "residual": 4.4184032781265116e-14,
+          "residual": 4.418403278126513e-14,
           "update": 4.301877189462467e-15
         }
       ],
-      "seconds": 268.32306080600006,
+      "seconds": 283.4263012229994,
       "unknowns": 348083,
       "elements": 38400,
-      "entrance_length": 1.7794157336021346,
+      "entrance_length": 1.7794154128903676,
       "energy": {
         "flux_in": 1.333333273920128,
         "flux_out": 1.3333332739201031,
@@ -205,13 +205,13 @@
         100,
         24
       ],
-      "u_l2_change": 0.0004301890159814693,
-      "u_max_change": 0.006897653298475304,
-      "v_l2_change": 0.00027894079518322036,
-      "v_max_change": 0.005130618131027262,
-      "p_l2_change": 0.0010645707407905961,
-      "p_max_change": 0.04833838750001318,
-      "entrance_length_change": 0.0016323803247313418
+      "u_l2_change": 0.00042192794695522154,
+      "u_max_change": 0.006976221306267405,
+      "v_l2_change": 0.0002796141470725994,
+      "v_max_change": 0.005337535890069009,
+      "p_l2_change": 0.0009877856087764693,
+      "p_max_change": 0.05093572896788956,
+      "entrance_length_change": 0.0016323364353156844
     },
     {
       "coarse": [
@@ -222,16 +222,16 @@
         200,
         48
       ],
-      "u_l2_change": 5.0853311058882214e-05,
-      "u_max_change": 0.0009250015387546329,
-      "v_l2_change": 2.365189032411735e-05,
-      "v_max_change": 0.00036992039814308375,
-      "p_l2_change": 0.00022559791101243722,
-      "p_max_change": 0.010364447115270181,
-      "entrance_length_change": 8.21167515885346e-05,
-      "u_observed_order": 3.0805570727687797,
-      "v_observed_order": 3.5599315469815735,
-      "p_observed_order": 2.2384462062798507
+      "u_l2_change": 4.958402244625289e-05,
+      "u_max_change": 0.0009233242395865204,
+      "v_l2_change": 2.379267420655532e-05,
+      "v_max_change": 0.0004169311640195711,
+      "p_l2_change": 0.0002064306613414183,
+      "p_max_change": 0.01084667301333786,
+      "entrance_length_change": 8.207362529133455e-05,
+      "u_observed_order": 3.0890494312899874,
+      "v_observed_order": 3.5548480162359777,
+      "p_observed_order": 2.2585406784538673
     },
     {
       "coarse": [
@@ -242,19 +242,20 @@
         400,
         96
       ],
-      "u_l2_change": 6.374276509402906e-06,
-      "u_max_change": 0.00010922324144102546,
-      "v_l2_change": 2.521206641892304e-06,
-      "v_max_change": 3.122917970324601e-05,
-      "p_l2_change": 5.120244608809157e-05,
-      "p_max_change": 0.0023057159715942355,
-      "entrance_length_change": 1.8464528828143756e-06,
-      "u_observed_order": 2.996008202831788,
-      "v_observed_order": 3.2297692187148854,
-      "p_observed_order": 2.139469070081334
+      "u_l2_change": 6.151799945241411e-06,
+      "u_max_change": 0.00010731199786051526,
+      "v_l2_change": 2.4896095445107623e-06,
+      "v_max_change": 3.0328403143022042e-05,
+      "p_l2_change": 4.9308906566127875e-05,
+      "p_max_change": 0.00253970687256011,
+      "entrance_length_change": 1.8369276335583606e-06,
+      "u_observed_order": 3.0107948199834373,
+      "v_observed_order": 3.256526032865439,
+      "p_observed_order": 2.0657371052516087
     }
   ],
-  "entrance_length": 1.7794157336021346,
+  "convergence_norm": "relative L2, Gauss-Legendre 6 x 6 in every element of the finest mesh",
+  "entrance_length": 1.7794154128903676,
   "flux_max_relative_error": 6.638149319115882e-08,
   "centreline_pressure_drop": 1.9967934869620623,
   "grid": [

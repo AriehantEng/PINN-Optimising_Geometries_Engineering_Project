@@ -1655,23 +1655,37 @@ def residuals_at(config: Config, field, params, points, chunk=4096):
     return tuple(np.concatenate([np.asarray(o[k]) for o in outputs])[:n] for k in range(7))
 
 
-#: Centreline points for the entrance length, here and in the reference. The
-#: 99% crossing is linearly interpolated, with an O(dx^2) bias: at 1,001 points
-#: (dx = 0.01) it was 8.5e-6, 4.8e-6 relative, half of G3's and G4's entire
-#: reported entrance-length error, while the reference used 10,001. At 10,001
-#: it is below 3e-7.
+#: Centreline points that bracket the entrance length, here and in the
+#: reference. The crossing inside the bracket is then found by root-finding on
+#: the field itself: linear interpolation has an O(dx^2) bias, which at the
+#: 1,001 points metrics.json used was 8.5e-6 (4.8e-6 relative, half of G3's
+#: and G4's whole reported entrance-length error) and at 10,001 still ~1.5e-7.
 CENTRELINE_POINTS = 10001
 
 
 def entrance_length(model, length):
     """The 99% entrance length of model(x, y) -> (u, v, p) arrays: where the
     centreline first reaches 0.99 of 0.75 x (flux at the outlet), measured
-    identically for a PINN and for the reference."""
+    identically for a PINN and for the reference. Bracketed on
+    CENTRELINE_POINTS, then solved to machine precision (Brent's method)."""
+    from scipy.optimize import brentq
+
     nodes, weights = np.polynomial.legendre.leggauss(200)
     u_out, _, _ = model(np.full_like(nodes, length), nodes)
+    target = 0.99 * 0.75 * float(u_out @ weights)
     xc = np.linspace(0.0, length, CENTRELINE_POINTS)
     uc, _, _ = model(xc, np.zeros_like(xc))
-    return _crossing(xc, uc, 0.99 * 0.75 * float(u_out @ weights))
+    reached = uc >= target
+    if not np.any(reached):
+        return math.nan
+    i = int(np.argmax(reached))
+    if i == 0:
+        return float(xc[0])
+
+    def gap(x):
+        return float(model(np.array([x]), np.array([0.0]))[0][0]) - target
+
+    return float(brentq(gap, xc[i - 1], xc[i], xtol=1e-15, rtol=4.0 * np.finfo(float).eps))
 
 
 def _crossing(x, values, target):
@@ -1713,7 +1727,8 @@ def measure_solution(config: Config, field, params):
     xc = np.linspace(0.0, L, CENTRELINE_POINTS)
     uc, _, pc = predict(field, params, np.stack([xc, np.zeros_like(xc)], axis=-1))
     developed_centreline = 0.75 * flux_outlet
-    entrance = _crossing(xc, uc, 0.99 * developed_centreline)
+    entrance = entrance_length(
+        lambda x, y: predict(field, params, np.stack([x, y], axis=-1)), L)
 
     # Outlet profile against the developed parabola at the MEASURED flux.
     yo = np.linspace(-1.0, 1.0, 201)

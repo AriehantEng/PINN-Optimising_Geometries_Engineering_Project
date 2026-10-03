@@ -188,3 +188,20 @@ a warm-start parent → since warm starts, a run reads its siblings' configs, so
 migrate only when no queue on older code will read them, or move the queue's
 worktree to the migrating commit first. A checkpoint from the older code then
 refuses to resume (code fingerprint), by design.
+
+**A uniform grid over-weights the inlet corners in an L2 norm.** The PINN's
+pressure error "converged" with the scoring grid (7.0e-5, 4.2e-5, 3.0e-5,
+2.5e-5 from 251 to 2001 columns) while u and v did not move → the inlet
+corners carry a pressure spike narrower than the grid spacing, and a grid sum
+weights the x = 0 column like any interior one: that column held 53.5% of the
+summed p error → integrate norms on the reference's own mesh
+(`reference.relative_errors`, Gauss points in every element; corner elements
+are 0.00085 x 0.00054). Corrected p for G3/G4 is 2.2e-5/1.9e-5, within 1.5x
+of the reference's own 1.5e-5. Phase 2's junction corners will do the same.
+
+**Linear interpolation of a threshold crossing biases the entrance length.**
+At 1,001 centreline points the bias was 4.8e-6 relative, half of G3's and
+G4's reported entrance-length error, and at 10,001 still 1.4e-7 (a new test
+caught this at 1e-7; the tolerance was kept) → bracket on a grid, then root-
+find on the field itself (`pinn.entrance_length`, Brent). Use one measuring
+function for the PINN and the reference, never two that look alike.
