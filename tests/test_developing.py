@@ -1142,10 +1142,14 @@ def test_a_rejected_step_is_retried_with_more_damping():
 @pytest.mark.parametrize("lm, message", [
     ({"iterations": 5}, "damping"),
     ({"iterations": 5, "damping": 1e-3}, "resample_every"),
+    ({"iterations": 5, "damping": 1e-3, "resample_every": 2}, "average"),
     ({"iterations": 0, "damping": 1e-3}, "no effect"),
+    ({"iterations": 0, "average": 4}, "no effect"),
     ({"iterations": -1}, "iterations"),
-    ({"iterations": 5, "damping": 0.0, "resample_every": 2}, "damping"),
-    ({"iterations": 5, "damping": 1e-3, "resample_every": 0}, "resample_every"),
+    ({"iterations": 5, "damping": 0.0, "resample_every": 2, "average": 0}, "damping"),
+    ({"iterations": 5, "damping": 1e-3, "resample_every": 0, "average": 0}, "resample_every"),
+    ({"iterations": 5, "damping": 1e-3, "resample_every": 2, "average": 1}, "average"),
+    ({"iterations": 5, "damping": 1e-3, "resample_every": 2, "average": -2}, "average"),
 ])
 def test_the_lm_settings_are_required_and_checked(lm, message):
     document = base_document()
@@ -1157,7 +1161,8 @@ def test_the_lm_settings_are_required_and_checked(lm, message):
 @pytest.mark.slow
 def test_a_tiny_run_with_levenberg_marquardt_is_deterministic():
     document = tiny_document()
-    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2}
+    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2,
+                                  "average": 0}
     config = pinn.parse_config(document)
     first, history, info = pinn.train(config, verbose=False)
     second, _, _ = pinn.train(config, verbose=False)
@@ -1210,7 +1215,8 @@ class Interrupted(Exception):
 
 def tiny_lm_document():
     document = tiny_document()
-    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2}
+    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2,
+                                  "average": 2}
     return document
 
 
@@ -1261,6 +1267,38 @@ def test_a_resumed_run_reproduces_the_uninterrupted_run_bitwise(tmp_path, monkey
     for name in ("selected", "selected_heldout_loss", "lbfgs_cycles", "levenberg_marquardt"):
         assert info[name] == expected_info[name], name
     assert len(info["resumed_from"]) == 1 and expected_info["resumed_from"] == []
+
+
+@pytest.mark.slow
+def test_the_mean_of_recent_iterates_is_scored_and_may_be_selected(uninterrupted):
+    """average: 2 over 4 LM steps: the mean of each step's iterate and the one
+    before is scored from the second step on, and the selection is the best
+    held-out score among the iterates AND the means."""
+    _, history, info = uninterrupted
+    lm = [row for row in history if row["phase"] == "lm"]
+    assert np.isnan(lm[0]["heldout_average"])
+    assert all(np.isfinite(row["heldout_average"]) for row in lm[1:])
+    assert all(np.isnan(row["heldout_average"]) for row in history if row["phase"] != "lm")
+    scores = [row["heldout_loss"] for row in history] + [row["heldout_average"] for row in lm[1:]]
+    assert info["selected_heldout_loss"] == min(scores)
+    where = {f"{r['phase']}:{r['iteration']}": r["heldout_loss"] for r in history}
+    where.update({f"lm_average:{r['iteration']}": r["heldout_average"] for r in lm[1:]})
+    assert where[info["selected"]] == info["selected_heldout_loss"]
+
+
+def test_migration_gives_an_old_lm_run_no_averaging(tmp_path):
+    from developing_flow import migrate
+    with open("developing_flow/re10_lm_fresh.yaml", encoding="utf-8") as handle:
+        text = handle.read()
+    run = tmp_path / "old_lm"
+    run.mkdir()
+    old = "\n".join(line for line in text.splitlines() if "average:" not in line) + "\n"
+    (run / "config.yaml").write_text(old, encoding="utf-8")
+    (run / "params.npz").write_bytes(b"")
+    with pytest.raises(pinn.ConfigError, match="average"):
+        pinn.load_config(run / "config.yaml")
+    migrate.main(["--runs-root", str(tmp_path), "--write"])
+    assert pinn.load_config(run / "config.yaml") == pinn.load_config("developing_flow/re10_lm_fresh.yaml")
 
 
 def test_resuming_refuses_a_different_config_or_code(tmp_path):
@@ -1403,7 +1441,8 @@ def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
     document["training"]["init_from"] = "parent"
     document["training"]["adam"]["steps"] = 0
     document["training"]["lbfgs"]["cycles"] = 1
-    document["training"]["lm"] = {"iterations": 3, "damping": 1e-3, "resample_every": 1}
+    document["training"]["lm"] = {"iterations": 3, "damping": 1e-3, "resample_every": 1,
+                                  "average": 0}
     child_path = tmp_path / "child.yaml"
     child_path.write_text(yaml.safe_dump(document), encoding="utf-8")
     directory = pinn.run(child_path, out=tmp_path / "child", verbose=False)

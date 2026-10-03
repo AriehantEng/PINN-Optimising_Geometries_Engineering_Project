@@ -196,6 +196,7 @@ CONDITIONAL = {
     ("physics", "lift_length"): float,       # lift = blended
     ("training.lm", "damping"): float,        # lm.iterations > 0
     ("training.lm", "resample_every"): int,   # lm.iterations > 0
+    ("training.lm", "average"): int,          # lm.iterations > 0
 }
 
 
@@ -276,6 +277,7 @@ class Config:
     lm_iterations: int
     lm_damping: float | None
     lm_resample_every: int | None
+    lm_average: int | None
     init_from: str
     check_every: int
     nx: int
@@ -367,6 +369,7 @@ def parse_config(document) -> Config:
     lm_on = lm["iterations"] > 0
     lm_damping = take("training.lm", "damping", lm_on, "lm.iterations > 0")
     lm_resample = take("training.lm", "resample_every", lm_on, "lm.iterations > 0")
+    lm_average = take("training.lm", "average", lm_on, "lm.iterations > 0")
     model = document["model"]
     input_length = take("model", "input_length", model["input_map"] == "exponential",
                         "input_map is 'exponential'")
@@ -426,6 +429,7 @@ def parse_config(document) -> Config:
         lm_iterations=lm["iterations"],
         lm_damping=None if lm_damping is None else float(lm_damping),
         lm_resample_every=lm_resample,
+        lm_average=lm_average,
         init_from=document["training"]["init_from"],
         check_every=document["training"]["check_every"],
         nx=evaluation["nx"],
@@ -492,6 +496,9 @@ def parse_config(document) -> Config:
         raise ConfigError("training.lm.damping must be positive")
     if lm_on and config.lm_resample_every < 1:
         raise ConfigError("training.lm.resample_every must be at least 1")
+    if lm_on and (config.lm_average < 0 or config.lm_average == 1):
+        raise ConfigError("training.lm.average must be 0 (off) or at least 2: the mean of the "
+                          "last N iterates")
     if not 0.0 <= config.focus_fraction <= 1.0:
         raise ConfigError("sampling.focus_fraction must lie in [0, 1]")
     if not 0.0 < config.focus_length <= config.length:
@@ -1403,26 +1410,37 @@ def train(config: Config, verbose: bool = True, checkpoint=None, initial=None, r
     def saved_batch():
         return Batch(**{name: jnp.asarray(saved[f"batch_{name}"]) for name in Batch._fields})
 
-    def record(p, batch, phase, cycle, iteration, lr):
+    def record(p, batch, phase, cycle, iteration, lr, average=None):
+        """One history row for `p`. `average`, if given, is a second candidate
+        (the mean of recent iterates): it is scored on the held-out points too
+        and may be selected, labelled '<phase>_average:<iteration>'."""
         loss, terms = train_terms(p, batch)
         held = float(heldout_loss(p))
         loss = float(loss)
-        if not (math.isfinite(loss) and math.isfinite(held)):
+        held_average = math.nan if average is None else float(heldout_loss(average))
+        if not (math.isfinite(loss) and math.isfinite(held)
+                and (average is None or math.isfinite(held_average))):
             raise FloatingPointError(
-                f"non-finite loss at {phase}:{iteration} (training {loss}, held-out {held}); "
-                "training has diverged and nothing will be saved as a result")
+                f"non-finite loss at {phase}:{iteration} (training {loss}, held-out {held}, "
+                f"averaged {held_average}); training has diverged and nothing will be saved "
+                "as a result")
         if held < best["heldout"]:
             best.update(heldout=held, params=p, where=f"{phase}:{iteration}")
+        if held_average < best["heldout"]:
+            best.update(heldout=held_average, params=average,
+                        where=f"{phase}_average:{iteration}")
         history.append({
             "phase": phase, "cycle": cycle, "iteration": iteration,
             "train_loss": loss, "heldout_loss": held,
             "heldout_over_train": held / loss if loss > 0 else math.inf,
+            "heldout_average": held_average,
             "learning_rate": lr, "seconds": time.time() - started,
             **{f"term_{k}": float(v) for k, v in terms.items()},
         })
         if verbose:
             print(f"  {phase:>6} {cycle:>5} {iteration:>9d} {loss:>12.4e} "
-                  f"{held:>12.4e} {held / loss if loss > 0 else math.inf:>10.1f}", flush=True)
+                  f"{held:>12.4e} {held / loss if loss > 0 else math.inf:>10.1f}"
+                  + ("" if average is None else f"   averaged {held_average:.4e}"), flush=True)
 
     if verbose:
         print(f"  {'phase':>6} {'cycle':>5} {'iteration':>9} {'train loss':>12} "
@@ -1522,8 +1540,15 @@ def train(config: Config, verbose: bool = True, checkpoint=None, initial=None, r
     if config.lm_iterations > 0:
         normal_equations, lm_loss = make_gauss_newton(config, field, unflatten)
         lam, nu, first = None, 2.0, 0
+        # With fresh points at every step, each step fits its own draw: the
+        # iterates scatter around the solution by the sampling noise of one
+        # draw. Their mean cancels much of that scatter, as averaging the
+        # iterates of a stochastic method does (Polyak & Juditsky 1992).
+        window = []
         if position[0] == "lm":
             lam, nu, first, batch = meta["lam"], meta["nu"], position[1], saved_batch()
+            if config.lm_average:
+                window = [jnp.asarray(row) for row in saved["lm_window"]]
         for step in range(first, config.lm_iterations):
             if step % config.lm_resample_every == 0:
                 key, draw = jax.random.split(key)
@@ -1545,9 +1570,17 @@ def train(config: Config, verbose: bool = True, checkpoint=None, initial=None, r
                 flat = flat + jnp.asarray(delta)
             iteration += 1
             lm_log["iterations"] += 1
-            record(unflatten(flat), batch, "lm", step // config.lm_resample_every, iteration, lam)
-            checkpoint_state("lm", step + 1, flat, batch, iteration=iteration,
-                             adam_seconds=adam_seconds, lam=lam, nu=nu)
+            average = None
+            if config.lm_average:
+                window = (window + [flat])[-config.lm_average:]
+                if len(window) == config.lm_average:
+                    average = unflatten(jnp.mean(jnp.stack(window), axis=0))
+            record(unflatten(flat), batch, "lm", step // config.lm_resample_every, iteration, lam,
+                   average)
+            checkpoint_state(
+                "lm", step + 1, flat, batch,
+                {"lm_window": np.stack([np.asarray(w) for w in window])} if window else None,
+                iteration=iteration, adam_seconds=adam_seconds, lam=lam, nu=nu)
 
     if best["where"] == "initial":
         raise RuntimeError(
@@ -1810,6 +1843,10 @@ def write_figures(config: Config, params, metrics, arrays, history, directory):
     it = np.array([row["iteration"] for row in history])
     a.semilogy(it, [row["train_loss"] for row in history], color=SERIES[0], linewidth=1.5, label="training points")
     a.semilogy(it, [row["heldout_loss"] for row in history], color=SERIES[1], linewidth=1.5, label="held-out points")
+    averaged = np.array([row.get("heldout_average", math.nan) for row in history])
+    if np.isfinite(averaged).any():
+        a.semilogy(it, averaged, color=SERIES[2], linewidth=1.5,
+                   label="held-out, mean of recent iterates")
     a.axvline(config.adam_steps, color=MUTED, linewidth=1, linestyle=":")
     a.set_xlabel("iteration (Adam, then L-BFGS cycles)")
     a.set_ylabel("loss")

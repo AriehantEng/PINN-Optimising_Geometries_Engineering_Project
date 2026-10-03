@@ -22,6 +22,8 @@ describes what the run ACTUALLY did, from the MIGRATIONS table below:
                                             the lift was the inlet profile
     training.lm = {iterations: 0}           there was no Levenberg-Marquardt stage
     training.init_from = random             every run started from a random network
+    training.lm.average = 0                 (LM runs only) no mean of iterates was ever a
+                                            selection candidate
 
 The edit is a targeted text insertion, not a YAML round-trip, so comments in
 the stored config survive, and each migrated run gets a config.migrated.json
@@ -92,6 +94,11 @@ MIGRATIONS = (
     ("training.init_from", "random", r"^  check_every: .*$",
      lambda d: "init_from" not in d.get("training", {}),
      "before training.init_from existed every run started from a random network"),
+    ("training.lm.average", 0, r"^    damping: .*$",
+     lambda d: isinstance(d.get("training", {}).get("lm"), dict)
+     and d["training"]["lm"].get("iterations", 0) > 0
+     and "average" not in d["training"]["lm"],
+     "before training.lm.average existed no average of iterates was a selection candidate"),
 )
 
 

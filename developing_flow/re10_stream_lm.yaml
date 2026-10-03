@@ -63,6 +63,7 @@ training:
     iterations: 500           # Levenberg-Marquardt after L-BFGS
     damping: 1.0e-3           # initial lambda, relative to the mean diagonal of J^T J
     resample_every: 10        # fresh points every 10 LM iterations
+    average: 0                # no mean of recent iterates as a candidate
 evaluation:
   nx: 201
   ny: 101
