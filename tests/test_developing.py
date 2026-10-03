@@ -793,21 +793,21 @@ STEP2_EXPERIMENTS = {
     "re10_inletgrid_w1.yaml": {"name", "sampling.n_inlet", "sampling.inlet_points"},
     "re10_w40.yaml": {"name", "model.width"},
     "re10_lm.yaml": {"name", "model.width", "training.lbfgs.cycles", "training.lm.iterations",
-                     "training.lm.damping", "training.lm.resample_every"},
+                     "training.lm.damping", "training.lm.resample_every", "training.lm.average"},
     "re10_lm_fresh.yaml": {"name", "model.width", "training.lbfgs.cycles", "training.lm.iterations",
-                           "training.lm.damping", "training.lm.resample_every"},
+                           "training.lm.damping", "training.lm.resample_every", "training.lm.average"},
     "re10_lm_fresh_inletgrid.yaml": {"name", "model.width", "training.lbfgs.cycles",
                                      "training.lm.iterations", "training.lm.damping",
-                                     "training.lm.resample_every", "sampling.n_inlet",
+                                     "training.lm.resample_every", "training.lm.average", "sampling.n_inlet",
                                      "sampling.inlet_points"},
     "re10_lm_fresh_inputmap.yaml": {"name", "model.width", "model.input_map", "model.input_length",
                                     "training.lbfgs.cycles", "training.lm.iterations",
-                                    "training.lm.damping", "training.lm.resample_every"},
+                                    "training.lm.damping", "training.lm.resample_every", "training.lm.average"},
     "re10_stream_lm.yaml": {"name", "physics.formulation", "physics.inlet_condition",
                             "physics.inlet_ramp", "physics.inlet_ramp_length", "physics.lift",
                             "physics.lift_length", "weights.continuity", "weights.inlet",
                             "model.width", "training.lbfgs.cycles", "training.lm.iterations",
-                            "training.lm.damping", "training.lm.resample_every"},
+                            "training.lm.damping", "training.lm.resample_every", "training.lm.average"},
 }
 
 
@@ -1460,3 +1460,30 @@ def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
     assert float(first[4]) != parent_metrics["loss_heldout"]   # other points, other number
     assert metrics["loss_heldout"] < start
     assert metrics["info_init_from"]["run"] == "parent"
+
+
+POLISH = {  # each polish run against re10_polish_control: what it may change
+    "re10_polish_average.yaml": {"name", "sampling.n_validation", "training.lm.average"},
+    "re10_polish_points.yaml": {"name", "sampling.n_validation", "training.lm.average",
+                                "sampling.n_interior"},
+}
+
+
+@pytest.mark.parametrize("filename, allowed", sorted(POLISH.items()))
+def test_each_polish_run_changes_only_its_own_keys(filename, allowed):
+    """re10_polish_average must differ from the control in selection alone
+    (held-out points, averaging), so its iterates are the control's."""
+    def flat(document, prefix=""):
+        out = {}
+        for key, value in document.items():
+            if isinstance(value, dict):
+                out.update(flat(value, f"{prefix}{key}."))
+            else:
+                out[f"{prefix}{key}"] = value
+        return out
+    with open("developing_flow/re10_polish_control.yaml", encoding="utf-8") as handle:
+        control = flat(yaml.safe_load(handle))
+    with open(f"developing_flow/{filename}", encoding="utf-8") as handle:
+        polish = flat(yaml.safe_load(handle))
+    assert set(control) == set(polish)
+    assert {k for k in control if control[k] != polish[k]} == allowed

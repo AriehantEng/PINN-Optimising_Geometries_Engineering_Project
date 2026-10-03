@@ -1,10 +1,13 @@
-# POLISH, averaged: re10_polish_control plus the mean of the last 20 iterates
-# as a selection candidate. Averaging never feeds back into the steps, so the
-# iterates here are re10_polish_control's, bit for bit: any difference in the
-# selected network is the averaging alone. In the control the loss on each
-# draw after its step (~1.4e-8) sits below the held-out loss (~2.4e-8): each
-# step fits its own 4,096 points, so the iterates scatter around the solution
-# by one draw's sampling noise, which a mean over 20 independent draws cuts.
+# POLISH, averaged and measured better: re10_polish_control's iterates
+# (bit for bit: the held-out set and the average never touch the steps), but
+# selected on 32,768 held-out points instead of 4,096, with the mean of the
+# last 20 iterates as a candidate too. The control picked an iterate whose
+# held-out loss was lower than G4's (1.94e-8 vs 2.64e-8) but whose error
+# against the reference was higher in u, v, p and the objective: at this
+# plateau 4,096 points cannot tell the iterates apart (G4 alone scores 1.38e-8
+# on one such set and 2.64e-8 on another). Eight times the points cut that
+# noise ~2.8x; the mean of 20 iterates cuts the scatter of the iterates
+# themselves.
 #
 # Developing (not fully developed) channel flow with inertia, Re_h = 10.
 #
@@ -36,7 +39,7 @@ sampling:
   focus_length: 4.0           # focus points lie in x* < 4, crowded toward x* = 0
   n_inlet: 1024
   n_outlet: 256
-  n_validation: 4096          # held-out points, never trained on
+  n_validation: 32768         # 8x: re10_polish_control showed 4,096 cannot rank networks
   rar_points: 0               # residual-based adaptive refinement off
   inlet_points: fixed         # one static grid, crowded toward the corners
 weights:

@@ -1,8 +1,9 @@
-# POLISH: G4's network, 100 more Levenberg-Marquardt steps on 16,384
-# interior points per draw, four times G4's. If the plateau is sampling noise
-# (each step fits one draw), four times the points halve that noise and this
-# run ends clearly below re10_polish_control. If the plateau is the network's
-# capacity, both end in the same place.
+# POLISH, four times the points: re10_polish_average with 16,384 interior
+# points per Levenberg-Marquardt step instead of 4,096. Same selection (32,768
+# held-out points, mean of the last 20 iterates as a candidate), so the
+# difference between the two runs is the points per step alone. If the
+# plateau is sampling noise (each step fits its own draw), more points per
+# step lower it; if it is the network's capacity, they do not.
 #
 # Developing (not fully developed) channel flow with inertia, Re_h = 10.
 #
@@ -34,7 +35,7 @@ sampling:
   focus_length: 4.0           # focus points lie in x* < 4, crowded toward x* = 0
   n_inlet: 1024
   n_outlet: 256
-  n_validation: 4096          # held-out points, never trained on
+  n_validation: 32768         # 8x: re10_polish_control showed 4,096 cannot rank networks
   rar_points: 0               # residual-based adaptive refinement off
   inlet_points: fixed         # one static grid, crowded toward the corners
 weights:
@@ -62,7 +63,7 @@ training:
     damping: 1.0e-5           # initial lambda, relative to the mean diagonal of J^T J;
                               # G4 ended near 1e-6, so start a little more cautious
     resample_every: 1         # fresh points at EVERY iteration
-    average: 0                # no mean of recent iterates as a candidate
+    average: 20               # the mean of the last 20 iterates is a candidate too
 evaluation:
   nx: 201
   ny: 101
