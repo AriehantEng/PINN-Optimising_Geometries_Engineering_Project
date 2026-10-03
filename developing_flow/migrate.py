@@ -21,6 +21,7 @@ describes what the run ACTUALLY did, from the MIGRATIONS table below:
     physics.lift = inlet                    (stream-function and hard-inlet runs only)
                                             the lift was the inlet profile
     training.lm = {iterations: 0}           there was no Levenberg-Marquardt stage
+    training.init_from = random             every run started from a random network
 
 The edit is a targeted text insertion, not a YAML round-trip, so comments in
 the stored config survive, and each migrated run gets a config.migrated.json
@@ -88,6 +89,9 @@ MIGRATIONS = (
     ("training.lm", {"iterations": 0}, r"^  check_every: .*$",
      lambda d: "lm" not in d.get("training", {}),
      "before training.lm existed there was no Levenberg-Marquardt stage"),
+    ("training.init_from", "random", r"^  check_every: .*$",
+     lambda d: "init_from" not in d.get("training", {}),
+     "before training.init_from existed every run started from a random network"),
 )
 
 

@@ -56,6 +56,7 @@ training:
     iterations_per_cycle: 500
     gtol: 1.0e-14
   check_every: 100            # held-out loss is measured this often
+  init_from: random           # or the name of a finished run beside this one, to start from its network
   lm:
     iterations: 0             # Levenberg-Marquardt after L-BFGS; 0 = off
 evaluation:

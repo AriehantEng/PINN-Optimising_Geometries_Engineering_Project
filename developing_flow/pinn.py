@@ -172,6 +172,7 @@ SCHEMA = {
         "lbfgs": {"cycles": int, "iterations_per_cycle": int, "gtol": float},
         "lm": {"iterations": int},
         "check_every": int,
+        "init_from": str,
     },
     "evaluation": {"nx": int, "ny": int, "profile_stations": list, "n_flux_stations": int},
 }
@@ -275,6 +276,7 @@ class Config:
     lm_iterations: int
     lm_damping: float | None
     lm_resample_every: int | None
+    init_from: str
     check_every: int
     nx: int
     ny: int
@@ -424,6 +426,7 @@ def parse_config(document) -> Config:
         lm_iterations=lm["iterations"],
         lm_damping=None if lm_damping is None else float(lm_damping),
         lm_resample_every=lm_resample,
+        init_from=document["training"]["init_from"],
         check_every=document["training"]["check_every"],
         nx=evaluation["nx"],
         ny=evaluation["ny"],
@@ -463,7 +466,7 @@ def parse_config(document) -> Config:
     if config.lbfgs_gtol <= 0:
         raise ConfigError("training.lbfgs.gtol must be positive")
     for name in ("width", "depth", "n_interior", "n_inlet", "n_outlet",
-                 "n_validation", "adam_steps", "adam_resample_every",
+                 "n_validation", "adam_resample_every",
                  "lbfgs_iterations", "check_every", "nx", "ny", "n_flux_stations"):
         if getattr(config, name) < 1:
             raise ConfigError(f"{name} must be at least 1")
@@ -476,8 +479,13 @@ def parse_config(document) -> Config:
             raise ConfigError("sampling.rar_exponent must be positive")
         if config.rar_floor < 0:
             raise ConfigError("sampling.rar_floor must be >= 0")
+    if config.adam_steps < 0:
+        raise ConfigError("training.adam.steps must be >= 0")
     if config.lbfgs_cycles < 0:
         raise ConfigError("training.lbfgs.cycles must be >= 0")
+    if not config.init_from or "/" in config.init_from or config.init_from in (".", ".."):
+        raise ConfigError("training.init_from must be 'random' or the NAME of a finished run "
+                          "in the same runs directory, not a path")
     if config.lm_iterations < 0:
         raise ConfigError("training.lm.iterations must be >= 0 (0 turns Levenberg-Marquardt off)")
     if lm_on and config.lm_damping <= 0:
@@ -1209,11 +1217,112 @@ def adam_schedule(config: Config):
         alpha=config.adam_final_learning_rate / config.adam_learning_rate)
 
 
-def train(config: Config, verbose: bool = True, checkpoint=None):
-    """Returns (best params, history rows, info dict)."""
+#: What a warm start may NOT change: the network and the ansatz it feeds, so
+#: the parent's parameters mean the same function. The Reynolds number, the
+#: sampling, the weights and the training schedule may all change (a
+#: curriculum in Re, Krishnapriyan et al. 2021, changes exactly the first).
+WARM_START_FIXED = ("width", "depth", "activation", "input_map", "input_length", "formulation",
+                    "inlet_condition", "inlet_ramp", "inlet_ramp_length", "lift", "lift_length",
+                    "length", "pressure_scaling", "inlet_sharpness")
+
+
+def warm_start_params(config: Config, parent_directory):
+    """(params, sha256 of params.npz) of the finished run `config` starts from."""
+    import hashlib
+
+    parent_directory = pathlib.Path(parent_directory)
+    if not (parent_directory / "params.npz").is_file():
+        raise ConfigError(f"training.init_from = {config.init_from!r}: {parent_directory} is not a "
+                          "finished run (no params.npz)")
+    parent = load_config(parent_directory / "config.yaml")
+    for name in WARM_START_FIXED:
+        if getattr(parent, name) != getattr(config, name):
+            raise ConfigError(
+                f"training.init_from = {config.init_from!r}: {name} is {getattr(parent, name)!r} "
+                f"there and {getattr(config, name)!r} here; a warm start keeps the network and "
+                "its ansatz")
+    raw = (parent_directory / "params.npz").read_bytes()
+    _, unflatten = ravel_pytree(init_params(config, root_keys(config.seed)[0]))
+    flat = np.load(parent_directory / "params.npz")["flat"]
+    return unflatten(jnp.asarray(flat)), hashlib.sha256(raw).hexdigest()
+
+
+#: Bumped whenever the training state written at checkpoints changes meaning.
+TRAINING_STATE_VERSION = 1
+
+
+def _config_fingerprint(config: Config) -> str:
+    import dataclasses
+    import hashlib
+
+    text = json.dumps(dataclasses.asdict(config), sort_keys=True, default=repr)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _code_fingerprint() -> str:
+    """This file's bytes plus the libraries that compute the arithmetic: a
+    resumed run must continue on the SAME code, or it is not one run."""
+    import hashlib
+    import scipy
+
+    digest = hashlib.sha256(pathlib.Path(__file__).read_bytes())
+    digest.update(f"jax {jax.__version__} optax {optax.__version__} scipy {scipy.__version__} "
+                  f"numpy {np.__version__}".encode())
+    return digest.hexdigest()
+
+
+def save_training_state(path, arrays, meta):
+    """Atomically write the state train() needs to continue from a boundary
+    (the end of an Adam check, of an L-BFGS cycle, or of an LM step)."""
+    temporary = pathlib.Path(path).with_suffix(".tmp.npz")
+    np.savez_compressed(temporary, meta=np.array(json.dumps(meta)), **arrays)
+    temporary.replace(path)
+
+
+def load_training_state(path, config: Config):
+    path = pathlib.Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"cannot resume: {path} does not exist")
+    with np.load(path) as saved:
+        if "meta" not in saved:
+            raise ValueError(f"cannot resume: {path} holds no training state (it was written "
+                             "before runs could be resumed, and records only the best parameters)")
+        meta = json.loads(str(saved["meta"]))
+        arrays = {name: saved[name] for name in saved.files if name != "meta"}
+    for name, expected in (("version", TRAINING_STATE_VERSION),
+                           ("config", _config_fingerprint(config)),
+                           ("code", _code_fingerprint())):
+        if meta[name] != expected:
+            raise ValueError(f"cannot resume from {path}: its {name} fingerprint differs from "
+                             "this run's, so continuing would not reproduce one uninterrupted run")
+    return arrays, meta
+
+
+def train(config: Config, verbose: bool = True, checkpoint=None, initial=None, resume=False):
+    """Returns (best params, history rows, info dict).
+
+    `initial` is the network to start from when config.init_from names a run
+    (run() loads and checks it); with init_from = 'random' it must be None.
+
+    With a `checkpoint` path, the full training state is written there at every
+    boundary: each Adam check, each completed L-BFGS cycle, each LM step. With
+    `resume`, training continues from that state and reproduces the
+    uninterrupted run bitwise (the tests check it); only wall-clock columns
+    differ. Mid-cycle L-BFGS progress is not resumable and is redone.
+    """
+    if resume and checkpoint is None:
+        raise ValueError("resume needs the checkpoint to resume from")
     field = make_field(config)
     model_key, sample_key, heldout_key = root_keys(config.seed)
     params = init_params(config, model_key)
+    if config.init_from == "random":
+        if initial is not None:
+            raise ValueError("initial parameters given, but training.init_from is 'random'")
+    else:
+        if initial is None:
+            raise ValueError(f"training.init_from = {config.init_from!r}: pass that run's "
+                             "parameters as `initial` (run() does)")
+        params = initial
     loss_terms = make_loss_terms(config, field)
     weights = {name: jnp.asarray(config.weights[name], dtype=jnp.float64)
                for name in config.loss_terms}
@@ -1226,10 +1335,49 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
     draw_batch = make_draw(config, field)
     heldout_loss = jax.jit(lambda p: objective(p, heldout_batch)[0])
     train_terms = jax.jit(objective)
+    flat, unflatten = ravel_pytree(params)
 
     best = {"heldout": math.inf, "params": params, "where": "initial"}
     history = []
+    cycle_log = []
+    lm_log = {"iterations": 0, "rejected": 0, "stalled": 0}
+    resumed_from = []
     started = time.time()
+    key = sample_key
+    position, saved = ("start", 0), {}
+    if resume:
+        saved, meta = load_training_state(checkpoint, config)
+        position = (meta["phase"], meta["done"])
+        best = {"heldout": meta["best_heldout"], "where": meta["best_where"],
+                "params": unflatten(jnp.asarray(saved["best_flat"]))}
+        history, cycle_log, lm_log = meta["history"], meta["cycle_log"], meta["lm_log"]
+        resumed_from = meta["resumed_from"] + [f"{position[0]}:{position[1]}"]
+        started -= meta["elapsed"]
+        key = jnp.asarray(saved["key"])
+        flat = jnp.asarray(saved["flat"])
+        params = unflatten(flat)
+        if verbose:
+            print(f"  resuming after {position[0]} {position[1]} "
+                  f"({meta['elapsed'] / 60:.1f} min already trained)", flush=True)
+
+    def checkpoint_state(phase, done, current, batch=None, extra_arrays=None, **extra):
+        if checkpoint is None:
+            return
+        arrays = {"key": np.asarray(key), "flat": np.asarray(current),
+                  "best_flat": np.asarray(ravel_pytree(best["params"])[0])}
+        if batch is not None:
+            arrays.update({f"batch_{name}": np.asarray(value)
+                           for name, value in batch._asdict().items()})
+        arrays.update(extra_arrays or {})
+        meta = {"version": TRAINING_STATE_VERSION, "config": _config_fingerprint(config),
+                "code": _code_fingerprint(), "phase": phase, "done": done,
+                "elapsed": time.time() - started, "best_heldout": best["heldout"],
+                "best_where": best["where"], "history": history, "cycle_log": cycle_log,
+                "lm_log": lm_log, "resumed_from": resumed_from, **extra}
+        save_training_state(checkpoint, arrays, meta)
+
+    def saved_batch():
+        return Batch(**{name: jnp.asarray(saved[f"batch_{name}"]) for name in Batch._fields})
 
     def record(p, batch, phase, cycle, iteration, lr):
         loss, terms = train_terms(p, batch)
@@ -1241,8 +1389,6 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
                 "training has diverged and nothing will be saved as a result")
         if held < best["heldout"]:
             best.update(heldout=held, params=p, where=f"{phase}:{iteration}")
-            if checkpoint is not None:
-                save_params(checkpoint, p)
         history.append({
             "phase": phase, "cycle": cycle, "iteration": iteration,
             "train_loss": loss, "heldout_loss": held,
@@ -1258,63 +1404,90 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         print(f"  {'phase':>6} {'cycle':>5} {'iteration':>9} {'train loss':>12} "
               f"{'held-out':>12} {'ratio':>10}", flush=True)
 
+    phases = ("start", "adam", "lbfgs", "lm")
+    order = phases.index(position[0])
+
+    if position[0] == "start" and config.init_from != "random":
+        # The starting network is a result in its own right: it is the best
+        # so far until training beats it on the held-out points.
+        key, draw = jax.random.split(key)
+        record(params, draw_batch(draw, params), "init", 0, 0, math.nan)
+
     # -- Adam, redrawing points every `resample_every` steps ---------------- #
-    schedule = adam_schedule(config)
-    optimiser = optax.adam(schedule)
-    state = optimiser.init(params)
+    if order <= phases.index("adam") and config.adam_steps > 0:
+        schedule = adam_schedule(config)
+        optimiser = optax.adam(schedule)
+        state = optimiser.init(params)
 
-    @jax.jit
-    def adam_step(p, s, batch):
-        (loss, _), grads = jax.value_and_grad(objective, has_aux=True)(p, batch)
-        updates, s = optimiser.update(grads, s, p)
-        return optax.apply_updates(p, updates), s, loss
+        @jax.jit
+        def adam_step(p, s, batch):
+            (loss, _), grads = jax.value_and_grad(objective, has_aux=True)(p, batch)
+            updates, s = optimiser.update(grads, s, p)
+            return optax.apply_updates(p, updates), s, loss
 
-    key = sample_key
-    batch = None
-    for step in range(config.adam_steps):
-        if step % config.adam_resample_every == 0:
-            key, draw = jax.random.split(key)
-            batch = draw_batch(draw, params)
-        params, state, _ = adam_step(params, state, batch)
-        if (step + 1) % config.check_every == 0 or step + 1 == config.adam_steps:
-            record(params, batch, "adam", step // config.adam_resample_every,
-                   step + 1, float(schedule(step)))
-    adam_seconds = time.time() - started
+        first, batch = 0, None
+        if position[0] == "adam":
+            first, batch = position[1], saved_batch()
+            leaves, treedef = jax.tree_util.tree_flatten(state)
+            state = jax.tree_util.tree_unflatten(
+                treedef, [jnp.asarray(saved[f"adam_{i}"]) for i in range(len(leaves))])
+        for step in range(first, config.adam_steps):
+            if step % config.adam_resample_every == 0:
+                key, draw = jax.random.split(key)
+                batch = draw_batch(draw, params)
+            params, state, _ = adam_step(params, state, batch)
+            if (step + 1) % config.check_every == 0 or step + 1 == config.adam_steps:
+                record(params, batch, "adam", step // config.adam_resample_every,
+                       step + 1, float(schedule(step)))
+                checkpoint_state(
+                    "adam", step + 1, ravel_pytree(params)[0], batch,
+                    {f"adam_{i}": np.asarray(leaf)
+                     for i, leaf in enumerate(jax.tree_util.tree_leaves(state))})
+    if order <= phases.index("adam"):
+        adam_seconds = time.time() - started
+    else:
+        adam_seconds = meta["adam_seconds"]
 
     # -- L-BFGS in cycles, each on a fresh draw ----------------------------- #
-    flat, unflatten = ravel_pytree(params)
+    flat = ravel_pytree(params)[0]
     value_and_grad = jax.jit(jax.value_and_grad(
         lambda vector, batch: objective(unflatten(vector), batch)[0]))
-    iteration = config.adam_steps
-    cycle_log = []
-    for cycle in range(config.lbfgs_cycles):
-        key, draw = jax.random.split(key)
-        batch = draw_batch(draw, unflatten(flat))
+    iteration = (meta["iteration"] if resume and order >= phases.index("lbfgs")
+                 else config.adam_steps)
+    first_cycle = position[1] if position[0] == "lbfgs" else 0
+    if order <= phases.index("lbfgs"):
+        for cycle in range(first_cycle, config.lbfgs_cycles):
+            key, draw = jax.random.split(key)
+            batch = draw_batch(draw, unflatten(flat))
 
-        def fun(vector):
-            value, grad = value_and_grad(jnp.asarray(vector), batch)
-            return float(value), np.asarray(grad, dtype=np.float64)
+            def fun(vector):
+                value, grad = value_and_grad(jnp.asarray(vector), batch)
+                return float(value), np.asarray(grad, dtype=np.float64)
 
-        counter = {"n": 0}
+            counter = {"n": 0}
 
-        def callback(vector):
-            nonlocal iteration
-            counter["n"] += 1
-            iteration += 1
-            if counter["n"] % config.check_every == 0:
-                record(unflatten(jnp.asarray(vector)), batch, "lbfgs", cycle, iteration, math.nan)
+            def callback(vector):
+                nonlocal iteration
+                counter["n"] += 1
+                iteration += 1
+                if counter["n"] % config.check_every == 0:
+                    record(unflatten(jnp.asarray(vector)), batch, "lbfgs", cycle, iteration,
+                           math.nan)
 
-        result = minimize(
-            fun, np.asarray(flat, dtype=np.float64), jac=True, method="L-BFGS-B",
-            callback=callback,
-            options={"maxiter": config.lbfgs_iterations, "maxfun": 2 * config.lbfgs_iterations,
-                     "gtol": config.lbfgs_gtol, "ftol": 0.0, "maxcor": 100},
-        )
-        flat = jnp.asarray(result.x)
-        if counter["n"] % config.check_every != 0:
-            record(unflatten(flat), batch, "lbfgs", cycle, iteration, math.nan)
-        cycle_log.append({"cycle": cycle, "iterations": int(result.nit),
-                          "message": str(result.message)})
+            result = minimize(
+                fun, np.asarray(flat, dtype=np.float64), jac=True, method="L-BFGS-B",
+                callback=callback,
+                options={"maxiter": config.lbfgs_iterations,
+                         "maxfun": 2 * config.lbfgs_iterations,
+                         "gtol": config.lbfgs_gtol, "ftol": 0.0, "maxcor": 100},
+            )
+            flat = jnp.asarray(result.x)
+            if counter["n"] % config.check_every != 0:
+                record(unflatten(flat), batch, "lbfgs", cycle, iteration, math.nan)
+            cycle_log.append({"cycle": cycle, "iterations": int(result.nit),
+                              "message": str(result.message)})
+            checkpoint_state("lbfgs", cycle + 1, flat, iteration=iteration,
+                             adam_seconds=adam_seconds)
 
     # -- Levenberg-Marquardt on the full network ---------------------------- #
     # Gauss-Newton with trust-region damping (Levenberg 1944; Marquardt 1963)
@@ -1322,11 +1495,12 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
     # gradient in function space, the method Jnini, Vella & Zeinhofer (2024)
     # used to solve Navier-Stokes PINNs to near single-precision accuracy.
     # J^T J is P x P, so this suits networks of a few thousand parameters.
-    lm_log = {"iterations": 0, "rejected": 0, "stalled": 0}
     if config.lm_iterations > 0:
         normal_equations, lm_loss = make_gauss_newton(config, field, unflatten)
-        lam, nu = None, 2.0
-        for step in range(config.lm_iterations):
+        lam, nu, first = None, 2.0, 0
+        if position[0] == "lm":
+            lam, nu, first, batch = meta["lam"], meta["nu"], position[1], saved_batch()
+        for step in range(first, config.lm_iterations):
             if step % config.lm_resample_every == 0:
                 key, draw = jax.random.split(key)
                 batch = draw_batch(draw, unflatten(flat))
@@ -1348,11 +1522,17 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
             iteration += 1
             lm_log["iterations"] += 1
             record(unflatten(flat), batch, "lm", step // config.lm_resample_every, iteration, lam)
+            checkpoint_state("lm", step + 1, flat, batch, iteration=iteration,
+                             adam_seconds=adam_seconds, lam=lam, nu=nu)
 
     if best["where"] == "initial":
         raise RuntimeError(
             "no trained parameters beat the untrained network on the held-out points; "
             "refusing to return the random initialisation as a result")
+    if best["where"] == "init:0":
+        raise RuntimeError(
+            f"training did not improve on the starting run {config.init_from!r} on the held-out "
+            "points; nothing new to save")
     info = {
         "parameter_count": int(ravel_pytree(params)[0].size),
         "adam_seconds": adam_seconds,
@@ -1361,6 +1541,7 @@ def train(config: Config, verbose: bool = True, checkpoint=None):
         "selected_heldout_loss": best["heldout"],
         "lbfgs_cycles": cycle_log,
         "levenberg_marquardt": lm_log,
+        "resumed_from": resumed_from,
     }
     return best["params"], history, info
 
@@ -1672,16 +1853,27 @@ def load_run(directory):
     return model
 
 
-def run(config_path, out=None, verbose=True):
+def run(config_path, out=None, verbose=True, resume=False):
+    """Train, evaluate and save one run. With `resume`, continue an interrupted
+    run in `out` from its checkpoint: its config.yaml must be the same file,
+    byte for byte, and the result equals the uninterrupted run's."""
     config = load_config(config_path)
     directory = pathlib.Path(out) if out else HERE / "runs" / config.name
-    if directory.exists() and any(directory.iterdir()):
-        raise FileExistsError(
-            f"{directory} already holds files. A run never writes over another run: "
-            "delete it or pass a different --out.")
-    directory.mkdir(parents=True, exist_ok=True)
-    (directory / "config.yaml").write_text(
-        pathlib.Path(config_path).read_text(encoding="utf-8"), encoding="utf-8")
+    text = pathlib.Path(config_path).read_text(encoding="utf-8")
+    if resume:
+        if (directory / "params.npz").exists():
+            raise FileExistsError(f"{directory} is a finished run; there is nothing to resume")
+        stored = directory / "config.yaml"
+        if not stored.is_file() or stored.read_text(encoding="utf-8") != text:
+            raise ValueError(f"cannot resume {directory}: its config.yaml is missing or is not "
+                             f"the same file as {config_path}")
+    else:
+        if directory.exists() and any(directory.iterdir()):
+            raise FileExistsError(
+                f"{directory} already holds files. A run never writes over another run: "
+                "delete it or pass a different --out (or --resume an interrupted run).")
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "config.yaml").write_text(text, encoding="utf-8")
 
     if verbose:
         print(f"[{config.name}] developing flow, Re = {config.reynolds:g} "
@@ -1706,8 +1898,19 @@ def run(config_path, out=None, verbose=True):
                  f" ({config.rar_mode})" if config.rar_points else "")
               + f", {config.lbfgs_cycles} L-BFGS cycles of {config.lbfgs_iterations}")
 
+    initial, warm = None, None
+    if config.init_from != "random":
+        initial, digest = warm_start_params(config, directory.parent / config.init_from)
+        warm = {"run": config.init_from, "params_sha256": digest}
+        if verbose:
+            print(f"[{config.name}] starting from run {config.init_from} "
+                  f"(params.npz sha256 {digest[:16]}...)")
+
     checkpoint = directory / "checkpoint.npz"
-    params, history, info = train(config, verbose=verbose, checkpoint=checkpoint)
+    params, history, info = train(config, verbose=verbose, checkpoint=checkpoint, initial=initial,
+                                  resume=resume)
+    if warm is not None:
+        info["init_from"] = warm
 
     # Losses of the SELECTED parameters on a fresh draw. The held-out loss was
     # already measured, compiled, when train() selected them.
@@ -1788,8 +1991,10 @@ def main(argv=None) -> int:
     parser.add_argument("--config", required=True, help="path to a developing-flow YAML config")
     parser.add_argument("--out", default=None, help="run directory (default: developing_flow/runs/<name>)")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--resume", action="store_true",
+                        help="continue an interrupted run from its checkpoint.npz")
     args = parser.parse_args(argv)
-    run(args.config, args.out, verbose=not args.quiet)
+    run(args.config, args.out, verbose=not args.quiet, resume=args.resume)
     return 0
 
 

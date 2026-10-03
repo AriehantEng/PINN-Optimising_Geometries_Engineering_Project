@@ -38,6 +38,7 @@ def tiny_document():
         "lbfgs": {"cycles": 2, "iterations_per_cycle": 20, "gtol": 1.0e-14},
         "lm": {"iterations": 0},
         "check_every": 10,
+        "init_from": "random",
     }
     document["evaluation"] = {"nx": 21, "ny": 11, "profile_stations": [0.0, 1.0],
                               "n_flux_stations": 5}
@@ -552,7 +553,8 @@ def test_migration_records_what_old_runs_actually_did(tmp_path):
     for section, key in (("sampling", "rar_points"), ("sampling", "inlet_points"),
                          ("physics", "inlet_condition"), ("physics", "formulation"),
                          ("model", "activation"), ("model", "init_gain"),
-                         ("model", "input_map"), ("training", "lm")):
+                         ("model", "input_map"), ("training", "lm"),
+                         ("training", "init_from")):
         del document[section][key]
     del document["training"]["adam"]["schedule"]
     run = tmp_path / "old_run"
@@ -700,12 +702,18 @@ def test_the_reference_floor_is_the_last_change_over_its_observed_order(tmp_path
             "v_observed_order": 2.0, "p_l2_change": 3e-5, "p_observed_order": 2.0,
             "entrance_length_change": -2e-6}
     (tmp_path / "reference.json").write_text(json.dumps(
-        {"convergence": [{}, last], "entrance_length": 2.0}))
+        {"convergence": [{}, last], "entrance_length": 2.0,
+         "grid_convergence_index": {"total_pressure_drop": {"gci_fine": 4e-8},
+                                    "dissipation": {"gci_fine": 5e-8}},
+         "energy": {"energy_consistency": 3e-9}}))
     floor = summary_reference.reference_floor(tmp_path)
     assert abs(floor["u"] - 1e-6) < 1e-18 and floor["u_entrance"] == floor["u"]
     assert abs(floor["v"] - 2.0 * 3e-6 / 3.0) < 1e-18   # rescaled from |u| to |v|
     assert abs(floor["p"] - 1e-5) < 1e-18
     assert abs(floor["entrance_length"] - 1e-6) < 1e-18
+    # integrated quantities: the GCI (Celik 2008), and the reference's own budget closure
+    assert floor["total_pressure_drop"] == 4e-8 and floor["dissipation"] == 5e-8
+    assert floor["energy_consistency"] == 3e-9
 
 
 def test_the_pinn_energy_budget_is_exact_on_the_developed_field(config):
@@ -1191,3 +1199,193 @@ def test_the_stream_function_is_measured_like_any_other_field():
     m, _ = pinn.measure_solution(config, pinn.make_field(config), random_params(config, 1))
     assert abs(m["flux_at_inlet_station"] - pinn.INLET_FLUX) < 1e-12
     assert m["residual_continuity_max"] < 1e-12
+
+
+# -- resuming an interrupted run, and starting from a finished one ----------- #
+
+
+class Interrupted(Exception):
+    pass
+
+
+def tiny_lm_document():
+    document = tiny_document()
+    document["training"]["lm"] = {"iterations": 4, "damping": 1e-3, "resample_every": 2}
+    return document
+
+
+@pytest.fixture(scope="module")
+def uninterrupted():
+    return pinn.train(pinn.parse_config(tiny_lm_document()), verbose=False)
+
+
+def _same_rows(a, b):
+    """History rows equal in everything but wall-clock time (NaN equals NaN)."""
+    assert len(a) == len(b)
+    for left, right in zip(a, b):
+        assert left.keys() == right.keys()
+        for name in left:
+            if name == "seconds":
+                continue
+            x, y = left[name], right[name]
+            assert x == y or (isinstance(x, float) and np.isnan(x) and np.isnan(y)), (name, x, y)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("saves", [3, 6, 7, 8, 10])
+def test_a_resumed_run_reproduces_the_uninterrupted_run_bitwise(tmp_path, monkeypatch,
+                                                                uninterrupted, saves):
+    """Killed straight after its n-th checkpoint: mid-Adam (3), end of Adam
+    (6), after each L-BFGS cycle (7, 8), mid-Levenberg-Marquardt (10). The
+    tiny run checkpoints 6 + 2 + 4 times."""
+    config = pinn.parse_config(tiny_lm_document())
+    checkpoint = tmp_path / "checkpoint.npz"
+    save = pinn.save_training_state
+    count = {"n": 0}
+
+    def save_then_die(*args):
+        save(*args)
+        count["n"] += 1
+        if count["n"] == saves:
+            raise Interrupted
+    monkeypatch.setattr(pinn, "save_training_state", save_then_die)
+    with pytest.raises(Interrupted):
+        pinn.train(config, verbose=False, checkpoint=checkpoint)
+    monkeypatch.setattr(pinn, "save_training_state", save)
+
+    params, history, info = pinn.train(config, verbose=False, checkpoint=checkpoint, resume=True)
+    expected_params, expected_history, expected_info = uninterrupted
+    assert np.array_equal(np.asarray(ravel_pytree(params)[0]),
+                          np.asarray(ravel_pytree(expected_params)[0]))
+    _same_rows(history, expected_history)
+    for name in ("selected", "selected_heldout_loss", "lbfgs_cycles", "levenberg_marquardt"):
+        assert info[name] == expected_info[name], name
+    assert len(info["resumed_from"]) == 1 and expected_info["resumed_from"] == []
+
+
+def test_resuming_refuses_a_different_config_or_code(tmp_path):
+    config = pinn.parse_config(tiny_document())
+    other = pinn.parse_config({**tiny_document(), "seed": 1})
+    path = tmp_path / "checkpoint.npz"
+    meta = {"version": pinn.TRAINING_STATE_VERSION, "config": pinn._config_fingerprint(other),
+            "code": pinn._code_fingerprint()}
+    pinn.save_training_state(path, {}, meta)
+    with pytest.raises(ValueError, match="config fingerprint"):
+        pinn.load_training_state(path, config)
+    meta.update(config=pinn._config_fingerprint(config), code="0" * 64)
+    pinn.save_training_state(path, {}, meta)
+    with pytest.raises(ValueError, match="code fingerprint"):
+        pinn.load_training_state(path, config)
+
+
+def test_a_best_parameters_only_checkpoint_cannot_be_resumed(tmp_path):
+    config = pinn.parse_config(tiny_document())
+    path = tmp_path / "checkpoint.npz"
+    pinn.save_params(path, random_params(config, 0))
+    with pytest.raises(ValueError, match="no training state"):
+        pinn.load_training_state(path, config)
+    with pytest.raises(ValueError, match="needs the checkpoint"):
+        pinn.train(config, verbose=False, resume=True)
+
+
+def test_run_resumes_only_an_unfinished_run_of_the_same_config_file(tmp_path):
+    config_path = tmp_path / "tiny.yaml"
+    config_path.write_text(yaml.safe_dump(tiny_document()), encoding="utf-8")
+    directory = tmp_path / "run"
+    directory.mkdir()
+    (directory / "config.yaml").write_text(
+        config_path.read_text(encoding="utf-8") + "# edited\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="not the same file"):
+        pinn.run(config_path, out=directory, verbose=False, resume=True)
+    (directory / "config.yaml").write_text(config_path.read_text(encoding="utf-8"),
+                                           encoding="utf-8")
+    (directory / "params.npz").write_bytes(b"")
+    with pytest.raises(FileExistsError, match="nothing to resume"):
+        pinn.run(config_path, out=directory, verbose=False, resume=True)
+    with pytest.raises(FileExistsError, match="--resume"):
+        pinn.run(config_path, out=directory, verbose=False)
+
+
+@pytest.mark.parametrize("value", ["", "runs/developing_re10", "..", "."])
+def test_init_from_names_a_sibling_run_not_a_path(value):
+    document = base_document()
+    document["training"]["init_from"] = value
+    with pytest.raises(pinn.ConfigError, match="init_from"):
+        pinn.parse_config(document)
+
+
+def test_adam_may_be_skipped_but_not_negative():
+    document = base_document()
+    document["training"]["adam"]["steps"] = 0
+    assert pinn.parse_config(document).adam_steps == 0
+    document["training"]["adam"]["steps"] = -1
+    with pytest.raises(pinn.ConfigError, match="adam.steps"):
+        pinn.parse_config(document)
+
+
+def _finished_parent(tmp_path, document, seed=0):
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    (parent / "config.yaml").write_text(yaml.safe_dump(document), encoding="utf-8")
+    pinn.save_params(parent / "params.npz", random_params(pinn.parse_config(document), seed))
+    return parent
+
+
+@pytest.mark.parametrize("section, key, value", [
+    ("model", "width", 24), ("model", "activation", "silu"),
+    ("physics", "formulation", "stream_pressure"), ("domain", "length", 5.0),
+])
+def test_a_warm_start_keeps_the_network_and_its_ansatz(tmp_path, section, key, value):
+    parent = _finished_parent(tmp_path, tiny_document())
+    document = tiny_document()
+    document[section][key] = value
+    document["training"]["init_from"] = "parent"
+    if key == "formulation":
+        document["physics"]["lift"] = "inlet"
+        del document["weights"]["continuity"]
+    with pytest.raises(pinn.ConfigError, match="keeps the network"):
+        pinn.warm_start_params(pinn.parse_config(document), parent)
+
+
+def test_a_warm_start_needs_a_finished_parent_and_returns_its_parameters(tmp_path):
+    document = tiny_document()
+    document["training"]["init_from"] = "parent"
+    config = pinn.parse_config(document)
+    with pytest.raises(pinn.ConfigError, match="not a finished run"):
+        pinn.warm_start_params(config, tmp_path / "parent")
+    parent = _finished_parent(tmp_path, tiny_document(), seed=3)
+    params, digest = pinn.warm_start_params(config, parent)
+    assert np.array_equal(np.asarray(ravel_pytree(params)[0]),
+                          np.asarray(ravel_pytree(random_params(config, 3))[0]))
+    assert len(digest) == 64
+    with pytest.raises(ValueError, match="pass that run's parameters"):
+        pinn.train(config, verbose=False)
+    with pytest.raises(ValueError, match="'random'"):
+        pinn.train(pinn.parse_config(tiny_document()), verbose=False, initial=params)
+
+
+@pytest.mark.slow
+def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
+    """Same seed, so the same held-out points: the child's first history row
+    must carry the parent's selected held-out loss, to the bit."""
+    import json
+    parent_path = tmp_path / "parent.yaml"
+    parent_path.write_text(yaml.safe_dump(tiny_document()), encoding="utf-8")
+    pinn.run(parent_path, out=tmp_path / "parent", verbose=False)
+    parent_metrics = json.loads((tmp_path / "parent" / "metrics.json").read_text())
+
+    document = tiny_document()
+    document["training"]["init_from"] = "parent"
+    document["training"]["adam"]["steps"] = 0
+    document["training"]["lbfgs"]["cycles"] = 1
+    document["training"]["lm"] = {"iterations": 3, "damping": 1e-3, "resample_every": 1}
+    child_path = tmp_path / "child.yaml"
+    child_path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    directory = pinn.run(child_path, out=tmp_path / "child", verbose=False)
+    metrics = json.loads((directory / "metrics.json").read_text())
+    with open(directory / "history.csv", encoding="utf-8") as handle:
+        first = handle.read().splitlines()[1].split(",")
+    assert first[0] == "init"
+    assert float(first[4]) == parent_metrics["loss_heldout"]
+    assert metrics["loss_heldout"] < parent_metrics["loss_heldout"]
+    assert metrics["info_init_from"]["run"] == "parent"
