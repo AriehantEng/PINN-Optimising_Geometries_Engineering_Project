@@ -6,6 +6,7 @@ Relative L2 errors (entrance length: relative error). Several seeds: mean (range
 |---|---|---|---|---|---|---|---|---|
 | G3 LM, fresh points each step | 1 | 5.50e-06 | 5.77e-06 | 5.33e-06 | 1.59e-04 | 3.37e-05 | 9.12e-06 | 206 |
 | G1 width 40 + LM | 1 | 7.42e-06 | 8.81e-06 | 6.47e-06 | 1.72e-04 | 3.44e-05 | 1.87e-04 | 123 |
+| G4 G3 + dense corner inlet grid | 1 | 8.37e-06 | 6.40e-06 | 9.34e-06 | 1.67e-04 | 3.02e-05 | 1.52e-05 | 229 |
 | E8 exponential input map | 1 | 1.98e-04 | 2.35e-04 | 1.73e-04 | 3.34e-03 | 3.17e-04 | 2.77e-03 | 51 |
 | G2 stream, exact BCs + LM | 1 | 2.06e-04 | 1.96e-04 | 2.12e-04 | 6.06e-03 | 4.34e-04 | 2.98e-03 | 112 |
 | E1 24 L-BFGS cycles | 3 | 2.30e-04 (1.8e-04 to 3.1e-04) | 1.54e-04 (1.4e-04 to 1.6e-04) | 2.62e-04 (1.9e-04 to 3.7e-04) | 3.99e-03 (3.8e-03 to 4.1e-03) | 4.37e-04 (4.0e-04 to 5.1e-04) | 5.37e-03 (9.0e-04 to 9.2e-03) | 81 |
