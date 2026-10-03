@@ -13,7 +13,7 @@
 # (Durst et al. 2005, flat inlet), so a channel of 10 leaves about 8 of
 # developed flow to check the outlet against.
 name: developing_re10_polish_points
-seed: 0
+seed: 1                       # not G4's 0: its held-out points selected the starting network
 physics:
   reynolds: 10.0              # Re_h = U h / nu: developed centreline speed, half-height
   pressure_scaling: inertial  # p* = p / (rho U^2); use viscous only for Re <= 1

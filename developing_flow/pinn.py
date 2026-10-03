@@ -1241,6 +1241,30 @@ def warm_start_params(config: Config, parent_directory):
                 f"training.init_from = {config.init_from!r}: {name} is {getattr(parent, name)!r} "
                 f"there and {getattr(config, name)!r} here; a warm start keeps the network and "
                 "its ansatz")
+    # The seed fixes the held-out points, and a run's held-out points chose
+    # its network (the minimum over hundreds of noisy iterates: G4's chosen
+    # network scored 1.38e-8 on them and 2.22e-8 on fresh points). Reusing an
+    # ancestor's seed would score the starting network with that bias, and
+    # training would have to beat a lucky number. So the whole chain differs.
+    seeds, ancestor, where = {}, parent, parent_directory
+    while True:
+        if ancestor.name in seeds.values():
+            raise ConfigError(f"training.init_from: the chain of starting runs loops at "
+                              f"{ancestor.name!r}")
+        seeds.setdefault(ancestor.seed, ancestor.name)
+        if ancestor.init_from == "random":
+            break
+        where = where.parent / ancestor.init_from
+        if not (where / "config.yaml").is_file():
+            raise ConfigError(f"training.init_from: {ancestor.name!r} started from "
+                              f"{ancestor.init_from!r}, which is not in {where.parent}; the "
+                              "seeds of the whole chain cannot be checked")
+        ancestor = load_config(where / "config.yaml")
+    if config.seed in seeds:
+        raise ConfigError(
+            f"seed {config.seed} is also the seed of {seeds[config.seed]!r}, which this run "
+            "starts from: its held-out points selected that network and would score the start "
+            f"with a bias. Use a seed not in {sorted(seeds)}.")
     raw = (parent_directory / "params.npz").read_bytes()
     _, unflatten = ravel_pytree(init_params(config, root_keys(config.seed)[0]))
     flat = np.load(parent_directory / "params.npz")["flat"]

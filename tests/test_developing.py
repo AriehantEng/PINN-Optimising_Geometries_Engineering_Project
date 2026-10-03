@@ -1350,6 +1350,7 @@ def test_a_warm_start_keeps_the_network_and_its_ansatz(tmp_path, section, key, v
 def test_a_warm_start_needs_a_finished_parent_and_returns_its_parameters(tmp_path):
     document = tiny_document()
     document["training"]["init_from"] = "parent"
+    document["seed"] = 1
     config = pinn.parse_config(document)
     with pytest.raises(pinn.ConfigError, match="not a finished run"):
         pinn.warm_start_params(config, tmp_path / "parent")
@@ -1364,10 +1365,33 @@ def test_a_warm_start_needs_a_finished_parent_and_returns_its_parameters(tmp_pat
         pinn.train(pinn.parse_config(tiny_document()), verbose=False, initial=params)
 
 
+def test_a_warm_start_refuses_a_seed_anywhere_in_its_ancestry(tmp_path):
+    """The seed fixes the held-out points that selected each ancestor's network."""
+    parent = _finished_parent(tmp_path, tiny_document())          # seed 0, from random
+    child = tiny_document()
+    child.update(name="child", seed=1)
+    child["training"]["init_from"] = "parent"
+    (tmp_path / "child").mkdir()
+    (tmp_path / "child" / "config.yaml").write_text(yaml.safe_dump(child), encoding="utf-8")
+    pinn.save_params(tmp_path / "child" / "params.npz",
+                     random_params(pinn.parse_config(child), 1))
+    for seed, culprit in ((0, "'tiny'"), (1, "'child'")):
+        grandchild = tiny_document()
+        grandchild.update(seed=seed)
+        grandchild["training"]["init_from"] = "child"
+        with pytest.raises(pinn.ConfigError, match=f"seed {seed} is also the seed of {culprit}"):
+            pinn.warm_start_params(pinn.parse_config(grandchild), tmp_path / "child")
+    grandchild["seed"] = 2
+    pinn.warm_start_params(pinn.parse_config(grandchild), tmp_path / "child")
+    (parent / "config.yaml").rename(tmp_path / "moved.yaml")
+    with pytest.raises(pinn.ConfigError, match="cannot be checked"):
+        pinn.warm_start_params(pinn.parse_config(grandchild), tmp_path / "child")
+
+
 @pytest.mark.slow
 def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
-    """Same seed, so the same held-out points: the child's first history row
-    must carry the parent's selected held-out loss, to the bit."""
+    """The child's first history row is the parent's selected network, scored
+    on the child's own held-out points (another seed, so unbiased)."""
     import json
     parent_path = tmp_path / "parent.yaml"
     parent_path.write_text(yaml.safe_dump(tiny_document()), encoding="utf-8")
@@ -1375,6 +1399,7 @@ def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
     parent_metrics = json.loads((tmp_path / "parent" / "metrics.json").read_text())
 
     document = tiny_document()
+    document["seed"] = 1
     document["training"]["init_from"] = "parent"
     document["training"]["adam"]["steps"] = 0
     document["training"]["lbfgs"]["cycles"] = 1
@@ -1386,6 +1411,13 @@ def test_a_warm_started_run_begins_exactly_where_its_parent_ended(tmp_path):
     with open(directory / "history.csv", encoding="utf-8") as handle:
         first = handle.read().splitlines()[1].split(",")
     assert first[0] == "init"
-    assert float(first[4]) == parent_metrics["loss_heldout"]
-    assert metrics["loss_heldout"] < parent_metrics["loss_heldout"]
+    config = pinn.parse_config(document)
+    parent_params = pinn.warm_start_params(config, tmp_path / "parent")[0]
+    heldout = pinn.sample_batch(pinn.root_keys(1)[2], config, config.n_validation)
+    weights = {k: jnp.asarray(v) for k, v in config.weights.items()}
+    start = float(pinn.total_loss(
+        pinn.make_loss_terms(config, pinn.make_field(config))(parent_params, heldout), weights))
+    assert abs(float(first[4]) - start) <= 1e-12 * start
+    assert float(first[4]) != parent_metrics["loss_heldout"]   # other points, other number
+    assert metrics["loss_heldout"] < start
     assert metrics["info_init_from"]["run"] == "parent"
