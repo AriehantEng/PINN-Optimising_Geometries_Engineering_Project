@@ -694,10 +694,11 @@ def test_the_scorecard_measures_each_run_against_the_reference_for_its_own_probl
 def test_the_reference_floor_is_the_last_change_over_its_observed_order(tmp_path):
     import json
     from developing_flow import summary_reference
-    x, y = np.linspace(0.0, 10.0, 5), np.linspace(-1.0, 1.0, 3)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    u, v = 1.0 - Y**2 + 0.0 * X, 0.5 * (1.0 - Y**2) + 0.0 * X   # |u| / |v| = 2 exactly
-    np.savez_compressed(tmp_path / "reference.npz", x=x, y=y, u=u, v=v, p=10.0 - X)
+    from developing_flow import reference
+    xn, yn = np.linspace(0.0, 10.0, 5), np.array([-1.0, 0.0, 1.0])
+    X2, Y2 = np.meshgrid(np.linspace(0.0, 10.0, 9), np.linspace(-1.0, 1.0, 5), indexing="ij")
+    reference.LatticeSolution(xn, yn, 1.0 - Y2**2, 0.5 * (1.0 - Y2**2),   # |u| / |v| = 2 exactly
+                              np.zeros((5, 3))).save(tmp_path / "solution.npz")
     last = {"u_l2_change": 7e-6, "u_observed_order": 3.0, "v_l2_change": 3e-6,
             "v_observed_order": 2.0, "p_l2_change": 3e-5, "p_observed_order": 2.0,
             "entrance_length_change": -2e-6}
@@ -705,7 +706,12 @@ def test_the_reference_floor_is_the_last_change_over_its_observed_order(tmp_path
         {"convergence": [{}, last], "entrance_length": 2.0,
          "grid_convergence_index": {"total_pressure_drop": {"gci_fine": 4e-8},
                                     "dissipation": {"gci_fine": 5e-8}},
-         "energy": {"energy_consistency": 3e-9}}))
+         "energy": {"energy_consistency": 3e-9}, "length_sampled": 10.0}))
+    with pytest.raises(ValueError, match="predates mesh-integrated norms"):
+        summary_reference.reference_floor(tmp_path)
+    described = json.loads((tmp_path / "reference.json").read_text())
+    described["convergence_norm"] = "relative L2, mesh Gauss quadrature"
+    (tmp_path / "reference.json").write_text(json.dumps(described))
     floor = summary_reference.reference_floor(tmp_path)
     assert abs(floor["u"] - 1e-6) < 1e-18 and floor["u_entrance"] == floor["u"]
     assert abs(floor["v"] - 2.0 * 3e-6 / 3.0) < 1e-18   # rescaled from |u| to |v|
@@ -1466,6 +1472,15 @@ POLISH = {  # each polish run against re10_polish_control: what it may change
     "re10_polish_average.yaml": {"name", "sampling.n_validation", "training.lm.average"},
     "re10_polish_points.yaml": {"name", "sampling.n_validation", "training.lm.average",
                                 "sampling.n_interior"},
+    "re10_polish_average_seed2.yaml": {"name", "sampling.n_validation", "training.lm.average", "seed"},
+    "re10_polish_average_seed3.yaml": {"name", "sampling.n_validation", "training.lm.average", "seed"},
+    "re10_polish_focus0.yaml": {"name", "sampling.n_validation", "training.lm.average", "sampling.focus_fraction"},
+    "re10_polish_focus25.yaml": {"name", "sampling.n_validation", "training.lm.average", "sampling.focus_fraction"},
+    "re10_polish_focus75.yaml": {"name", "sampling.n_validation", "training.lm.average", "sampling.focus_fraction"},
+    "re10_polish_g3.yaml": {"name", "sampling.n_validation", "training.lm.average", "training.init_from", "sampling.n_inlet",
+                            "sampling.inlet_points"},
+    "re10_polish_g5.yaml": {"name", "sampling.n_validation", "training.lm.average", "training.init_from", "sampling.n_inlet",
+                            "sampling.inlet_points", "model.input_map", "model.input_length"},
 }
 
 
@@ -1485,5 +1500,25 @@ def test_each_polish_run_changes_only_its_own_keys(filename, allowed):
         control = flat(yaml.safe_load(handle))
     with open(f"developing_flow/{filename}", encoding="utf-8") as handle:
         polish = flat(yaml.safe_load(handle))
-    assert set(control) == set(polish)
-    assert {k for k in control if control[k] != polish[k]} == allowed
+    missing = object()   # a key present in only one of the two is a difference
+    assert {k for k in set(control) | set(polish)
+            if control.get(k, missing) != polish.get(k, missing)} == allowed
+
+
+def test_the_entrance_length_is_measured_without_interpolation_bias():
+    """u_c(x) = 1 - 0.3 exp(-2x): the 99% crossing is known in closed form.
+    At CENTRELINE_POINTS the linear-interpolation bias must be far below the
+    1e-5 entrance-length errors the runs are ranked by; at the old 1,001
+    points it was not."""
+    length = 10.0
+
+    def model(x, y):
+        x, y = np.broadcast_arrays(np.asarray(x, float), np.asarray(y, float))
+        return (1.0 - 0.3 * np.exp(-2.0 * x)) * (1.0 - y**2), 0.0 * x, 0.0 * x
+
+    developed = 1.0 - 0.3 * np.exp(-2.0 * length)
+    exact = -0.5 * np.log((1.0 - 0.99 * developed) / 0.3)
+    assert abs(pinn.entrance_length(model, length) / exact - 1.0) < 1e-7
+    xc = np.linspace(0.0, length, 1001)
+    old = pinn._crossing(xc, model(xc, 0.0 * xc)[0], 0.99 * developed)
+    assert abs(old / exact - 1.0) > 1e-6

@@ -107,7 +107,13 @@ def sweep(directory, nx: int, ny: int, reference_dir=None, verbose: bool = True)
 
 
 def against_reference(reference_dir, x, y, U, V, P, developed_from) -> dict:
-    """Errors of (U, V, P), sampled on the grid x by y, against the reference."""
+    """Errors of (U, V, P), sampled on the grid x by y, against the reference.
+
+    Grid sums, kept for the Step 0-1 scorecards they produced. They over-weight
+    the inlet column x = 0, so p here is inflated by the corner pressure spike
+    (about half of it at the 2001 x 1001 grid); the canonical errors are
+    reference.relative_errors, integrated on the reference's mesh.
+    """
     rx, ry, ru, rv, rp = reference.load(reference_dir)
     if not (np.array_equal(rx, x) and np.array_equal(ry, y)):
         raise ValueError(f"{reference_dir} is sampled on a {len(rx)} x {len(ry)} grid over "

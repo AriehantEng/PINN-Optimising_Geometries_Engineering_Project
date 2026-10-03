@@ -1655,6 +1655,25 @@ def residuals_at(config: Config, field, params, points, chunk=4096):
     return tuple(np.concatenate([np.asarray(o[k]) for o in outputs])[:n] for k in range(7))
 
 
+#: Centreline points for the entrance length, here and in the reference. The
+#: 99% crossing is linearly interpolated, with an O(dx^2) bias: at 1,001 points
+#: (dx = 0.01) it was 8.5e-6, 4.8e-6 relative, half of G3's and G4's entire
+#: reported entrance-length error, while the reference used 10,001. At 10,001
+#: it is below 3e-7.
+CENTRELINE_POINTS = 10001
+
+
+def entrance_length(model, length):
+    """The 99% entrance length of model(x, y) -> (u, v, p) arrays: where the
+    centreline first reaches 0.99 of 0.75 x (flux at the outlet), measured
+    identically for a PINN and for the reference."""
+    nodes, weights = np.polynomial.legendre.leggauss(200)
+    u_out, _, _ = model(np.full_like(nodes, length), nodes)
+    xc = np.linspace(0.0, length, CENTRELINE_POINTS)
+    uc, _, _ = model(xc, np.zeros_like(xc))
+    return _crossing(xc, uc, 0.99 * 0.75 * float(u_out @ weights))
+
+
 def _crossing(x, values, target):
     """First x at which `values` reaches `target`, linearly interpolated."""
     reached = values >= target
@@ -1691,7 +1710,7 @@ def measure_solution(config: Config, field, params):
     flux_outlet = float(flux[-1])
 
     # Centreline development and pressure.
-    xc = np.linspace(0.0, L, 1001)
+    xc = np.linspace(0.0, L, CENTRELINE_POINTS)
     uc, _, pc = predict(field, params, np.stack([xc, np.zeros_like(xc)], axis=-1))
     developed_centreline = 0.75 * flux_outlet
     entrance = _crossing(xc, uc, 0.99 * developed_centreline)

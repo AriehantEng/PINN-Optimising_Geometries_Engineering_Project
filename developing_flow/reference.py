@@ -219,28 +219,30 @@ def _lagrange_weights(nodes, points, degree):
                                   2.0 * t * (t - 0.5)], axis=1)
 
 
-class Solution:
-    """A solved field that evaluates (u, v, p) at arbitrary points.
+class LatticeSolution:
+    """(u, v, p) of a Q2/Q1 solution at arbitrary points, from nodal values alone.
 
     The mesh is a tensor product of rectangles, so Q2 velocity and Q1 pressure
     are tensor products of 1D Lagrange interpolants on each element. Evaluation
     uses that directly instead of a general point search, which does not scale
     to millions of points; `tests/test_reference.py` checks it against
-    scikit-fem's own `probes`.
+    scikit-fem's own `probes`. Needs no scikit-fem objects, so a solved
+    reference can be stored (`save`) and evaluated anywhere later
+    (`load_solution`), not only on the grid it was sampled on.
     """
 
-    def __init__(self, basis_u, basis_p, U, P, info, x_nodes, y_nodes):
-        self.basis_u, self.basis_p, self.U, self.P, self.info = basis_u, basis_p, U, P, info
+    def __init__(self, x_nodes, y_nodes, lattice_u, lattice_v, lattice_p):
         self.x_nodes, self.y_nodes = np.asarray(x_nodes), np.asarray(y_nodes)
-        (u, scalar), (v, _) = basis_u.split(U)
-        # Q2 node lattice: vertices plus midpoints, (2 nx + 1) x (2 ny + 1).
-        self.x2 = np.empty(2 * len(self.x_nodes) - 1)
-        self.x2[0::2], self.x2[1::2] = self.x_nodes, 0.5 * (self.x_nodes[1:] + self.x_nodes[:-1])
-        self.y2 = np.empty(2 * len(self.y_nodes) - 1)
-        self.y2[0::2], self.y2[1::2] = self.y_nodes, 0.5 * (self.y_nodes[1:] + self.y_nodes[:-1])
-        self.lattice_u = self._to_lattice(u, scalar.doflocs, self.x2, self.y2)
-        self.lattice_v = self._to_lattice(v, scalar.doflocs, self.x2, self.y2)
-        self.lattice_p = self._to_lattice(P, basis_p.doflocs, self.x_nodes, self.y_nodes)
+        self.lattice_u, self.lattice_v = np.asarray(lattice_u), np.asarray(lattice_v)
+        self.lattice_p = np.asarray(lattice_p)
+        q2 = (2 * len(self.x_nodes) - 1, 2 * len(self.y_nodes) - 1)
+        if self.lattice_u.shape != q2 or self.lattice_v.shape != q2 \
+                or self.lattice_p.shape != (len(self.x_nodes), len(self.y_nodes)):
+            raise ValueError("lattice shapes do not match the mesh nodes")
+
+    def save(self, path):
+        np.savez_compressed(path, x_nodes=self.x_nodes, y_nodes=self.y_nodes,
+                            u=self.lattice_u, v=self.lattice_v, p=self.lattice_p)
 
     @staticmethod
     def _to_lattice(values, doflocs, xs, ys):
@@ -260,6 +262,7 @@ class Solution:
             raise RuntimeError("the tensor lattice is not fully covered by degrees of freedom")
         return lattice
 
+
     def __call__(self, x, y):
         x, y = np.broadcast_arrays(np.asarray(x, float), np.asarray(y, float))
         xf, yf = x.ravel(), y.ravel()
@@ -275,6 +278,88 @@ class Solution:
                     value += wx[:, a] * wy[:, b] * lattice[i0 + a, j0 + b]
             out.append(value.reshape(x.shape))
         return tuple(out)
+
+
+class Solution(LatticeSolution):
+    """A solved field: the scikit-fem objects, and the lattice evaluator."""
+
+    def __init__(self, basis_u, basis_p, U, P, info, x_nodes, y_nodes):
+        self.basis_u, self.basis_p, self.U, self.P, self.info = basis_u, basis_p, U, P, info
+        x_nodes, y_nodes = np.asarray(x_nodes), np.asarray(y_nodes)
+        (u, scalar), (v, _) = basis_u.split(U)
+        # Q2 node lattice: vertices plus midpoints, (2 nx + 1) x (2 ny + 1).
+        self.x2 = np.empty(2 * len(x_nodes) - 1)
+        self.x2[0::2], self.x2[1::2] = x_nodes, 0.5 * (x_nodes[1:] + x_nodes[:-1])
+        self.y2 = np.empty(2 * len(y_nodes) - 1)
+        self.y2[0::2], self.y2[1::2] = y_nodes, 0.5 * (y_nodes[1:] + y_nodes[:-1])
+        super().__init__(x_nodes, y_nodes,
+                         self._to_lattice(u, scalar.doflocs, self.x2, self.y2),
+                         self._to_lattice(v, scalar.doflocs, self.x2, self.y2),
+                         self._to_lattice(P, basis_p.doflocs, x_nodes, y_nodes))
+
+    def lattice(self):
+        """The same solution without the scikit-fem objects: small, storable."""
+        return LatticeSolution(self.x_nodes, self.y_nodes, self.lattice_u, self.lattice_v,
+                               self.lattice_p)
+
+
+def load_solution(directory):
+    """The finest reference mesh's solution, evaluable anywhere (solution.npz)."""
+    path = pathlib.Path(directory) / "solution.npz"
+    if not path.is_file():
+        raise FileNotFoundError(f"{path} does not exist: this reference was written before "
+                                "solutions were stored; rerun developing_flow.reference")
+    with np.load(path) as data:
+        return LatticeSolution(data["x_nodes"], data["y_nodes"], data["u"], data["v"], data["p"])
+
+
+#: Gauss-Legendre points per element and direction in every error norm. The
+#: integrand (smooth network minus a Q2/Q1 polynomial) is integrated element by
+#: element on the reference's own mesh, which crowds the inlet and the walls
+#: down to elements 0.00085 x 0.00054. A uniform sampling grid cannot do this:
+#: the inlet corners carry a pressure spike narrower than its spacing, and the
+#: x = 0 column, weighted like any other, then supplied half of the "p error"
+#: (see norm_quadrature's test). Checked converged in the tests.
+NORM_GAUSS = 6
+
+
+def norm_quadrature(x_nodes, y_nodes, length, n_gauss=NORM_GAUSS):
+    """(X, Y, W): Gauss points in every element of a tensor mesh with x <= length,
+    and their weights, as (n_x, n_y) arrays. sum(W f) integrates f."""
+    xs = np.asarray(x_nodes)
+    xs = xs[xs <= length * (1.0 + 1e-12)]
+    if abs(xs[-1] - length) > 1e-9 * length:
+        raise ValueError(f"the mesh has no node at x = {length}; cannot integrate to there")
+    g, w = np.polynomial.legendre.leggauss(n_gauss)
+
+    def composite(nodes):
+        left, right = nodes[:-1, None], nodes[1:, None]
+        return ((0.5 * (right - left) * g + 0.5 * (right + left)).ravel(),
+                (0.5 * (right - left) * w).ravel())
+
+    x, wx = composite(xs)
+    y, wy = composite(np.asarray(y_nodes))
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    return X, Y, np.outer(wx, wy)
+
+
+def relative_errors(model, solution, length, developed_from, n_gauss=NORM_GAUSS):
+    """Relative L2 errors of model(x, y) -> (u, v, p) against a reference
+    solution, by `norm_quadrature` on the reference's mesh: whole channel for
+    u, v, p, and u split at x = developed_from."""
+    X, Y, W = norm_quadrature(solution.x_nodes, solution.y_nodes, length, n_gauss)
+    u, v, p = model(X, Y)
+    ru, rv, rp = solution(X, Y)
+    entrance = X < developed_from
+
+    def rel(a, b, mask=None):
+        mask = np.ones(a.shape, bool) if mask is None else mask
+        return float(np.sqrt(np.sum((W * (a - b) ** 2)[mask]) / np.sum((W * b**2)[mask])))
+
+    return {"u": rel(u, ru), "u_entrance": rel(u, ru, entrance),
+            "u_developed": rel(u, ru, ~entrance), "v": rel(v, rv), "p": rel(p, rp),
+            "u_max_at_gauss_points": float(np.max(np.abs(u - ru))),
+            "quadrature_points": int(X.size), "gauss_per_direction": n_gauss}
 
 
 def solve_channel(reynolds, pressure_scaling, sharpness, length, nx, ny, grading,
@@ -425,10 +510,9 @@ def developed_measures(solution, length):
     sx, sy = np.meshgrid(stations, nodes, indexing="ij")
     u, _, _ = solution(sx, sy)
     flux = u @ weights
-    xc = np.linspace(0.0, length, 10001)
+    xc = np.linspace(0.0, length, pinn.CENTRELINE_POINTS)
     uc, _, pc = solution(xc, np.zeros_like(xc))
-    developed = 0.75 * flux[-1]
-    entrance = pinn._crossing(xc, uc, 0.99 * developed)
+    entrance = pinn.entrance_length(solution, length)   # exactly as for a PINN
     return {"stations": stations, "flux": flux, "xc": xc, "uc": uc, "pc": pc,
             "entrance_length": entrance}
 
@@ -458,11 +542,6 @@ def main(argv=None) -> int:
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    # A fixed comparison grid for the convergence study: node-free points so
-    # that no level is compared exactly at its own nodes.
-    cx = np.linspace(0.0, config.length, 401)
-    cy = np.linspace(-1.0, 1.0, 201)
-    gx, gy = np.meshgrid(cx, cy, indexing="ij")
     levels = []
     for level in range(args.levels):
         nx, ny = args.nx * 2**level, args.ny * 2**level
@@ -470,27 +549,31 @@ def main(argv=None) -> int:
         solution = solve_channel(config.reynolds, config.pressure_scaling,
                                  config.inlet_sharpness, length, nx, ny, args.x_grading,
                                  verbose=True)
-        fields = solution(gx, gy)
         measures = developed_measures(solution, config.length)
         a, nu = pinn.scaling_coefficients(config.reynolds, config.pressure_scaling)
         # The budget closes only over the channel the PINN solves.
         energy = energy_budget(solution, a, nu, config.length) if length == config.length else None
-        levels.append({"nx": nx, "ny": ny, "fields": fields, "measures": measures,
+        levels.append({"nx": nx, "ny": ny, "solution": solution.lattice(), "measures": measures,
                        "info": solution.info, "energy": energy})
         print(f"  {solution.info['unknowns']} unknowns, {solution.info['seconds']:.0f} s, "
               f"entrance length {measures['entrance_length']:.6f}", flush=True)
 
-    # Differences between successive levels, and the observed order.
+    # Differences between successive levels, and the observed order, as L2
+    # norms integrated on the FINEST mesh (the levels nest, so every coarser
+    # solution is a polynomial on each finest element and the integrals are
+    # exact). The maximum is over the same Gauss points.
     names = ("u", "v", "p")
+    finest_solution = levels[-1]["solution"]
+    QX, QY, QW = norm_quadrature(finest_solution.x_nodes, finest_solution.y_nodes, config.length)
+    fields = [L["solution"](QX, QY) for L in levels]
     convergence = []
     for k in range(1, len(levels)):
         row = {"coarse": [levels[k - 1]["nx"], levels[k - 1]["ny"]],
                "fine": [levels[k]["nx"], levels[k]["ny"]]}
         for i, name in enumerate(names):
-            diff = levels[k]["fields"][i] - levels[k - 1]["fields"][i]
-            scale = np.linalg.norm(levels[k]["fields"][i]) if name != "v" else \
-                np.linalg.norm(levels[k]["fields"][0])
-            row[f"{name}_l2_change"] = float(np.linalg.norm(diff) / scale)
+            diff = fields[k][i] - fields[k - 1][i]
+            scale = fields[k][i] if name != "v" else fields[k][0]
+            row[f"{name}_l2_change"] = float(np.sqrt(np.sum(QW * diff**2) / np.sum(QW * scale**2)))
             row[f"{name}_max_change"] = float(np.max(np.abs(diff)))
         row["entrance_length_change"] = float(
             levels[k]["measures"]["entrance_length"] - levels[k - 1]["measures"]["entrance_length"])
@@ -507,6 +590,7 @@ def main(argv=None) -> int:
     print(f"sampling the finest level on {args.grid[0]} x {args.grid[1]}", flush=True)
     u, v, p = solution(fx, fy)
     np.savez_compressed(out / "reference.npz", x=solution_x, y=solution_y, u=u, v=v, p=p)
+    finest_solution.save(out / "solution.npz")
 
     m = finest["measures"]
     parabola = pinn.developed_profile(solution_y, pinn.INLET_FLUX)
@@ -528,6 +612,8 @@ def main(argv=None) -> int:
             for key in ("dissipation", "total_pressure_drop", "static_pressure_drop")}
         if len(levels) >= 3 and finest["energy"] else {},
         "convergence": convergence,
+        "convergence_norm": (f"relative L2, Gauss-Legendre {NORM_GAUSS} x {NORM_GAUSS} in every "
+                             "element of the finest mesh"),
         "entrance_length": m["entrance_length"],
         "flux_max_relative_error": float(np.max(np.abs(m["flux"] / pinn.INLET_FLUX - 1.0))),
         "centreline_pressure_drop": float(m["pc"][0] - m["pc"][-1]),

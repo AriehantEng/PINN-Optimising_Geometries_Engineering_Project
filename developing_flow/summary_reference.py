@@ -7,8 +7,10 @@
         baseline=developing_flow/runs/developing_re10_seed1 ...
 
 Each run is measured against the reference for its own problem (picked from
---solutions by Reynolds number, scaling, inlet sharpness and length), on every
-second point of the reference's stored grid, and by its energy budget
+--solutions by Reynolds number, scaling, inlet sharpness and length), by
+relative L2 norms integrated on the reference's own finite-element mesh
+(reference.relative_errors; a uniform grid over-weights the inlet corners,
+where a pressure spike narrower than its spacing sits), and by its energy budget
 (developing_flow/energy.py): the flux-weighted total-pressure drop, which is
 the bifurcation study's objective, the viscous dissipation, and how well the
 two balance with no reference at all. Runs sharing a label are seeds of
@@ -43,22 +45,27 @@ METRICS = (
 )
 
 
-def _relative(a, b):
-    return float(np.linalg.norm(a - b) / np.linalg.norm(b))
-
-
 def reference_floor(solution_dir):
     """The reference's own relative L2 errors, from its two finest meshes:
-    change / (2^order - 1) at the observed order; entrance length likewise."""
+    change / (2^order - 1) at the observed order; entrance length likewise.
+    The changes must be mesh-integrated norms, the same norm the runs are
+    scored in; a reference whose convergence study used a sampling grid is
+    refused rather than mixed in."""
     described = json.loads((pathlib.Path(solution_dir) / "reference.json").read_text())
+    if "convergence_norm" not in described:
+        raise ValueError(f"{solution_dir}: its convergence study predates mesh-integrated norms "
+                         "(it over-weights the inlet column); rerun developing_flow.reference")
     last = described["convergence"][-1]
-    _, _, ru, rv, _ = reference.load(solution_dir)
+    solution = reference.load_solution(solution_dir)
+    X, Y, W = reference.norm_quadrature(solution.x_nodes, solution.y_nodes,
+                                        described["length_sampled"])
+    ru, rv, _ = solution(X, Y)
     floor = {}
     for name in ("u", "v", "p"):
         order = last[f"{name}_observed_order"]
         change = last[f"{name}_l2_change"]
         if name == "v":  # the convergence study scales v's change by |u|
-            change *= np.linalg.norm(ru) / np.linalg.norm(rv)
+            change *= np.sqrt(np.sum(W * ru**2) / np.sum(W * rv**2))
         floor[name] = change / (2.0**order - 1.0)
     floor["u_entrance"] = floor["u_developed"] = floor["u"]
     floor["entrance_length"] = abs(last["entrance_length_change"]) / described["entrance_length"]
@@ -69,17 +76,15 @@ def reference_floor(solution_dir):
     return floor
 
 
-def measure(directory, solutions, stride=2):
+def measure(directory, solutions):
     model = pinn.load_run(directory)
     config = model.config
     solution = pick_solution(config, solutions)
-    x, y, ru, rv, rp = reference.load(solution)
-    x, y = x[::stride], y[::stride]
-    ru, rv, rp = ru[::stride, ::stride], rv[::stride, ::stride], rp[::stride, ::stride]
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    u, v, p = model(X, Y)
-    entrance = x < 2.0 * pinn.correlation_entrance_length(config.reynolds)
+    errors = reference.relative_errors(
+        model, reference.load_solution(solution), config.length,
+        2.0 * pinn.correlation_entrance_length(config.reynolds))
     described = json.loads((pathlib.Path(solution) / "reference.json").read_text())
+    entrance = pinn.entrance_length(model, config.length)
     metrics = json.loads((pathlib.Path(directory) / "metrics.json").read_text())
     budget = energy.run_budget(directory)
     return {
@@ -87,13 +92,11 @@ def measure(directory, solutions, stride=2):
                                    / described["energy"]["total_pressure_drop"] - 1.0),
         "dissipation": abs(budget["dissipation"] / described["energy"]["dissipation"] - 1.0),
         "energy_consistency": budget["energy_consistency"],
-        "u": _relative(u, ru),
-        "u_entrance": _relative(u[entrance], ru[entrance]),
-        "u_developed": _relative(u[~entrance], ru[~entrance]),
-        "v": _relative(v, rv),
-        "p": _relative(p, rp),
-        "entrance_length": abs(metrics["entrance_length"] / described["entrance_length"] - 1.0)
-        if np.isfinite(metrics["entrance_length"]) else float("inf"),
+        **{key: errors[key] for key in ("u", "u_entrance", "u_developed", "v", "p")},
+        # Recomputed, not read from metrics.json: runs before CENTRELINE_POINTS
+        # measured it with a 1,001-point centreline and its interpolation bias.
+        "entrance_length": abs(entrance / described["entrance_length"] - 1.0)
+        if np.isfinite(entrance) else float("inf"),
         "minutes": metrics["info_total_seconds"] / 60.0,
         "solution": str(solution),
     }

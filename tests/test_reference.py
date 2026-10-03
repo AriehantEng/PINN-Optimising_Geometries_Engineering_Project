@@ -107,3 +107,66 @@ def test_the_grid_convergence_index_recovers_a_known_order():
     assert abs(gci["extrapolated"] - 1.0) < 1e-12
     assert abs(gci["gci_fine"] - 1.25 * (0.875 / 1.125) / 7.0) < 1e-12
     assert reference.grid_convergence_index(1.0, 2.0, 1.5)["order"] is None  # oscillating
+
+
+def test_a_stored_lattice_evaluates_exactly_like_the_solution(tmp_path):
+    solution = reference.solve_channel(10.0, "inertial", 8, 10.0, 16, 6, 4.0)
+    solution.lattice().save(tmp_path / "solution.npz")
+    stored = reference.load_solution(tmp_path)
+    rng = np.random.default_rng(1)
+    x, y = rng.uniform(0.0, 10.0, 500), rng.uniform(-1.0, 1.0, 500)
+    for a, b in zip(solution(x, y), stored(x, y)):
+        assert np.array_equal(a, b)
+    with pytest.raises(FileNotFoundError, match="rerun"):
+        reference.load_solution(tmp_path / "missing")
+
+
+def test_the_norm_quadrature_is_exact_on_polynomials_and_stops_at_a_node():
+    X, Y, W = reference.norm_quadrature(reference.x_nodes(20, 10.0, 5.0), reference.y_nodes(6), 10.0)
+    assert abs(W.sum() - 20.0) < 1e-12
+    assert abs(np.sum(W * X**5 * Y**6) - 1e6 / 6 * 2 / 7) < 1e-9 * 1e6
+    nodes = reference.x_nodes(20, 15.0, 5.0)
+    X, _, W = reference.norm_quadrature(nodes, reference.y_nodes(6), nodes[18])
+    assert X.max() < nodes[18] and abs(W.sum() - 2.0 * nodes[18]) < 1e-12
+    with pytest.raises(ValueError, match="no node"):
+        reference.norm_quadrature(nodes, reference.y_nodes(6), 10.0)
+
+
+def test_a_corner_spike_is_integrated_on_the_mesh_and_overweighted_on_a_grid():
+    """Why the norms moved off the sampling grid. A spike of width 1e-3 at the
+    inlet corners, like the PINN's pressure error there: the reference mesh's
+    Gauss points integrate it, while the 2001 x 1001 grid, whose x = 0 column
+    is weighted like any other, overstates it several times over."""
+    d = 1e-3
+
+    def spike(x, y):
+        return np.exp(-x / d) * np.exp(-(1.0 - np.abs(y)) / d)
+
+    exact = 2.0 * (d * (1.0 - np.exp(-10.0 / d))) * (d * (1.0 - np.exp(-1.0 / d)))
+    X, Y, W = reference.norm_quadrature(reference.x_nodes(400, 10.0, 5.0),
+                                        reference.y_nodes(96), 10.0)
+    assert abs(np.sum(W * spike(X, Y)) / exact - 1.0) < 1e-6
+    gx, gy = np.meshgrid(np.linspace(0, 10, 2001), np.linspace(-1, 1, 1001), indexing="ij")
+    grid = np.sum(spike(gx, gy)) * (10.0 / 2000) * (2.0 / 1000)
+    assert grid / exact > 5.0
+
+
+def test_relative_errors_vanish_on_the_exact_field_and_measure_a_known_offset():
+    reynolds, length = 10.0, 10.0
+    solution = reference.solve_channel(reynolds, "inertial", 1, length, 20, 6, 3.0)
+    _, nu = pinn.scaling_coefficients(reynolds, "inertial")
+
+    def exact(x, y):
+        return 1.0 - y**2, 0.0 * x, 2.0 * nu * (length - x)
+
+    errors = reference.relative_errors(exact, solution, length, 3.77)
+    for key in ("u", "u_entrance", "u_developed", "v", "p"):
+        if key != "v":   # v is zero: its relative error is 0/0
+            assert errors[key] < 1e-12, key
+
+    def offset(x, y):
+        u, v, p = exact(x, y)
+        return u + 1e-3, v, p
+    # ||1e-3|| / ||1 - y^2|| over the whole channel = 1e-3 sqrt(20) / sqrt(10 * 16/15)
+    expected = 1e-3 * np.sqrt(20.0 / (10.0 * 16.0 / 15.0))
+    assert abs(reference.relative_errors(offset, solution, length, 3.77)["u"] / expected - 1) < 1e-10

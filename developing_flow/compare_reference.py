@@ -72,15 +72,17 @@ def measure(solution_dir, directory, stride=2):
     X, Y = np.meshgrid(xs, ys, indexing="ij")
     u, v, p = model(X, Y)
     su, sv, sp = ru[::stride, ::stride], rv[::stride, ::stride], rp[::stride, ::stride]
-    entrance = xs < developed_from
     out["maps"] = {"x": xs, "y": ys, "u": np.abs(u - su), "v": np.abs(v - sv), "p": np.abs(p - sp)}
     metrics = json.loads((pathlib.Path(directory) / "metrics.json").read_text())
+    # The norms are integrated on the reference's mesh, not summed over the
+    # grid the maps use: the grid over-weights the inlet column, where the
+    # corner pressure spike is narrower than its spacing.
+    errors = reference.relative_errors(model, reference.load_solution(solution_dir),
+                                       config.length, developed_from)
     out["summary"] = {
-        "u": _relative(u, su), "u_entrance": _relative(u[entrance], su[entrance]),
-        "u_developed": _relative(u[~entrance], su[~entrance]),
-        "v": _relative(v, sv), "p": _relative(p, sp),
+        **{key: errors[key] for key in ("u", "u_entrance", "u_developed", "v", "p")},
         "u_max": float(np.max(np.abs(u - su))),
-        "entrance_length": metrics["entrance_length"],
+        "entrance_length": pinn.entrance_length(model, config.length),
         "entrance_length_ref": described["entrance_length"],
         "minutes": metrics["info_total_seconds"] / 60.0,
         "heldout": metrics["loss_heldout"],
@@ -213,8 +215,10 @@ def format_tables(runs, labels):
     lines = [
         "## Table 1. Whole-channel accuracy against the finite-element reference",
         "",
-        "The reference's own error is about 1e-6 in u (mesh convergence, "
-        "docs/developing_re10-reference.json), well below every number here.",
+        "Relative L2 norms integrated on the reference's finite-element mesh "
+        f"({reference.NORM_GAUSS} x {reference.NORM_GAUSS} Gauss points in every element); the "
+        "largest error in u is over the sampling grid. The reference's own error is in "
+        "docs/developing_re10-reference.json.",
         "",
         "| Run | u, relative L2, whole channel | u, entrance region x* < "
         f"{first['developed_from']:.2f} | u, developed region | largest error in u | "
