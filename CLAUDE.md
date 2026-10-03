@@ -167,3 +167,24 @@ coefficients against geometry, so this recurs.
 Both slow down several-fold and timings become meaningless. Run the sweep, then
 the tests.
 
+
+**A small held-out set cannot rank networks on a Levenberg-Marquardt plateau.**
+`developing_re10_polish_control` (G4 + 100 LM steps) selected an iterate whose
+held-out loss beat G4's (1.94e-8 vs 2.64e-8) and whose error against the
+finite-element reference was WORSE in u, v, p and the objective (u 1.19e-5 vs
+8.4e-6, total-pressure drop 1.4e-5 vs 2.4e-6) → with fresh points every step
+the iterates scatter by one draw's sampling noise, and 4,096 held-out points
+measure the loss with more noise than the iterates differ by (G4 alone scores
+1.38e-8 on one such set, 2.64e-8 on another) → select on many more held-out
+points, average iterates, and rank by the reference. Corollary: the G1/G3/G4
+differences are partly selection luck. A warm start must also not reuse an
+ancestor's seed: its held-out points chose the parent, so they flatter it.
+
+**Migrating stored runs can break a queue running on older frozen code.**
+`re10_polish_points` died at start-up with `unknown key(s) under training.lm:
+['average']` → the migration for a new required key had rewritten G4's stored
+config, and the queue's frozen worktree predated the key, so it refused G4 as
+a warm-start parent → since warm starts, a run reads its siblings' configs, so
+migrate only when no queue on older code will read them, or move the queue's
+worktree to the migrating commit first. A checkpoint from the older code then
+refuses to resume (code fingerprint), by design.
