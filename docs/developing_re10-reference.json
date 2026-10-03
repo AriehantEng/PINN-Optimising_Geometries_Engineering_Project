@@ -32,10 +32,20 @@
           "update": 1.34745638412175e-15
         }
       ],
-      "seconds": 0.5992755789999364,
+      "seconds": 0.5945162330000358,
       "unknowns": 5713,
       "elements": 600,
-      "entrance_length": 1.7776993900729319
+      "entrance_length": 1.7776993900729319,
+      "energy": {
+        "flux_in": 1.3331032814848236,
+        "flux_out": 1.3331032814848203,
+        "energy_in": 3.3017401757529994,
+        "energy_out": 0.4569062732068143,
+        "dissipation": 2.8448978532090656,
+        "total_pressure_drop": 2.133993623793035,
+        "static_pressure_drop": 2.2383927473519276,
+        "energy_consistency": 2.247907172085222e-05
+      }
     },
     {
       "nx": 100,
@@ -62,10 +72,20 @@
           "update": 1.256814636280722e-15
         }
       ],
-      "seconds": 3.6037733460000254,
+      "seconds": 3.7519156350000458,
       "unknowns": 22223,
       "elements": 2400,
-      "entrance_length": 1.7793317703976632
+      "entrance_length": 1.7793317703976632,
+      "energy": {
+        "flux_in": 1.3333183296709077,
+        "flux_out": 1.333318329670901,
+        "energy_in": 3.303486197999656,
+        "energy_out": 0.4571274249768355,
+        "dissipation": 2.8463561654268483,
+        "total_pressure_drop": 2.1347931020534046,
+        "static_pressure_drop": 2.2393387179734408,
+        "energy_consistency": 9.161172463778257e-07
+      }
     },
     {
       "nx": 200,
@@ -92,10 +112,20 @@
           "update": 1.6483291552401094e-15
         }
       ],
-      "seconds": 33.48328603499999,
+      "seconds": 33.39438481399998,
       "unknowns": 87643,
       "elements": 9600,
-      "entrance_length": 1.7794138871492517
+      "entrance_length": 1.7794138871492517,
+      "energy": {
+        "flux_in": 1.333332385316876,
+        "flux_out": 1.3333323853168642,
+        "energy_in": 3.3035948740686676,
+        "energy_out": 0.4571418820399201,
+        "dissipation": 2.84645149006182,
+        "total_pressure_drop": 2.134841261920048,
+        "static_pressure_drop": 2.239396379936168,
+        "energy_consistency": 5.276629278662723e-07
+      }
     },
     {
       "nx": 400,
@@ -122,12 +152,49 @@
           "update": 4.301877189462467e-15
         }
       ],
-      "seconds": 274.161662376,
+      "seconds": 268.32306080600006,
       "unknowns": 348083,
       "elements": 38400,
-      "entrance_length": 1.7794157336021346
+      "entrance_length": 1.7794157336021346,
+      "energy": {
+        "flux_in": 1.333333273920128,
+        "flux_out": 1.3333332739201031,
+        "energy_in": 3.3036007464434616,
+        "energy_out": 0.4571427960311706,
+        "dissipation": 2.846457525553397,
+        "total_pressure_drop": 2.1348435579376424,
+        "static_pressure_drop": 2.239399279254419,
+        "energy_consistency": 1.4925882099902214e-07
+      }
     }
   ],
+  "energy": {
+    "flux_in": 1.333333273920128,
+    "flux_out": 1.3333332739201031,
+    "energy_in": 3.3036007464434616,
+    "energy_out": 0.4571427960311706,
+    "dissipation": 2.846457525553397,
+    "total_pressure_drop": 2.1348435579376424,
+    "static_pressure_drop": 2.239399279254419,
+    "energy_consistency": 1.4925882099902214e-07
+  },
+  "grid_convergence_index": {
+    "dissipation": {
+      "order": 3.9813059163941507,
+      "extrapolated": 2.8464579335219042,
+      "gci_fine": 1.7915624241077379e-07
+    },
+    "total_pressure_drop": {
+      "order": 4.390625794755452,
+      "extrapolated": 2.134843672879953,
+      "gci_fine": 6.730136641690173e-08
+    },
+    "static_pressure_drop": {
+      "order": 4.313834336675904,
+      "extrapolated": 2.2393994327540607,
+      "gci_fine": 8.568126024607468e-08
+    }
+  },
   "convergence": [
     {
       "coarse": [

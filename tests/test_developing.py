@@ -708,6 +708,21 @@ def test_the_reference_floor_is_the_last_change_over_its_observed_order(tmp_path
     assert abs(floor["entrance_length"] - 1e-6) < 1e-18
 
 
+def test_the_pinn_energy_budget_is_exact_on_the_developed_field(config):
+    """The quadrature must integrate the exact developed field's dissipation,
+    8 nu L / 3, and its flux-weighted total-pressure drop, 2 nu L, exactly."""
+    from developing_flow import energy
+    L, nu = config.length, 1.0 / config.reynolds
+
+    def exact(params, xy):
+        return jnp.stack([1.0 - xy[1] ** 2, 0.0 * xy[0], 2.0 * nu * (L - xy[0])])
+
+    budget = energy.budget(config, exact, None)
+    assert abs(budget["dissipation"] - 8.0 * nu * L / 3.0) < 1e-12
+    assert abs(budget["total_pressure_drop"] - 2.0 * nu * L) < 1e-12
+    assert budget["energy_consistency"] < 1e-12
+
+
 def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():
     from developing_flow import scorecard
     keys = [k for k, _ in scorecard.METRICS]

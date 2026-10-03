@@ -84,3 +84,26 @@ def test_mesh_nodes_span_the_domain_and_crowd_the_inlet_and_walls():
     y = reference.y_nodes(12)
     assert y[0] == -1.0 and y[-1] == 1.0 and np.all(np.diff(y) > 0)
     assert np.diff(y)[0] < np.diff(y)[6] / 5
+
+
+@pytest.mark.parametrize("scaling", ["inertial", "viscous"])
+def test_the_energy_budget_of_poiseuille_flow_is_exact(scaling):
+    """inflow - outflow = dissipation = Q dp = (4/3)(2 nu L) for the exact field."""
+    reynolds, length = 10.0, 10.0
+    a, nu = pinn.scaling_coefficients(reynolds, scaling)
+    solution = reference.solve_channel(reynolds, scaling, 1, length, 20, 6, 3.0)
+    budget = reference.energy_budget(solution, a, nu, length)
+    expected = 8.0 * nu * length / 3.0
+    assert abs(budget["dissipation"] - expected) < 1e-12 * expected
+    assert abs(budget["energy_in"] - budget["energy_out"] - expected) < 1e-12 * expected
+    assert abs(budget["total_pressure_drop"] - 2.0 * nu * length) < 1e-12 * nu * length
+    assert budget["energy_consistency"] < 1e-12
+
+
+def test_the_grid_convergence_index_recovers_a_known_order():
+    # f(h) = 1 + 8 h^3 at h = 1, 1/2, 1/4: order 3, limit 1
+    gci = reference.grid_convergence_index(9.0, 2.0, 1.125)
+    assert abs(gci["order"] - 3.0) < 1e-12
+    assert abs(gci["extrapolated"] - 1.0) < 1e-12
+    assert abs(gci["gci_fine"] - 1.25 * (0.875 / 1.125) / 7.0) < 1e-12
+    assert reference.grid_convergence_index(1.0, 2.0, 1.5)["order"] is None  # oscillating

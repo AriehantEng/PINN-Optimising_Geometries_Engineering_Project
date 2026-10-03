@@ -8,7 +8,10 @@
 
 Each run is measured against the reference for its own problem (picked from
 --solutions by Reynolds number, scaling, inlet sharpness and length), on every
-second point of the reference's stored grid. Runs sharing a label are seeds of
+second point of the reference's stored grid, and by its energy budget
+(developing_flow/energy.py): the flux-weighted total-pressure drop, which is
+the bifurcation study's objective, the viscous dissipation, and how well the
+two balance with no reference at all. Runs sharing a label are seeds of
 one setup and are shown as a range. The reference's own error, estimated from
 its mesh convergence, is drawn on each panel: a run below that line cannot be
 ranked against another run below it.
@@ -24,7 +27,7 @@ import pathlib
 
 import numpy as np
 
-from developing_flow import pinn, reference
+from developing_flow import energy, pinn, reference
 from developing_flow.scorecard import pick_solution
 
 METRICS = (
@@ -34,6 +37,9 @@ METRICS = (
     ("v", "v, whole channel"),
     ("p", "p, whole channel"),
     ("entrance_length", "entrance length"),
+    ("total_pressure_drop", "total-pressure drop (the design objective)"),
+    ("dissipation", "viscous dissipation"),
+    ("energy_consistency", "energy budget, PINN alone (no reference)"),
 )
 
 
@@ -56,6 +62,10 @@ def reference_floor(solution_dir):
         floor[name] = change / (2.0**order - 1.0)
     floor["u_entrance"] = floor["u_developed"] = floor["u"]
     floor["entrance_length"] = abs(last["entrance_length_change"]) / described["entrance_length"]
+    gci = described["grid_convergence_index"]
+    floor["total_pressure_drop"] = gci["total_pressure_drop"]["gci_fine"]
+    floor["dissipation"] = gci["dissipation"]["gci_fine"]
+    floor["energy_consistency"] = described["energy"]["energy_consistency"]
     return floor
 
 
@@ -71,7 +81,12 @@ def measure(directory, solutions, stride=2):
     entrance = x < 2.0 * pinn.correlation_entrance_length(config.reynolds)
     described = json.loads((pathlib.Path(solution) / "reference.json").read_text())
     metrics = json.loads((pathlib.Path(directory) / "metrics.json").read_text())
+    budget = energy.run_budget(directory)
     return {
+        "total_pressure_drop": abs(budget["total_pressure_drop"]
+                                   / described["energy"]["total_pressure_drop"] - 1.0),
+        "dissipation": abs(budget["dissipation"] / described["energy"]["dissipation"] - 1.0),
+        "energy_consistency": budget["energy_consistency"],
         "u": _relative(u, ru),
         "u_entrance": _relative(u[entrance], ru[entrance]),
         "u_developed": _relative(u[~entrance], ru[~entrance]),
@@ -131,7 +146,7 @@ def plot(summary, rows, floor, reference_setup, out, title):
 
     order = sorted(summary, key=lambda s: summary[s]["u"]["mean"])[::-1]
     y = np.arange(len(order))
-    fig, axes = plt.subplots(2, 3, figsize=(16, 2.2 + 0.42 * len(order) * 2), sharey=True)
+    fig, axes = plt.subplots(3, 3, figsize=(16, 2.6 + 0.42 * len(order) * 3), sharey=True)
     ref = summary[reference_setup]
     for ax, (key, name) in zip(axes.ravel(), METRICS):
         ax.axvspan(ref[key]["min"], ref[key]["max"], color=pinn.GRID, zorder=0)

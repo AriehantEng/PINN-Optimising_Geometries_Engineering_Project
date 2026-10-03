@@ -352,6 +352,72 @@ def solve_kovasznay(reynolds, n):
 # --------------------------------------------------------------------------- #
 
 
+def energy_budget(solution, a, nu, length):
+    """The mechanical-energy budget of a solution, each term to quadrature accuracy.
+
+    Dotting momentum with u and integrating over the channel gives, for steady
+    incompressible flow with no-slip walls,
+
+        inflow - outflow = dissipation + boundary viscous work,
+        inflow  = int_inlet  (p + a |u|^2 / 2) u dy,
+        outflow = int_outlet (p + a |u|^2 / 2) u dy,
+        dissipation = 2 nu int e:e dA,   e the strain-rate tensor.
+
+    With these boundary conditions the boundary work vanishes: v = 0 along the
+    inlet makes v_y = 0 there, hence u_x = 0, and the outlet is developed. So
+    (inflow - outflow) / Q is the flux-weighted total-pressure drop, the
+    objective of the bifurcation study, and it must equal dissipation / Q.
+
+    Line integrals use Gauss-Legendre on every element of the y-mesh (exact
+    for the piecewise polynomials); the dissipation is assembled on the mesh.
+    """
+    from skfem.helpers import transpose
+
+    @fem.Functional
+    def dissipation(w):
+        e = 0.5 * (w["u"].grad + transpose(w["u"].grad))
+        return 2.0 * nu * ddot(e, e)
+
+    phi = float(dissipation.assemble(solution.basis_u,
+                                     u=solution.basis_u.interpolate(solution.U)))
+    nodes, weights = np.polynomial.legendre.leggauss(6)
+    left, right = solution.y_nodes[:-1, None], solution.y_nodes[1:, None]
+    y = (0.5 * (right - left) * nodes[None, :] + 0.5 * (right + left)).ravel()
+    w = (0.5 * (right - left) * weights[None, :]).ravel()
+
+    def through(x):
+        u, v, p = solution(np.full_like(y, x), y)
+        return (float(u @ w), float(((p + 0.5 * a * (u**2 + v**2)) * u) @ w),
+                float((p * u) @ w))
+
+    q_in, total_in, static_in = through(0.0)
+    q_out, total_out, static_out = through(length)
+    return {"flux_in": q_in, "flux_out": q_out, "energy_in": total_in, "energy_out": total_out,
+            "dissipation": phi,
+            "total_pressure_drop": (total_in - total_out) / q_in,
+            "static_pressure_drop": (static_in - static_out) / q_in,
+            "energy_consistency": abs(total_in - total_out - phi) / phi}
+
+
+def grid_convergence_index(coarse, medium, fine, ratio=2.0, safety=1.25):
+    """Celik et al. (2008) GCI of a scalar from three meshes refined by `ratio`.
+
+    Returns the observed order, the Richardson-extrapolated value and the GCI
+    of the finest mesh as a fraction of its value. Valid for integrated
+    quantities, whose error has a smooth expansion in h (unlike values
+    sampled between nodes, where Richardson extrapolation failed its
+    Kovasznay check).
+    """
+    e32, e21 = medium - coarse, fine - medium
+    if e21 == 0.0 or e32 == 0.0 or e32 / e21 <= 0.0:
+        return {"order": None, "extrapolated": None, "gci_fine": None,
+                "note": "oscillatory or exact convergence: no GCI"}
+    order = math.log(abs(e32 / e21)) / math.log(ratio)
+    extrapolated = fine + e21 / (ratio**order - 1.0)
+    gci = safety * abs(e21 / fine) / (ratio**order - 1.0)
+    return {"order": order, "extrapolated": extrapolated, "gci_fine": gci}
+
+
 def developed_measures(solution, length):
     """Flux at 201 stations, centreline, and the entrance length of the solution."""
     nodes, weights = np.polynomial.legendre.leggauss(200)
@@ -406,8 +472,11 @@ def main(argv=None) -> int:
                                  verbose=True)
         fields = solution(gx, gy)
         measures = developed_measures(solution, config.length)
+        a, nu = pinn.scaling_coefficients(config.reynolds, config.pressure_scaling)
+        # The budget closes only over the channel the PINN solves.
+        energy = energy_budget(solution, a, nu, config.length) if length == config.length else None
         levels.append({"nx": nx, "ny": ny, "fields": fields, "measures": measures,
-                       "info": solution.info})
+                       "info": solution.info, "energy": energy})
         print(f"  {solution.info['unknowns']} unknowns, {solution.info['seconds']:.0f} s, "
               f"entrance length {measures['entrance_length']:.6f}", flush=True)
 
@@ -451,7 +520,13 @@ def main(argv=None) -> int:
         "length_sampled": config.length,
         "x_grading": args.x_grading,
         "levels": [{"nx": L["nx"], "ny": L["ny"], **L["info"],
-                    "entrance_length": L["measures"]["entrance_length"]} for L in levels],
+                    "entrance_length": L["measures"]["entrance_length"],
+                    "energy": L["energy"]} for L in levels],
+        "energy": finest["energy"],
+        "grid_convergence_index": {
+            key: grid_convergence_index(*(L["energy"][key] for L in levels[-3:]))
+            for key in ("dissipation", "total_pressure_drop", "static_pressure_drop")}
+        if len(levels) >= 3 and finest["energy"] else {},
         "convergence": convergence,
         "entrance_length": m["entrance_length"],
         "flux_max_relative_error": float(np.max(np.abs(m["flux"] / pinn.INLET_FLUX - 1.0))),
@@ -464,7 +539,8 @@ def main(argv=None) -> int:
     }
     with (out / "reference.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
-    print(json.dumps({k: summary[k] for k in ("convergence", "entrance_length",
+    print(json.dumps({k: summary[k] for k in ("convergence", "energy", "grid_convergence_index",
+                                              "entrance_length",
                                               "flux_max_relative_error",
                                               "departure_from_parabola")}, indent=2))
     return 0
