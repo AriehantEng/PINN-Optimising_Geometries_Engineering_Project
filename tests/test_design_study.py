@@ -40,3 +40,19 @@ def test_the_study_config_is_checked():
     del doc["workers"]
     with pytest.raises(pinn.ConfigError, match="workers"):
         d.parse_config(doc)
+
+
+def test_merging_studies_refuses_duplicates_and_mismatched_settings(tmp_path):
+    import json
+    src = "docs/bifurcation_re10-shares.json"
+    one = d.merge([src], tmp_path / "one")
+    assert one["rows"] == json.loads(open(src).read())["rows"]
+    with pytest.raises(pinn.ConfigError, match="twice"):
+        d.merge([src, src], tmp_path / "twice")
+    other = json.loads(open(src).read())
+    other["config"]["mesh"]["max_area"] = 0.01               # a different mesh
+    for row in other["rows"]:
+        row["angles"] = [row["angles"][0] + 1.0, row["angles"][1]]
+    (tmp_path / "other.json").write_text(json.dumps(other))
+    with pytest.raises(pinn.ConfigError, match="mesh differs"):
+        d.merge([src, str(tmp_path / "other.json")], tmp_path / "mixed")

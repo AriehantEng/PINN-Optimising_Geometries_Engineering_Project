@@ -1,0 +1,27 @@
+# The flow-share study at the bifurcation angles study_re10_shares lacks (it
+# has only 120 and 180 degrees), for Network 3: 30, 60, 90 and 150 degrees,
+# each in two or three orientations. None is one of Network 3's validation
+# pairs (45/75, 15/105, 75/105, 45/135, 30/30, 0/90), which stay unseen.
+# Everything but the angles matches study_re10_shares, so the two merge.
+name: study_re10_angles
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+geometry:
+  parent_length: 3.0
+  daughter_length: 8.0
+  min_width: 0.2              # no daughter narrower than a tenth of the parent
+angles: [[15.0, 15.0], [0.0, 30.0], [20.0, 40.0], [0.0, 60.0], [45.0, 45.0], [10.0, 80.0],
+         [75.0, 75.0], [30.0, 120.0], [0.0, 150.0]]
+shares: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+search:
+  grid: 17                    # splits 0.1, 0.15, ..., 0.9 scanned first
+  xatol: 1.0e-3               # then Brent to this tolerance in the split
+mesh:                         # the coarse mesh of the earlier sweeps (~2 s a solve)
+  max_area: 0.02
+  corner_levels: 3
+  corner_radius: 0.4
+check:                        # each optimum and its neighbours re-solved on this
+  max_area: 0.005
+  corner_levels: 5
+workers: 4

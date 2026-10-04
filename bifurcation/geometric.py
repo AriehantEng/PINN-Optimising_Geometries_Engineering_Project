@@ -58,6 +58,8 @@ from bifurcation.geometry import split_bounds  # noqa: E402
 from developing_flow import pinn  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
+#: Report stems in docs/ for runs named before reports were named by run.
+REPORTS = {"network3_re10_shares": "bifurcation_re10-network3"}
 ROOT = HERE.parent
 ConfigError = pinn.ConfigError
 
@@ -355,7 +357,8 @@ def run(config_path, out=None, verbose=True):
         "validation": validation,
     }
     (directory / "metrics.json").write_text(json.dumps(metrics, indent=1, default=float))
-    report(config, study_config, data, params, metrics, ROOT / "docs" / "bifurcation_re10-network3")
+    report(config, study_config, data, params, metrics, ROOT / "docs" / REPORTS[config["name"]]
+           if config["name"] in REPORTS else ROOT / "docs" / config["name"])
     return metrics
 
 

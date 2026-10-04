@@ -1,0 +1,25 @@
+# Network 3, second training: the first (network3_re10_shares) beat the
+# friction law inside its two trained bifurcation angles (120, 180) and lost
+# to it at 60 and 90, which it never saw. Here its data add 30, 60, 90 and
+# 150 degrees (study_re10_angles: 9 pairs), 165 optima in 15 pairs, and the
+# weight-decay candidates extend past 100, the first training's choice and
+# its largest candidate. The validation pairs are unchanged and still unseen.
+name: network3_re10_all
+seed: 7
+data: docs/bifurcation_re10-shares-all.json
+model:
+  width: 8                    # 186 parameters: small, for 66 optima
+  depth: 2
+  activation: tanh
+  init_gain: 1.0
+fit:
+  split_scale: 0.001          # a split error of 0.001 weighs like a 0.1% drop error
+  drop_scale: 0.001
+  regularisation: [1.0, 100.0, 1000.0, 10000.0, 100000.0]   # weight decay candidates, chosen
+                                                            # by leaving one angle pair out
+  restarts: 2                 # least-squares fits from 2 initialisations; the best is kept
+  max_evaluations: 2000
+validation:                   # angle pairs it never saw, checked by finite elements
+  pairs: [[45.0, 75.0], [15.0, 105.0], [75.0, 105.0], [45.0, 135.0], [30.0, 30.0], [0.0, 90.0]]
+  shares: [0.2, 0.5, 0.8]
+  workers: 2

@@ -299,12 +299,51 @@ def plot(summary, path):
     plt.close(fig)
 
 
+def merge(paths, out):
+    """One study from several with the same physics, geometry, search and
+    meshes (only angles and shares may differ): their optima side by side."""
+    studies = [json.loads(pathlib.Path(p).read_text()) for p in paths]
+    fixed = ("physics", "geometry", "search", "mesh", "check")
+    first = studies[0]["config"]
+    for path, study in zip(paths[1:], studies[1:]):
+        for key in fixed:
+            if study["config"][key] != first[key]:
+                raise ConfigError(f"{path}: {key} differs from {paths[0]}'s; its optima are "
+                                  "not comparable")
+    seen = set()
+    rows = []
+    for study in studies:
+        for row in study["rows"]:
+            key = (tuple(row["angles"]), row["share"])
+            if key in seen:
+                raise ConfigError(f"angles {row['angles']} share {row['share']} appear twice")
+            seen.add(key)
+            rows.append(row)
+    config = copy.deepcopy(first)
+    config["name"] = "+".join(s["config"]["name"] for s in studies)
+    config["angles"] = [list(a) for a in dict.fromkeys(tuple(r["angles"]) for r in rows)]
+    config["shares"] = sorted({r["share"] for r in rows if r["share"] is not None})
+    summary = {"config": config, "rows": rows,
+               "seconds": sum(s["seconds"] for s in studies), "merged_from": list(paths)}
+    out = pathlib.Path(out)
+    out.with_suffix(".json").write_text(json.dumps(summary, indent=1, default=str))
+    out.with_suffix(".md").write_text(markdown(summary))
+    plot(summary, out.with_suffix(".png"))
+    return summary
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--config", required=True)
+    parser.add_argument("--config")
+    parser.add_argument("--merge", nargs="+", help="study JSONs to combine instead of running")
     parser.add_argument("--out", required=True, help="path stem: writes .md, .json, .png")
     args = parser.parse_args(argv)
-    run(args.config, args.out)
+    if (args.config is None) == (args.merge is None):
+        parser.error("give exactly one of --config and --merge")
+    if args.merge:
+        merge(args.merge, args.out)
+    else:
+        run(args.config, args.out)
     return 0
 
 
