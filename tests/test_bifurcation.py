@@ -144,6 +144,63 @@ def test_one_bifurcation_angle_many_orientations_and_an_off_centre_tip(angle1, a
     assert abs(T[1]) > 1e-3                                     # w1 = 0.6, w2 = 1.4: off-centre
 
 
+
+ORIENTATIONS = [(60.0, 60.0), (30.0, 90.0), (0.0, 120.0), (45.0, 75.0), (20.0, 45.0),
+                (5.0, 0.0), (80.0, 80.0), (10.0, 150.0)]
+
+
+@pytest.mark.parametrize("angles", ORIENTATIONS)
+@pytest.mark.parametrize("split", [0.15, 0.5, 0.85])
+def test_the_polygon_cuts_into_positive_triangles_that_tile_it(angles, split):
+    from bifurcation.geometry import triangle_quadrature
+    try:
+        g = make(split, *angles)
+    except GeometryError:
+        pytest.skip("not a valid bifurcation")
+    tri = g.triangles()
+    area = 0.5 * ((tri[:, 1, 0] - tri[:, 0, 0]) * (tri[:, 2, 1] - tri[:, 0, 1])
+                  - (tri[:, 1, 1] - tri[:, 0, 1]) * (tri[:, 2, 0] - tri[:, 0, 0]))
+    assert area.min() > -1e-12
+    assert abs(area.sum() - g.area()) < 1e-10
+    points, weights = triangle_quadrature(tri, 2)
+    assert abs(weights.sum() - g.area()) < 1e-10
+    assert g.contains(points).all()
+
+
+def test_the_triangle_rule_is_exact_to_degree_six():
+    from bifurcation.geometry import triangle_quadrature
+    square = np.array([[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]], float)
+    for k in (1, 3):
+        p, w = triangle_quadrature(square, k)
+        for i, j in ((0, 0), (3, 3), (6, 0), (2, 4)):
+            exact = 1.0 / ((i + 1) * (j + 1))
+            assert abs(np.sum(w * p[:, 0] ** i * p[:, 1] ** j) - exact) < 1e-14
+
+
+def test_domain_integrals_differentiate_through_the_moving_boundary():
+    """Network 3 needs d(integral over the domain)/d(design): checked on the
+    area, whose derivative is known by finite differences of the polygon."""
+    from bifurcation.geometry import triangle_quadrature, triangles
+
+    def area(params):
+        split, a1, a2 = params
+        tri = triangles(2.0 * split, 2.0 * (1.0 - split), a1, a2, 3.0, 8.0, xp=jnp)
+        _, w = triangle_quadrature(tri, 1, xp=jnp)
+        return jnp.sum(w)
+
+    p = jnp.array([0.4, math.radians(30.0), math.radians(70.0)])
+    grad = np.asarray(jax.grad(area)(p))
+    for i in range(3):
+        h = 1e-6
+        dp = np.zeros(3)
+        dp[i] = h
+        g_plus = Geometry.from_split(float(p[0] + dp[0]), math.degrees(p[1] + dp[1]),
+                                     math.degrees(p[2] + dp[2]), 3.0, 8.0, min_width=0.2)
+        g_minus = Geometry.from_split(float(p[0] - dp[0]), math.degrees(p[1] - dp[1]),
+                                      math.degrees(p[2] - dp[2]), 3.0, 8.0, min_width=0.2)
+        assert abs(grad[i] - (g_plus.area() - g_minus.area()) / (2 * h)) < 1e-6
+
+
 # -- the finite-element reference on the bifurcation ------------------------ #
 
 COARSE = dict(max_area=0.04, corner_levels=3, corner_radius=0.4)

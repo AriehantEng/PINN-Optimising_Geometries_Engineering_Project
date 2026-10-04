@@ -93,6 +93,114 @@ def vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     return xp.stack([A, B, E2o, E2i, T, E1i, E1o, C, D])
 
 
+def corner_points(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
+    """The named points the decomposition needs (angles in radians):
+    A B C D, the daughters' entry points start1 = C + w1 n1 and start2 = B + w2 n2
+    (each daughter starts at the cross-section through its outer corner), the
+    tip T, and the outlet ends E1o E1i E2o E2i. Differentiable, like `vertices`."""
+    v = vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=xp)
+    A, B, E2o, E2i, T, E1i, E1o, C, D = (v[i] for i in range(9))
+    start1 = C + w1 * xp.stack([xp.sin(angle1), -xp.cos(angle1)])
+    start2 = B + w2 * xp.stack([xp.sin(angle2), xp.cos(angle2)])
+    return dict(A=A, B=B, C=C, D=D, T=T, start1=start1, start2=start2,
+                E1o=E1o, E1i=E1i, E2o=E2o, E2i=E2i)
+
+
+def triangles(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
+    """The polygon cut into 9 triangles, as a (9, 3, 2) array, each listed
+    counter-clockwise (positive area):
+
+        parent      A B C, A C D
+        junction    a fan of 3 over B start2 T start1 C
+        daughter 1  C start1 E1i, C E1i E1o
+        daughter 2  B E2o E2i, B E2i start2
+
+    The junction is the region between the parent's end and the daughters'
+    entry sections, fanned from a vertex that sees the whole of it (a triangle
+    may collapse to zero area where an entry point lies on the junction line).
+    Every corner is a differentiable function of the design parameters, so
+    Gauss points mapped onto these triangles integrate over a domain that
+    moves with the widths and angles, and the integral can be differentiated.
+    """
+    q = corner_points(w1, w2, angle1, angle2, parent_length, daughter_length, xp=xp)
+    fixed = [("A", "B", "C"), ("A", "C", "D"),
+             ("C", "start1", "E1i"), ("C", "E1i", "E1o"),
+             ("B", "E2o", "E2i"), ("B", "E2i", "start2")]
+    tris = [xp.stack([q[a], q[b], q[c]]) for a, b, c in fixed]
+    # The junction pentagon B start2 T start1 C is not always convex (T is a
+    # reflex vertex when both daughters turn). Fan it from whichever vertex
+    # sees all the others: the one whose smallest fan triangle is largest.
+    # The choice switches between geometries, but the area it covers does not.
+    ring = [q["B"], q["start2"], q["T"], q["start1"], q["C"]]
+    fans = []
+    for apex in range(5):
+        others = [ring[(apex + k) % 5] for k in range(1, 5)]
+        fans.append(xp.stack([xp.stack([ring[apex], others[k], others[k + 1]])
+                              for k in range(3)]))
+    fans = xp.stack(fans)                                         # (5, 3, 3, 2)
+    a, b, c = fans[..., 0, :], fans[..., 1, :], fans[..., 2, :]
+    area = 0.5 * ((b[..., 0] - a[..., 0]) * (c[..., 1] - a[..., 1])
+                  - (b[..., 1] - a[..., 1]) * (c[..., 0] - a[..., 0]))
+    best = xp.argmax(xp.min(area, axis=1))
+    junction = fans[best]
+    return xp.concatenate([xp.stack(tris[:2]), junction, xp.stack(tris[2:])])
+
+
+#: Symmetric Gauss rule on the reference triangle (Dunavant 1985, degree 6,
+#: 12 points), as orbits: (a, b, b) with 3 points, (a, b, c) with 6. The
+#: repeated coordinate is COMPUTED from the first, so equal values are equal
+#: to the bit: typed separately they differed in the last digit, and a set of
+#: permutations then counted one orbit twice (weights summed to 1.35).
+_DUNAVANT6_AAB = ((0.873821971016996, 0.050844906370207),
+                  (0.501426509658179, 0.116786275726379))
+_DUNAVANT6_ABC = ((0.636502499121399, 0.310352451033785, 0.082851075618374),)
+
+
+def _dunavant6():
+    bary, weight = [], []
+    for a, w in _DUNAVANT6_AAB:
+        b = 0.5 * (1.0 - a)
+        for p in ((a, b, b), (b, a, b), (b, b, a)):
+            bary.append(p)
+            weight.append(w)
+    for a, b, w in _DUNAVANT6_ABC:
+        c = 1.0 - a - b
+        for p in ((a, b, c), (a, c, b), (b, a, c), (b, c, a), (c, a, b), (c, b, a)):
+            bary.append(p)
+            weight.append(w)
+    bary, weight = np.array(bary), np.array(weight)
+    if abs(weight.sum() - 1.0) > 1e-14 or len(weight) != 12:
+        raise AssertionError("the Dunavant rule is mis-specified")
+    return bary, weight
+
+
+def triangle_quadrature(tris, subdivisions, xp=np):
+    """Gauss points and weights over a set of triangles: each triangle is cut
+    into subdivisions^2 similar ones and a degree-6 rule is applied to each.
+    Returns (points (N, 2), weights (N,)) with sum(weights) = total area."""
+    bary, weight = _dunavant6()
+    k = subdivisions
+    sub = []                                   # sub-triangles in barycentric coordinates
+    for i in range(k):
+        for j in range(k - i):
+            p0 = np.array([i, j]) / k
+            sub.append((p0, p0 + np.array([1, 0]) / k, p0 + np.array([0, 1]) / k))
+            if i + j < k - 1:
+                sub.append((p0 + np.array([1, 0]) / k, p0 + np.array([1, 1]) / k,
+                            p0 + np.array([0, 1]) / k))
+    lam = []                                   # (s, t) of every point in the unit triangle
+    for p0, p1, p2 in sub:
+        for b in bary:
+            lam.append(b[0] * p0 + b[1] * p1 + b[2] * p2)
+    lam = np.array(lam)
+    w_ref = np.tile(weight, len(sub)) / len(sub)
+    a, b, c = tris[:, 0], tris[:, 1], tris[:, 2]
+    area = 0.5 * ((b[:, 0] - a[:, 0]) * (c[:, 1] - a[:, 1]) - (b[:, 1] - a[:, 1]) * (c[:, 0] - a[:, 0]))
+    pts = (a[:, None, :] + lam[None, :, 0:1] * (b - a)[:, None, :]
+           + lam[None, :, 1:2] * (c - a)[:, None, :])
+    return pts.reshape(-1, 2), (area[:, None] * xp.asarray(w_ref)[None, :]).reshape(-1)
+
+
 @dataclass(frozen=True)
 class Geometry:
     """One bifurcation. Widths in the parent's half-width units, angles in degrees."""
@@ -167,6 +275,10 @@ class Geometry:
     def vertices(self):
         return vertices(self.w1, self.w2, math.radians(self.angle1), math.radians(self.angle2),
                         self.parent_length, self.daughter_length)
+
+    def triangles(self):
+        return triangles(self.w1, self.w2, math.radians(self.angle1), math.radians(self.angle2),
+                         self.parent_length, self.daughter_length)
 
     def edges(self):
         """[(start, end, kind)] for the 9 edges, counter-clockwise."""
