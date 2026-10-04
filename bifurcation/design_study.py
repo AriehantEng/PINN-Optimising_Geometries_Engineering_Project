@@ -1,0 +1,287 @@
+"""How low can the pressure drop go? For each set flow share, the best widths.
+
+The design question, by finite elements (bifurcation/reference.py), which
+Network 3 is to learn. For each pair of daughter angles and each prescribed
+share of the flow through daughter 1 (Q1 / Q_in, held by the flux-defective
+outlet), find the width split w1 / w0 with the lowest flux-weighted
+total-pressure drop, w1 + w2 = w0, both widths at least min_width:
+
+    1. scan the split on a grid (every geometry the bounds allow; any the
+       geometry refuses is reported, not skipped silently)
+    2. refine with a bounded Brent search inside the bracket around the grid's
+       best point
+    3. re-solve each optimum, and the grid neighbours either side, on a finer
+       mesh: the minimum must survive refinement, and the change in the
+       pressure drop is the mesh's error estimate
+
+Two comparisons come with every optimum:
+    equal widths       the pressure drop at split 0.5, the design without
+                       optimisation
+    friction law       w_i ~ Q_i^(1/2): minimising sum Q_i^2 L / w_i^3 (plane
+                       Poiseuille daughters) under w1 + w2 = w0 gives
+                       w1 / w0 = sqrt(q) / (sqrt(q) + sqrt(1 - q)). The
+                       distance from it is what the junction and the angles do.
+
+Equal outlet pressures (no share set) are included for reference: there the
+optimum sits on a width bound, the narrow daughter carrying almost nothing.
+
+    python -m bifurcation.design_study --config bifurcation/study_re10_shares.yaml
+"""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+import math
+import multiprocessing
+import pathlib
+import time
+
+import numpy as np
+import yaml
+from scipy.optimize import minimize_scalar
+
+from bifurcation import reference
+from bifurcation.geometry import Geometry, GeometryError, split_bounds
+from developing_flow import pinn
+
+ConfigError = pinn.ConfigError
+
+SCHEMA = {
+    "name": str,
+    "physics": {"reynolds": float, "pressure_scaling": str},
+    "geometry": {"parent_length": float, "daughter_length": float, "min_width": float},
+    "angles": list,               # [[angle1, angle2], ...] in degrees
+    "shares": list,               # Q1 / Q_in values in (0, 1)
+    "search": {"grid": int, "xatol": float},
+    "mesh": {"max_area": float, "corner_levels": int, "corner_radius": float},
+    "check": {"max_area": float, "corner_levels": int},
+    "workers": int,
+}
+
+
+def parse_config(document):
+    document = copy.deepcopy(document)
+    pinn._check(document, SCHEMA)
+    for pair in document["angles"]:
+        if not (isinstance(pair, list) and len(pair) == 2):
+            raise ConfigError(f"angles must be pairs [angle1, angle2], got {pair!r}")
+    for share in document["shares"]:
+        if not 0.0 < share < 1.0:
+            raise ConfigError(f"every share must lie in (0, 1), got {share}")
+    if document["search"]["grid"] < 3:
+        raise ConfigError("search.grid must be at least 3")
+    return document
+
+
+def solve(config, split, angles, share, max_area, corner_levels):
+    g = Geometry.from_split(split, angles[0], angles[1], config["geometry"]["parent_length"],
+                            config["geometry"]["daughter_length"],
+                            config["geometry"]["min_width"])
+    sol = reference.solve_bifurcation(
+        g, config["physics"]["reynolds"], config["physics"]["pressure_scaling"],
+        reference.parabola_inlet, share, max_area, corner_levels,
+        config["mesh"]["corner_radius"])
+    return sol.measures()
+
+
+def friction_split(share, min_width):
+    """The friction-law optimum w1 / w0 = sqrt(q) / (sqrt(q) + sqrt(1 - q)), in the bounds."""
+    lo, hi = split_bounds(min_width)
+    s = math.sqrt(share) / (math.sqrt(share) + math.sqrt(1.0 - share))
+    return min(max(s, lo), hi)
+
+
+def optimise(task):
+    """The best split for one (angles, share); share None = equal outlet pressures."""
+    config, angles, share = task
+    mesh = config["mesh"]
+    lo, hi = split_bounds(config["geometry"]["min_width"])
+    start = time.perf_counter()
+    solves = 0
+    cache = {}
+
+    refused = []
+
+    def drop(split):
+        """The coarse-mesh drop; a geometry the rules refuse counts as infinite
+        and is recorded."""
+        nonlocal solves
+        key = round(float(split), 12)
+        if key not in cache:
+            try:
+                solves += 1
+                cache[key] = solve(config, float(split), angles, share, mesh["max_area"],
+                                   mesh["corner_levels"])
+            except GeometryError as error:
+                cache[key] = {"total_pressure_drop": math.inf}
+                refused.append({"split": float(split), "reason": str(error)})
+        return cache[key]["total_pressure_drop"]
+
+    grid = np.linspace(lo, hi, config["search"]["grid"])
+    values = np.array([drop(s) for s in grid])
+    if not np.isfinite(values).any():
+        return {"angles": angles, "share": share, "refused": refused, "feasible": False}
+    k = int(np.argmin(values))
+    left, right = grid[max(k - 1, 0)], grid[min(k + 1, len(grid) - 1)]
+    if k in (0, len(grid) - 1):
+        best_split, best = float(grid[k]), float(values[k])   # on a bound: nothing to refine
+        on_bound = True
+    else:
+        result = minimize_scalar(drop, bounds=(left, right), method="bounded",
+                                 options={"xatol": config["search"]["xatol"]})
+        best_split, best = float(result.x), float(result.fun)
+        if values[k] < best:                                   # Brent never does worse
+            best_split, best = float(grid[k]), float(values[k])
+        on_bound = False
+    measured = cache[round(best_split, 12)]
+
+    # the optimum and its neighbours on the finer mesh
+    check = config["check"]
+    fine = {}
+    for s in sorted({float(left), best_split, float(right)}):
+        try:
+            fine[s] = solve(config, s, angles, share, check["max_area"],
+                            check["corner_levels"])["total_pressure_drop"]
+        except GeometryError:
+            fine[s] = math.inf
+    fine_best = fine[best_split]
+    survives = all(fine_best <= v for v in fine.values())
+
+    equal = drop(0.5) if lo <= 0.5 <= hi else None
+    friction = friction_split(share, config["geometry"]["min_width"]) if share else None
+    friction_drop = None if friction is None else drop(friction)
+    return {
+        "angles": angles, "share": share, "feasible": True,
+        "best_split": best_split, "w1": 2.0 * best_split, "w2": 2.0 * (1.0 - best_split),
+        "on_bound": on_bound,
+        "total_pressure_drop": best,
+        "total_pressure_drop_fine": fine_best,
+        "mesh_change": abs(fine_best - best) / abs(fine_best),
+        "minimum_survives_refinement": survives,
+        "equal_widths_drop": equal,
+        "saving_vs_equal_widths": None if equal is None else 1.0 - best / equal,
+        "friction_law_split": friction, "friction_law_drop": friction_drop,
+        "outlet1_pressure_offset": measured["outlet1_pressure_offset"],
+        "flow_split": measured["split_flux"],
+        "grid": [{"split": float(s), "total_pressure_drop": float(v)}
+                 for s, v in zip(grid, values)],
+        "refused": refused, "solves": solves, "seconds": time.perf_counter() - start,
+    }
+
+
+def run(config_path, out):
+    config = parse_config(yaml.safe_load(pathlib.Path(config_path).read_text()))
+    tasks = [(config, list(map(float, pair)), share)
+             for pair in config["angles"] for share in [None] + list(config["shares"])]
+    start = time.perf_counter()
+    with multiprocessing.get_context("fork").Pool(config["workers"]) as pool:
+        rows = []
+        for row in pool.imap(optimise, tasks):
+            rows.append(row)
+            if row["feasible"]:
+                label = "equal pressures" if row["share"] is None else f"share {row['share']:.2f}"
+                print(f"  {row['angles'][0]:g}/{row['angles'][1]:g} {label}: best split "
+                      f"{row['best_split']:.4f}{' (bound)' if row['on_bound'] else ''}, "
+                      f"drop {row['total_pressure_drop']:.5f} (fine {row['total_pressure_drop_fine']:.5f}), "
+                      f"{row['solves']} solves, {row['seconds']:.0f} s", flush=True)
+    summary = {"config": config, "rows": rows, "seconds": time.perf_counter() - start}
+    out = pathlib.Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.with_suffix(".json").write_text(json.dumps(summary, indent=1, default=str))
+    out.with_suffix(".md").write_text(markdown(summary))
+    plot(summary, out.with_suffix(".png"))
+    return summary
+
+
+def markdown(summary):
+    config = summary["config"]
+    g = config["geometry"]
+    lines = [
+        f"## How low can the pressure drop go? Re_h = {config['physics']['reynolds']:g}",
+        "",
+        f"Finite elements (P2/P1, mesh max area {config['mesh']['max_area']}, "
+        f"{config['mesh']['corner_levels']} corner refinements), parabolic inflow, parent "
+        f"{g['parent_length']:g} long, daughters {g['daughter_length']:g} long, "
+        f"w1 + w2 = 2, every width >= {g['min_width']:g}. 'share' is the fraction of the "
+        "flow daughter 1 must carry. 'drop' is the flux-weighted total-pressure drop "
+        "(E_in - E_out1 - E_out2) / Q_in, in units of rho U^2. 'fine' re-solves the "
+        f"optimum on max area {config['check']['max_area']} with "
+        f"{config['check']['corner_levels']} refinements. 'friction law' is "
+        "w1 / w0 = sqrt(q) / (sqrt(q) + sqrt(1 - q)).",
+        "",
+    ]
+    by_angles = {}
+    for row in summary["rows"]:
+        by_angles.setdefault(tuple(row["angles"]), []).append(row)
+    for angles, rows in by_angles.items():
+        lines += [f"### Angles {angles[0]:g} / {angles[1]:g} (bifurcation angle "
+                  f"{angles[0] + angles[1]:g})", "",
+                  "| share | best split w1/w0 | w1, w2 | lowest drop | fine mesh | "
+                  "equal widths | saving | friction-law split | outlet 1 offset |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for r in rows:
+            if not r["feasible"]:
+                lines.append(f"| {r['share']} | refused | | | | | | | |")
+                continue
+            share = "equal pressures" if r["share"] is None else f"{r['share']:.2f}"
+            fmt = lambda v, f: "-" if v is None else format(v, f)   # noqa: E731
+            lines.append(
+                f"| {share} | {r['best_split']:.4f}{' (bound)' if r['on_bound'] else ''}"
+                f"{'' if r['minimum_survives_refinement'] else ' (moves on refinement)'} | "
+                f"{r['w1']:.3f}, {r['w2']:.3f} | {r['total_pressure_drop']:.5f} | "
+                f"{r['total_pressure_drop_fine']:.5f} | {fmt(r['equal_widths_drop'], '.5f')} | "
+                f"{fmt(r['saving_vs_equal_widths'] and 100 * r['saving_vs_equal_widths'], '.1f')}% | "
+                f"{fmt(r['friction_law_split'], '.4f')} | {r['outlet1_pressure_offset']:+.4f} |")
+        lines.append("")
+    lines.append(f"{sum(r.get('solves', 0) for r in summary['rows'])} finite-element solves "
+                 f"(plus the fine-mesh checks), {summary['seconds'] / 60:.1f} min on "
+                 f"{config['workers']} processes.")
+    return "\n".join(lines) + "\n"
+
+
+def plot(summary, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    series = ["#2A78D6", "#EB6834", "#1BAF7A", "#EDA100", "#E87BA4", "#008300", "#6B6B6B"]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.8))
+    by_angles = {}
+    for row in summary["rows"]:
+        if row["feasible"] and row["share"] is not None:
+            by_angles.setdefault(tuple(row["angles"]), []).append(row)
+    for colour, (angles, rows) in zip(series, by_angles.items()):
+        rows = sorted(rows, key=lambda r: r["share"])
+        q = [r["share"] for r in rows]
+        label = f"{angles[0]:g} / {angles[1]:g}"
+        ax1.plot(q, [r["total_pressure_drop"] for r in rows], "o-", color=colour, label=label)
+        ax2.plot(q, [r["best_split"] for r in rows], "o-", color=colour, label=label)
+    q = np.linspace(0.01, 0.99, 200)
+    ax2.plot(q, [friction_split(v, summary["config"]["geometry"]["min_width"]) for v in q],
+             "--", color="#333333", label="friction law sqrt(q)")
+    ax1.set_xlabel("share of the flow through daughter 1, Q1 / Q_in")
+    ax1.set_ylabel("lowest total-pressure drop (best split)")
+    ax2.set_xlabel("share of the flow through daughter 1, Q1 / Q_in")
+    ax2.set_ylabel("best split w1 / w0")
+    for ax in (ax1, ax2):
+        ax.grid(color="#E6E6E6")
+        ax.legend(fontsize=8)
+    fig.suptitle("For each set flow share, the width split with the lowest pressure drop",
+                 x=0.01, ha="left")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--out", required=True, help="path stem: writes .md, .json, .png")
+    args = parser.parse_args(argv)
+    run(args.config, args.out)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

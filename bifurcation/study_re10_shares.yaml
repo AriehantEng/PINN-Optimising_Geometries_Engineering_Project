@@ -1,0 +1,26 @@
+# How low can the pressure drop go, for each set flow share? (bifurcation/design_study.py)
+#
+# Six ways to bifurcate: three 120-degree and three 180-degree bifurcations,
+# each from symmetric to strongly turned. Daughter 1's share of the flow from
+# 5% to 95%, plus equal outlet pressures (no share set) for reference.
+name: study_re10_shares
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+geometry:
+  parent_length: 3.0
+  daughter_length: 8.0
+  min_width: 0.2              # no daughter narrower than a tenth of the parent
+angles: [[60.0, 60.0], [30.0, 90.0], [0.0, 120.0], [90.0, 90.0], [60.0, 120.0], [30.0, 150.0]]
+shares: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+search:
+  grid: 17                    # splits 0.1, 0.15, ..., 0.9 scanned first
+  xatol: 1.0e-3               # then Brent to this tolerance in the split
+mesh:                         # the coarse mesh of the earlier sweeps (~2 s a solve)
+  max_area: 0.02
+  corner_levels: 3
+  corner_radius: 0.4
+check:                        # each optimum and its neighbours re-solved on this
+  max_area: 0.005
+  corner_levels: 5
+workers: 4
