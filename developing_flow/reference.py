@@ -127,6 +127,15 @@ def _forms(a, nu):
     return jacobian_uu, stokes_uu, jacobian_up, residual_u, residual_p
 
 
+def taylor_hood(mesh):
+    """(velocity element, pressure element): the inf-sup stable pair for the mesh's cells."""
+    if isinstance(mesh, fem.MeshQuad):
+        return fem.ElementVector(fem.ElementQuad2()), fem.ElementQuad1()
+    if isinstance(mesh, fem.MeshTri):
+        return fem.ElementVector(fem.ElementTriP2()), fem.ElementTriP1()
+    raise TypeError(f"no Taylor-Hood pair defined for {type(mesh).__name__}")
+
+
 def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
           traction_facets=None, verbose=False):
     """Steady Navier-Stokes by Q2/Q1 finite elements and Newton's method.
@@ -137,10 +146,12 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
     with t = traction(x, y, normal) on `traction_facets` (verification only)
     and t = 0 elsewhere.
 
+    The Taylor-Hood pair follows the mesh: Q2/Q1 on quadrilaterals (the
+    channel), P2/P1 on triangles (the bifurcation, bifurcation/reference.py).
+
     Returns (basis_u, basis_p, U, P, info).
     """
-    eu = fem.ElementVector(fem.ElementQuad2())
-    ep = fem.ElementQuad1()
+    eu, ep = taylor_hood(mesh)
     basis_u = fem.Basis(mesh, eu, intorder=6)
     basis_p = fem.Basis(mesh, ep, intorder=6)
     nu_dofs, np_dofs = basis_u.N, basis_p.N

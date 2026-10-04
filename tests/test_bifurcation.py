@@ -142,3 +142,61 @@ def test_one_bifurcation_angle_many_orientations_and_an_off_centre_tip(angle1, a
                                      / np.linalg.norm(inner1) / np.linalg.norm(inner2)))
     assert abs(between - (angle1 + angle2)) < 1e-9
     assert abs(T[1]) > 1e-3                                     # w1 = 0.6, w2 = 1.4: off-centre
+
+
+# -- the finite-element reference on the bifurcation ------------------------ #
+
+COARSE = dict(max_area=0.04, corner_levels=3, corner_radius=0.4)
+
+
+def coarse_solution(split, angle1, angle2):
+    from bifurcation import reference as br
+    g = make(split, angle1, angle2)
+    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, **COARSE)
+
+
+def test_the_mesh_fills_the_polygon_and_is_refined_at_the_corners():
+    from bifurcation import reference as br
+    import skfem as fem
+    g = make(0.4, 30.0, 60.0)
+    m = br.mesh(g, max_area=0.04, corner_levels=4, corner_radius=0.4)
+    area = fem.Functional(lambda w: 1.0 + 0.0 * w.x[0]).assemble(fem.Basis(m, fem.ElementTriP1()))
+    assert abs(area / g.area() - 1.0) < 1e-12
+    facets = br.boundary_facets(m, g)
+    assert set(facets) == {"wall", "inlet", "outlet1", "outlet2"}
+    edge = np.linalg.norm(m.p[:, m.facets[0]] - m.p[:, m.facets[1]], axis=0)
+    centre = m.p[:, m.facets].mean(axis=1).T
+    tip = g.vertices()[4]
+    near = np.linalg.norm(centre - tip, axis=1) < 0.02
+    assert edge[near].max() < 0.25 * edge.max()
+
+
+def test_mass_is_conserved_exactly_and_the_outlets_share_one_pressure():
+    """Taylor-Hood conserves mass globally (the constant is in the P1 pressure
+    space); the do-nothing outlets hold the same pressure, so the flow chooses
+    its own split."""
+    m = coarse_solution(0.4, 30.0, 70.0).measures()
+    assert abs(m["mass_imbalance"]) < 1e-12
+    assert abs(m["flux_in"] - 4.0 / 3.0) < 1e-12               # the parabola carries 4/3
+    assert abs(m["static_pressure_out1"]) < 1e-3 and abs(m["static_pressure_out2"]) < 1e-3
+    assert m["energy_consistency"] < 1e-3
+
+
+def test_a_mirror_symmetric_bifurcation_splits_the_flow_evenly():
+    m = coarse_solution(0.5, 60.0, 60.0).measures()
+    assert abs(m["split_flux"] - 0.5) < 1e-4                    # the mesh is not exactly symmetric
+    lopsided = coarse_solution(0.5, 20.0, 80.0).measures()
+    assert lopsided["split_flux"] > 0.5 + 1e-3                  # the straighter branch takes more
+
+
+@pytest.mark.slow
+def test_the_pressure_drop_converges_as_the_mesh_is_refined():
+    from bifurcation import reference as br
+    g = make(0.4, 30.0, 70.0)
+    drops = []
+    for area in (0.08, 0.02, 0.005):
+        sol = br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, max_area=area,
+                                   corner_levels=4, corner_radius=0.4)
+        drops.append(sol.measures()["total_pressure_drop"])
+    changes = np.abs(np.diff(drops))
+    assert changes[1] < 0.5 * changes[0]
