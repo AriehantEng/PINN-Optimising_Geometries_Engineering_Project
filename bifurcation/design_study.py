@@ -176,7 +176,9 @@ def run(config_path, out):
     tasks = [(config, list(map(float, pair)), share)
              for pair in config["angles"] for share in [None] + list(config["shares"])]
     start = time.perf_counter()
-    with multiprocessing.get_context("fork").Pool(config["workers"]) as pool:
+    # spawn, not fork: this module imports JAX (through developing_flow.pinn),
+    # and forking a process with JAX's threads running can deadlock
+    with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
         rows = []
         for row in pool.imap(optimise, tasks):
             rows.append(row)
@@ -215,6 +217,29 @@ def markdown(summary):
     by_angles = {}
     for row in summary["rows"]:
         by_angles.setdefault(tuple(row["angles"]), []).append(row)
+    lines += ["### At a glance", "",
+              "| angles | lowest drop at a set share (share, split) | at share 0.5 | "
+              "equal outlet pressures (floor) | largest gap to the friction-law split |",
+              "|---|---|---|---|---|"]
+    for angles, rows in by_angles.items():
+        shared = [r for r in rows if r["feasible"] and r["share"] is not None]
+        if not shared:
+            continue
+        low = min(shared, key=lambda r: r["total_pressure_drop"])
+        half = [r for r in shared if abs(r["share"] - 0.5) < 1e-12]
+        free = [r for r in rows if r["feasible"] and r["share"] is None]
+        gap = max(shared, key=lambda r: abs(r["best_split"] - r["friction_law_split"]))
+        lines.append(
+            f"| {angles[0]:g} / {angles[1]:g} | {low['total_pressure_drop']:.3f} "
+            f"({low['share']:.2f}, {low['best_split']:.3f}) | "
+            + (f"{half[0]['total_pressure_drop']:.3f} (split {half[0]['best_split']:.3f})"
+               if half else "-") + " | "
+            + (f"{free[0]['total_pressure_drop']:.3f} (split {free[0]['best_split']:.3f}, "
+               f"{100 * min(free[0]['flow_split'], 1 - free[0]['flow_split']):.1f}% of the flow "
+               "in the narrow daughter)" if free else "-")
+            + f" | {abs(gap['best_split'] - gap['friction_law_split']):.3f} at share "
+              f"{gap['share']:.2f} |")
+    lines.append("")
     for angles, rows in by_angles.items():
         lines += [f"### Angles {angles[0]:g} / {angles[1]:g} (bifurcation angle "
                   f"{angles[0] + angles[1]:g})", "",
