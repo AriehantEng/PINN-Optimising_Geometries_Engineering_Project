@@ -4,6 +4,9 @@ Relative L2 errors (entrance length: relative error). Several seeds: mean (range
 
 | Setup | Seeds | u, whole channel | u, entrance region | u, developed region | v, whole channel | p, whole channel | entrance length | total-pressure drop (the design objective) | viscous dissipation | energy budget, PINN alone (no reference) | Training time (min) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| P5 G3 + 100 steps at 16k, mean of 20, 32k held-out | 1 | 3.59e-06 | 4.36e-06 | 3.06e-06 | 1.00e-04 | 2.06e-05 | 5.75e-05 | 1.12e-06 | 2.22e-06 | 3.30e-06 | 71 |
+| G5 G3 + exponential input map | 1 | 3.63e-06 | 4.45e-06 | 3.05e-06 | 1.08e-04 | 1.71e-05 | 1.33e-04 | 1.07e-06 | 3.23e-06 | 1.62e-06 | 189 |
+| P6 G5 + 100 steps, mean of 20, 32k held-out | 1 | 4.59e-06 | 3.96e-06 | 4.92e-06 | 9.17e-05 | 1.67e-05 | 1.60e-04 | 1.42e-06 | 2.96e-06 | 2.91e-06 | 24 |
 | P3 G3 + 100 steps, mean of 20, 32k held-out | 1 | 4.62e-06 | 6.58e-06 | 2.91e-06 | 1.36e-04 | 2.01e-05 | 9.25e-05 | 1.97e-06 | 4.00e-06 | 3.38e-06 | 23 |
 | G3 LM, fresh points each step | 1 | 5.42e-06 | 5.56e-06 | 5.33e-06 | 1.57e-04 | 2.22e-05 | 1.32e-05 | 1.10e-05 | 5.29e-06 | 1.23e-05 | 206 |
 | P2 P1 with 16k points per step | 1 | 6.08e-06 | 5.49e-06 | 6.40e-06 | 1.32e-04 | 2.03e-05 | 1.12e-05 | 5.97e-06 | 6.90e-06 | 1.06e-06 | 76 |

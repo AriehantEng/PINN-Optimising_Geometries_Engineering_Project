@@ -77,3 +77,17 @@ any run, near the reference's 1.5e-5. It was selected on 4,096 held-out points
 (fresh/held-out loss 1.25), so its averaged polish (`re10_polish_g5`, same
 protocol as `re10_polish_g3`) is the fair comparison; `re10_polish_g5_points`
 then combines the input map with the 16,384-point polish.
+
+## 7. Lower loss, higher error: the polish of G5
+
+| | u | u, entrance | u, developed | v | p | total-pressure drop | fresh-point loss |
+|---|---|---|---|---|---|---|---|
+| G5 | 3.63e-6 | 4.45e-6 | 3.05e-6 | 1.08e-4 | 1.71e-5 | 1.07e-6 | 7.3e-9 |
+| G5 + averaged polish (P6) | 4.59e-6 | 3.96e-6 | 4.92e-6 | 9.2e-5 | 1.67e-5 | 1.42e-6 | 4.4e-9 |
+| G3 + the same polish (P3) | 4.62e-6 | 6.58e-6 | 2.91e-6 | 1.36e-4 | 2.01e-5 | 1.97e-6 | 1.1e-8 |
+
+The polish took G5 to the lowest loss of any run and raised its u error, all
+of it in the developed region: the loss weights the inlet corners 64% (section
+3), so minimising it further trades developed-flow accuracy for corner
+accuracy. With the polish protocol held equal (P3 vs P6) the exponential map
+improves v 32%, p 17%, the total-pressure drop 28% and leaves u unchanged.

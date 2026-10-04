@@ -34,3 +34,4 @@ P3 G3 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_g3
 P4 P1 with focus fraction 0.75=developing_re10_polish_focus75
 P5 G3 + 100 steps at 16k, mean of 20, 32k held-out=developing_re10_polish_g3_points
 G5 G3 + exponential input map=developing_re10_lm_fresh_inputmap
+P6 G5 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_g5
