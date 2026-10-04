@@ -4,10 +4,12 @@ Relative L2 errors (entrance length: relative error). Several seeds: mean (range
 
 | Setup | Seeds | u, whole channel | u, entrance region | u, developed region | v, whole channel | p, whole channel | entrance length | total-pressure drop (the design objective) | viscous dissipation | energy budget, PINN alone (no reference) | Training time (min) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| P3 G3 + 100 steps, mean of 20, 32k held-out | 1 | 4.62e-06 | 6.58e-06 | 2.91e-06 | 1.36e-04 | 2.01e-05 | 9.25e-05 | 1.97e-06 | 4.00e-06 | 3.38e-06 | 23 |
 | G3 LM, fresh points each step | 1 | 5.42e-06 | 5.56e-06 | 5.33e-06 | 1.57e-04 | 2.22e-05 | 1.32e-05 | 1.10e-05 | 5.29e-06 | 1.23e-05 | 206 |
 | P2 P1 with 16k points per step | 1 | 6.08e-06 | 5.49e-06 | 6.40e-06 | 1.32e-04 | 2.03e-05 | 1.12e-05 | 5.97e-06 | 6.90e-06 | 1.06e-06 | 76 |
 | G1 width 40 + LM | 1 | 7.32e-06 | 8.58e-06 | 6.47e-06 | 1.68e-04 | 2.20e-05 | 1.93e-04 | 1.27e-05 | 3.86e-06 | 1.22e-05 | 123 |
-| P1 G4 + 100 steps, mean of 20, 32k held-out | 1 | 7.40e-06 | 7.54e-06 | 7.31e-06 | 1.36e-04 | 1.96e-05 | 5.92e-05 | 4.81e-06 | 1.04e-05 | 1.39e-06 | 26 |
+| P4 P1 with focus fraction 0.75 | 1 | 7.72e-06 | 5.91e-06 | 8.60e-06 | 1.98e-04 | 2.31e-05 | 4.53e-05 | 1.11e-05 | 6.43e-06 | 3.34e-06 | 25 |
+| P1 G4 + 100 steps, mean of 20, 32k held-out | 3 | 7.75e-06 (7.4e-06 to 8.2e-06) | 7.13e-06 (6.7e-06 to 7.5e-06) | 8.08e-06 (7.3e-06 to 8.7e-06) | 1.48e-04 (1.4e-04 to 1.7e-04) | 2.01e-05 (2.0e-05 to 2.0e-05) | 3.49e-05 (1.3e-05 to 5.9e-05) | 5.30e-06 (4.8e-06 to 6.2e-06) | 1.06e-05 (1.0e-05 to 1.1e-05) | 3.04e-06 (1.4e-06 to 5.6e-06) | 26 |
 | G4 G3 + dense corner inlet grid | 1 | 8.31e-06 | 6.17e-06 | 9.34e-06 | 1.64e-04 | 1.93e-05 | 1.14e-05 | 2.43e-06 | 9.98e-06 | 4.15e-06 | 229 |
 | P0 G4 + 100 LM steps | 1 | 1.18e-05 | 1.28e-05 | 1.12e-05 | 2.12e-04 | 2.58e-05 | 1.58e-05 | 1.43e-05 | 1.90e-05 | 5.30e-06 | 26 |
 | E8 exponential input map | 1 | 1.98e-04 | 2.34e-04 | 1.73e-04 | 3.21e-03 | 2.80e-04 | 2.75e-03 | 2.37e-05 | 8.99e-05 | 9.40e-05 | 51 |

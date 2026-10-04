@@ -28,3 +28,7 @@ G4 G3 + dense corner inlet grid=developing_re10_lm_fresh_inletgrid
 P0 G4 + 100 LM steps=developing_re10_polish_control
 P1 G4 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_average
 P2 P1 with 16k points per step=developing_re10_polish_points
+P1 G4 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_average_seed2
+P1 G4 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_average_seed3
+P3 G3 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_g3
+P4 P1 with focus fraction 0.75=developing_re10_polish_focus75
