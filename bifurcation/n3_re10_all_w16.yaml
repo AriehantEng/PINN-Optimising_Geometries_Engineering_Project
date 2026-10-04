@@ -8,7 +8,7 @@ name: network3_re10_all_w16
 seed: 7
 data: docs/bifurcation_re10-shares-all.json
 model:
-  width: 16                   # 642 parameters
+  width: 16                   # 498 parameters (width 8: 186)
   depth: 2
   activation: tanh
   init_gain: 1.0
