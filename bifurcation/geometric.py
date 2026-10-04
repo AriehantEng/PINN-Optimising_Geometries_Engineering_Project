@@ -232,21 +232,60 @@ def _cv_fold(task):
             "drop_rms": float(np.sqrt(np.mean(e["drop_rel"] ** 2)))}
 
 
-def cross_validate(config, study_config, data, verbose=True):
+def _fold_key(lam, pair):
+    return f"{float(lam)!r}|{float(pair[0])!r}|{float(pair[1])!r}"
+
+
+def _cv_fingerprint(config, study_config, data):
+    """What a fold's result depends on: the config, the study, the data."""
+    import hashlib
+    digest = hashlib.sha256(json.dumps([config, study_config], sort_keys=True,
+                                       default=str).encode())
+    for key in sorted(data):
+        digest.update(np.ascontiguousarray(data[key]).tobytes())
+    return digest.hexdigest()
+
+
+def cross_validate(config, study_config, data, verbose=True, cache=None):
     """Leave one angle pair out: train on the others, predict the missing one.
     Run for every regularisation candidate, the folds spread over fit.workers
-    processes; returns {candidate: per-pair errors}."""
+    processes; returns {candidate: per-pair errors}.
+
+    With `cache` (a JSON path), each finished fold is written there as it
+    completes, and folds already there are not refitted: a run killed by a
+    restart resumes. Entries carry a fingerprint of the config, study and
+    data, and a cache with another fingerprint is ignored. A fold is a pure
+    function of those, so a resumed result is the uninterrupted one."""
     pairs = sorted({(a, b) for a, b in zip(data["a1"], data["a2"])})
     candidates = config["fit"]["regularisation"]
-    tasks = [(config, study_config, data, lam, pair) for lam in candidates for pair in pairs]
+    fingerprint = _cv_fingerprint(config, study_config, data)
+    done = {}
+    if cache is not None and pathlib.Path(cache).is_file():
+        stored = json.loads(pathlib.Path(cache).read_text())
+        if stored.get("fingerprint") == fingerprint:
+            done = stored["folds"]
+    tasks = [(config, study_config, data, lam, pair) for lam in candidates for pair in pairs
+             if _fold_key(lam, pair) not in done]
+    if verbose and done:
+        print(f"  {len(done)} folds from the cache, {len(tasks)} to fit", flush=True)
+
+    def keep(task, row):
+        done[_fold_key(task[3], task[4])] = row
+        if cache is not None:
+            temporary = pathlib.Path(cache).with_suffix(".tmp")
+            temporary.write_text(json.dumps({"fingerprint": fingerprint, "folds": done}))
+            temporary.replace(cache)
+
     if config["fit"]["workers"] == 1:
-        results = [_cv_fold(t) for t in tasks]
+        for task in tasks:
+            keep(task, _cv_fold(task))
     else:
         with multiprocessing.get_context("spawn").Pool(config["fit"]["workers"]) as pool:
-            results = pool.map(_cv_fold, tasks)
+            for task, row in zip(tasks, pool.imap(_cv_fold, tasks)):
+                keep(task, row)
     out = {}
-    for i, lam in enumerate(candidates):
-        rows = results[i * len(pairs):(i + 1) * len(pairs)]
+    for lam in candidates:
+        rows = [done[_fold_key(lam, pair)] for pair in pairs]
         out[lam] = rows
         if verbose:
             print(f"  regularisation {lam:g}: held-out split rms "
@@ -347,7 +386,7 @@ def run(config_path, out=None, verbose=True):
     if verbose:
         print(f"  {len(data['q'])} optima, {len({(a, b) for a, b in zip(data['a1'], data['a2'])})} "
               "angle pairs; leave-one-pair-out cross-validation:", flush=True)
-    cv = cross_validate(config, study_config, data, verbose)
+    cv = cross_validate(config, study_config, data, verbose, cache=directory / "cv_folds.json")
     lam = choose(cv, config["fit"]["split_scale"], config["fit"]["drop_scale"])
     params, objective = fit(config, study_config, data, lam, config["seed"])
     fit_seconds = time.perf_counter() - start

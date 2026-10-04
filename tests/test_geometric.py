@@ -83,3 +83,30 @@ def test_parallel_cross_validation_is_the_sequential_one(setup):
     small["fit"]["workers"] = 2
     two = n3.cross_validate(small, study_config, subset, verbose=False)
     assert one == two
+
+
+def test_cross_validation_resumes_from_its_cache(setup, tmp_path):
+    """A restart killed an hour of folds; now each finished fold is cached,
+    and a resumed run must give exactly the uninterrupted answer."""
+    import copy
+    import json
+    config, study_config, data, _ = setup
+    small = copy.deepcopy(config)
+    small["model"]["width"] = 4
+    small["fit"].update(regularisation=[1.0, 10.0], restarts=1, max_evaluations=30, workers=1)
+    keep = np.isin(data["a1"], [60.0, 30.0, 0.0]) & np.isin(data["a2"], [60.0, 90.0, 120.0])
+    subset = {k: v[keep] for k, v in data.items()}
+    cache = tmp_path / "folds.json"
+    full = n3.cross_validate(small, study_config, subset, verbose=False, cache=cache)
+    stored = json.loads(cache.read_text())
+    pairs = {(a, b) for a, b in zip(subset["a1"], subset["a2"])}
+    assert len(stored["folds"]) == 2 * len(pairs)              # every (candidate, pair)
+    # an interrupted run: half the folds lost
+    stored["folds"] = dict(list(stored["folds"].items())[:len(pairs)])
+    cache.write_text(json.dumps(stored))
+    assert n3.cross_validate(small, study_config, subset, verbose=False, cache=cache) == full
+    # another config's cache is not used
+    stored["fingerprint"] = "something else"
+    stored["folds"] = {k: {**v, "split_rms": -1.0} for k, v in stored["folds"].items()}
+    cache.write_text(json.dumps(stored))
+    assert n3.cross_validate(small, study_config, subset, verbose=False, cache=cache) == full
