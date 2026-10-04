@@ -64,3 +64,16 @@ reference's own limit), total-pressure drop 1.12e-6, dissipation 2.2e-6,
 energy balance 3.3e-6. Against G3 alone: u -34%, v -36%, objective 10x.
 It selected iterate 94, not a mean: its held-out loss was still falling at
 step 100, so `re10_polish_g3_more` continues it for 150 steps (seed 2).
+
+## 6. The input map (G5 = G3 with the exponential input map, l = 2)
+
+| | u | v | p | total-pressure drop | dissipation | energy balance |
+|---|---|---|---|---|---|---|
+| G3, linear map | 5.42e-6 | 1.57e-4 | 2.22e-5 | 1.10e-5 | 5.3e-6 | 1.23e-5 |
+| G5, exponential map | 3.63e-6 | 1.08e-4 | 1.71e-5 | 1.07e-6 | 3.2e-6 | 1.6e-6 |
+
+Unpolished, G5 matches P5 (the best polished network) and has the lowest p of
+any run, near the reference's 1.5e-5. It was selected on 4,096 held-out points
+(fresh/held-out loss 1.25), so its averaged polish (`re10_polish_g5`, same
+protocol as `re10_polish_g3`) is the fair comparison; `re10_polish_g5_points`
+then combines the input map with the 16,384-point polish.

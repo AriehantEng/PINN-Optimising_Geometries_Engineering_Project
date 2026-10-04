@@ -1495,6 +1495,10 @@ POLISH = {  # each polish run against re10_polish_control: what it may change
     "re10_polish_g3_more.yaml": {"name", "sampling.n_validation", "training.lm.average",
                                  "training.init_from", "sampling.n_inlet", "sampling.inlet_points",
                                  "sampling.n_interior", "seed", "training.lm.iterations"},
+    "re10_polish_g5_points.yaml": {"name", "sampling.n_validation", "training.lm.average",
+                                   "training.init_from", "sampling.n_inlet",
+                                   "sampling.inlet_points", "model.input_map",
+                                   "model.input_length", "sampling.n_interior"},
     "re10_polish_g5.yaml": {"name", "sampling.n_validation", "training.lm.average", "training.init_from", "sampling.n_inlet",
                             "sampling.inlet_points", "model.input_map", "model.input_length"},
 }
