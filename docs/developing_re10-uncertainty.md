@@ -26,7 +26,8 @@ runs at the 1e-5 level without several seeds.
 |---|---|---|---|---|
 | no averaging, 4,096 held-out points (control) | 1.18e-5 | 2.12e-4 | 1.43e-5 | far worse: selection was a lottery |
 | 16,384 points per step instead of 4,096 | 6.08e-6 | 1.32e-4 | 5.97e-6 | better on u, v: outside the band |
-| start from G3 instead of G4 | **4.62e-6** | 1.36e-4 | **1.97e-6** | much better: G3's network is better, not luckier |
+| start from G3 instead of G4 | 4.62e-6 | 1.36e-4 | 1.97e-6 | much better: G3's network is better, not luckier |
+| G3 and 16,384 points per step (P5) | **3.59e-6** | **1.00e-4** | **1.12e-6** | best: the two levers add up |
 | focus fraction 0.75 instead of 0.5 | 7.72e-6 | 1.98e-4 | 1.11e-5 | u same, v and objective worse |
 | focus fraction 0.25 | - | - | - | unstable: no step beat the start |
 | focus fraction 0 (uniform) | - | - | - | unstable: held-out loss x1,000 in one step |
@@ -55,3 +56,11 @@ u 8.7e-7, v 9.8e-6, p 1.5e-5, total-pressure drop 6.7e-8 (GCI). Every
 top run's pressure error (1.9-2.3e-5) is within 1.5x of the reference's, so
 pressure cannot rank them; its error lies 44% in the inlet strip x* < 0.05
 and 45% in the bulk, so only more elements, not grading, would lower it.
+
+## 5. Best so far (P5: G3 + 100 averaged LM steps at 16,384 points)
+
+u 3.59e-6 (entrance 4.36e-6, developed 3.06e-6), v 1.00e-4, p 2.06e-5 (at the
+reference's own limit), total-pressure drop 1.12e-6, dissipation 2.2e-6,
+energy balance 3.3e-6. Against G3 alone: u -34%, v -36%, objective 10x.
+It selected iterate 94, not a mean: its held-out loss was still falling at
+step 100, so `re10_polish_g3_more` continues it for 150 steps (seed 2).
