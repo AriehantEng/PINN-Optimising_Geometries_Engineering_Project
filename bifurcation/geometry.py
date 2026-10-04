@@ -15,9 +15,13 @@ Each daughter is a straight strip: its outer wall leaves the parent's corner
 and the two inner walls meet at the septum tip T. Each daughter ends in an
 outlet perpendicular to it, daughter_length along its outer wall.
 
-Angles are measured from the parent's axis, daughter 1 turning up and
-daughter 2 down; 0 is straight on. They need not be equal: (60, 60) is the
-symmetric 120-degree split, (0, 120) the same angle with one branch straight.
+Angles are DIRECTIONS, measured from the parent's axis, daughter 1 turning up
+and daughter 2 down; 0 is straight on, above 90 turns back. The bifurcation
+angle a1 + a2 is the angle between the two inner walls where they meet, at the
+septum tip, and the tip sits wherever the widths put it: off the centreline
+whenever w1 != w2. The angles need not be equal: a 120-degree bifurcation is
+(60, 60), (30, 90) or (0, 120), among others, and which orientation loses the
+least pressure is part of the design question.
 
 Width rules, chosen by the caller:
   * `Geometry.from_split(split, ...)`: w1 + w2 = w0, the parent's width shared
@@ -111,8 +115,8 @@ class Geometry:
                     f"{name} = {getattr(self, name)} is below the minimum width {self.min_width}: "
                     "a daughter may never close")
         for name in ("angle1", "angle2"):
-            if not 0.0 <= getattr(self, name) < 90.0:
-                raise GeometryError(f"{name} must lie in [0, 90) degrees, got {getattr(self, name)}")
+            if not 0.0 <= getattr(self, name) < 180.0:
+                raise GeometryError(f"{name} must lie in [0, 180) degrees, got {getattr(self, name)}")
         if self.angle1 + self.angle2 == 0.0:
             raise GeometryError(
                 "both daughters straight is a zero-thickness splitter plate, not a bifurcation: "

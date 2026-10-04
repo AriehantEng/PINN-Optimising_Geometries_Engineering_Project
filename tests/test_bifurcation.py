@@ -22,6 +22,8 @@ CASES = [
     dict(split=0.3, angle1=0.0, angle2=60.0),
     dict(split=0.7, angle1=20.0, angle2=45.0),
     dict(split=0.5, angle1=5.0, angle2=0.0),
+    dict(split=0.4, angle1=0.0, angle2=120.0),      # one straight, one turned back
+    dict(split=0.6, angle1=30.0, angle2=90.0),      # 120 degrees, off-centre orientation
 ]
 
 
@@ -107,7 +109,7 @@ def test_impossible_geometries_are_refused():
     with pytest.raises(GeometryError, match="overlap"):
         Geometry(1.8, 1.8, 0.0, 5.0, 3.0, 8.0, min_width=0.2)  # far wider than the parent
     with pytest.raises(GeometryError, match="angle"):
-        make(0.5, 95.0, 30.0)
+        make(0.5, 180.0, 30.0)
     with pytest.raises(GeometryError, match="too short"):
         # the tip sits 0.061 past the junction; outlets 0.05 along are before it
         Geometry.from_split(0.3, 0.0, 5.0, 3.0, 0.05, min_width=0.2)
@@ -127,3 +129,16 @@ def test_every_vertex_is_differentiable_in_the_design_parameters():
     tip = jax.jacfwd(lambda q: vertices(2.0 * q[0], 2.0 * (1.0 - q[0]), q[1], q[2], 3.0, 8.0,
                                         xp=jnp)[4])(p)
     assert np.all(np.isfinite(np.asarray(tip)))
+
+
+@pytest.mark.parametrize("angle1, angle2", [(60.0, 60.0), (30.0, 90.0), (0.0, 120.0)])
+def test_one_bifurcation_angle_many_orientations_and_an_off_centre_tip(angle1, angle2):
+    """The bifurcation angle is between the inner walls, at the tip; the tip
+    moves off the centreline with unequal widths."""
+    g = make(0.3, angle1, angle2)
+    A, B, E2o, E2i, T, E1i, E1o, C, D = g.vertices()
+    inner1, inner2 = E1i - T, E2i - T
+    between = math.degrees(math.acos(np.dot(inner1, inner2)
+                                     / np.linalg.norm(inner1) / np.linalg.norm(inner2)))
+    assert abs(between - (angle1 + angle2)) < 1e-9
+    assert abs(T[1]) > 1e-3                                     # w1 = 0.6, w2 = 1.4: off-centre
