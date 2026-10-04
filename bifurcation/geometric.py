@@ -69,7 +69,7 @@ SCHEMA = {
     "data": str,                  # the design study's JSON, relative to the repository
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float},
     "fit": {"split_scale": float, "drop_scale": float, "regularisation": list,
-            "restarts": int, "max_evaluations": int},
+            "restarts": int, "max_evaluations": int, "workers": int},
     "validation": {"pairs": list, "shares": list, "workers": int},
 }
 
@@ -87,6 +87,8 @@ def parse_config(document):
             raise ConfigError(f"fit.{key} must be positive")
     if document["fit"]["restarts"] < 1:
         raise ConfigError("fit.restarts must be at least 1")
+    if document["fit"]["workers"] < 1:
+        raise ConfigError("fit.workers must be at least 1")
     for pair in document["validation"]["pairs"]:
         if not (isinstance(pair, list) and len(pair) == 2):
             raise ConfigError(f"validation pairs must be [angle1, angle2], got {pair!r}")
@@ -216,22 +218,35 @@ def subset(data, mask):
     return {k: v[mask] for k, v in data.items()}
 
 
+def _cv_fold(task):
+    """One held-out angle pair at one regularisation: fit on the rest, score it.
+    A pure function of its arguments (fits are seeded from the config), so
+    the result does not depend on which process runs it."""
+    config, study_config, data, lam, pair = task
+    held = (data["a1"] == pair[0]) & (data["a2"] == pair[1])
+    params, _ = fit(config, study_config, subset(data, ~held), lam, config["seed"])
+    e = errors(make_model(config, study_config), params, subset(data, held))
+    return {"pair": list(pair), "split_max": float(e["split_abs"].max()),
+            "split_rms": float(np.sqrt(np.mean(e["split_abs"] ** 2))),
+            "drop_max": float(e["drop_rel"].max()),
+            "drop_rms": float(np.sqrt(np.mean(e["drop_rel"] ** 2)))}
+
+
 def cross_validate(config, study_config, data, verbose=True):
     """Leave one angle pair out: train on the others, predict the missing one.
-    Run for every regularisation candidate; returns {candidate: per-pair errors}."""
+    Run for every regularisation candidate, the folds spread over fit.workers
+    processes; returns {candidate: per-pair errors}."""
     pairs = sorted({(a, b) for a, b in zip(data["a1"], data["a2"])})
-    predict = make_model(config, study_config)
+    candidates = config["fit"]["regularisation"]
+    tasks = [(config, study_config, data, lam, pair) for lam in candidates for pair in pairs]
+    if config["fit"]["workers"] == 1:
+        results = [_cv_fold(t) for t in tasks]
+    else:
+        with multiprocessing.get_context("spawn").Pool(config["fit"]["workers"]) as pool:
+            results = pool.map(_cv_fold, tasks)
     out = {}
-    for lam in config["fit"]["regularisation"]:
-        rows = []
-        for pair in pairs:
-            held = (data["a1"] == pair[0]) & (data["a2"] == pair[1])
-            params, _ = fit(config, study_config, subset(data, ~held), lam, config["seed"])
-            e = errors(predict, params, subset(data, held))
-            rows.append({"pair": list(pair), "split_max": float(e["split_abs"].max()),
-                         "split_rms": float(np.sqrt(np.mean(e["split_abs"] ** 2))),
-                         "drop_max": float(e["drop_rel"].max()),
-                         "drop_rms": float(np.sqrt(np.mean(e["drop_rel"] ** 2)))})
+    for i, lam in enumerate(candidates):
+        rows = results[i * len(pairs):(i + 1) * len(pairs)]
         out[lam] = rows
         if verbose:
             print(f"  regularisation {lam:g}: held-out split rms "

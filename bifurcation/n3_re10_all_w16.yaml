@@ -15,10 +15,12 @@ model:
 fit:
   split_scale: 0.001          # a split error of 0.001 weighs like a 0.1% drop error
   drop_scale: 0.001
-  regularisation: [10.0, 100.0, 1000.0, 10000.0]   # weight decay candidates, chosen
+  regularisation: [100.0, 1000.0, 10000.0]   # weight decay candidates, chosen (10: held-out
+                                             # split rms 0.0175 in a stopped run, worse than 100 at width 8)
                                                             # by leaving one angle pair out
   restarts: 2                 # least-squares fits from 2 initialisations; the best is kept
   max_evaluations: 2000
+  workers: 4                  # cross-validation folds in parallel (one fit is ~5 min at width 16)
 validation:                   # angle pairs it never saw, checked by finite elements
   pairs: [[45.0, 75.0], [15.0, 105.0], [75.0, 105.0], [45.0, 135.0], [30.0, 30.0], [0.0, 90.0]]
   shares: [0.2, 0.5, 0.8]

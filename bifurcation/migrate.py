@@ -1,4 +1,4 @@
-"""Backfill config keys added after a bifurcation (Network 2) run finished.
+"""Backfill config keys added after a bifurcation (Network 2 or 3) run finished.
 
     python -m bifurcation.migrate            # dry run, changes nothing
     python -m bifurcation.migrate --write
@@ -13,6 +13,7 @@ ACTUALLY did:
     weights.corner_radius = 0.0             no corner weighting existed: every
                                             interior residual had weight 1
     model.wall_extension = 0.0              walls ended at the openings
+    fit.workers = 1                         (Network 3) cross-validation ran in one process
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -44,12 +45,26 @@ MIGRATIONS = (
 )
 
 
+#: The same for Network 3 (bifurcation/geometric.py) runs.
+NETWORK3_MIGRATIONS = (
+    ("fit.workers", 1, r"^  max_evaluations: .*$",
+     lambda d: "workers" not in d.get("fit", {}),
+     "before fit.workers existed cross-validation ran in one process"),
+)
+
+
 def plan(path: pathlib.Path):
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(document, dict) or "outlets" not in document:
-        return None                       # not a Network 2 run (Network 3's have "data")
+    if not isinstance(document, dict):
+        return None
+    if "outlets" in document:                         # Network 2
+        table = MIGRATIONS
+    elif "data" in document and "fit" in document:    # Network 3
+        table = NETWORK3_MIGRATIONS
+    else:
+        return None
     return [(key, value, anchor, reason)
-            for key, value, anchor, applies, reason in MIGRATIONS if applies(document)]
+            for key, value, anchor, applies, reason in table if applies(document)]
 
 
 def insert(text, additions, where):
@@ -93,7 +108,7 @@ def main(argv=None) -> int:
             continue
         additions = plan(directory / "config.yaml")
         if additions is None:
-            print(f"{directory.name}: not a Network 2 run, skipped")
+            print(f"{directory.name}: not a Network 2 or 3 run, skipped")
             continue
         if not additions:
             print(f"{directory.name}: already complete")

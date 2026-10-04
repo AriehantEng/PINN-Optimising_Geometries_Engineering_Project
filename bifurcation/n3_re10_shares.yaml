@@ -18,6 +18,7 @@ fit:
                                                         # leaving one angle pair out
   restarts: 3                 # least-squares fits from 3 initialisations; the best is kept
   max_evaluations: 2000
+  workers: 1
 validation:                   # angle pairs it never saw, checked by finite elements
   pairs: [[45.0, 75.0], [15.0, 105.0], [75.0, 105.0], [45.0, 135.0], [30.0, 30.0], [0.0, 90.0]]
   shares: [0.2, 0.5, 0.8]

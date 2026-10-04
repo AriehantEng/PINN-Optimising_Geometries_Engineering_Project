@@ -66,3 +66,20 @@ def test_the_study_data_are_what_the_report_says(setup):
     _, _, data, _ = setup
     assert len(data["q"]) == 66
     assert len({(a, b) for a, b in zip(data["a1"], data["a2"])}) == 6
+
+
+def test_parallel_cross_validation_is_the_sequential_one(setup):
+    """Folds are seeded from the config, so spreading them over processes
+    must not change a single number."""
+    import copy
+    config, study_config, data, _ = setup
+    small = copy.deepcopy(config)
+    small["model"]["width"] = 4
+    small["fit"].update(regularisation=[1.0, 10.0], restarts=1, max_evaluations=30)
+    keep = np.isin(data["a1"], [60.0, 30.0, 0.0]) & np.isin(data["a2"], [60.0, 90.0, 120.0])
+    subset = {k: v[keep] for k, v in data.items()}
+    small["fit"]["workers"] = 1
+    one = n3.cross_validate(small, study_config, subset, verbose=False)
+    small["fit"]["workers"] = 2
+    two = n3.cross_validate(small, study_config, subset, verbose=False)
+    assert one == two
