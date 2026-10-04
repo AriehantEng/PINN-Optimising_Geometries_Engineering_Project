@@ -1171,7 +1171,8 @@ def levenberg_marquardt_step(A, g, loss_now, trial_loss, lam, nu):
     """One accepted Levenberg-Marquardt step, retrying with more damping.
 
     Solves (A + lam I) delta = -g by Cholesky, accepts when the actual
-    reduction is positive, and updates lam by Nielsen's rule. Returns
+    reduction is positive, and updates lam by Nielsen's rule. A factorisation
+    that fails (lam below the round-off of A) counts as a rejected attempt. Returns
     (delta or None, new loss, lam, nu, attempts); delta is None when no
     damping in LM_MAX_ATTEMPTS attempts reduced the loss.
     """
@@ -1183,7 +1184,16 @@ def levenberg_marquardt_step(A, g, loss_now, trial_loss, lam, nu):
     for attempt in range(1, LM_MAX_ATTEMPTS + 1):
         damped = A.copy()
         damped[diagonal] += lam
-        factor = scipy.linalg.cho_factor(damped, lower=False, overwrite_a=True)
+        try:
+            factor = scipy.linalg.cho_factor(damped, lower=False, overwrite_a=True)
+        except np.linalg.LinAlgError:
+            # J^T J is positive semi-definite only in exact arithmetic: once lam
+            # falls below its round-off, A + lam I can fail to factorise (it
+            # killed developing_re10_polish_focus0 at step 56). That is a step
+            # the damping cannot support, so it is rejected like any other.
+            lam *= nu
+            nu *= 2.0
+            continue
         delta = scipy.linalg.cho_solve(factor, -g)
         predicted = -(2.0 * g @ delta + delta @ (A @ delta))
         new_loss = trial_loss(delta)

@@ -1145,6 +1145,19 @@ def test_a_rejected_step_is_retried_with_more_damping():
     assert np.allclose(calls[2], -g / (1.0 + 8.0))
 
 
+def test_a_failed_factorisation_is_a_rejected_step_not_a_crash():
+    """J^T J carries round-off: here an eigenvalue of -1e-14. With lam below
+    it, A + lam I cannot be Cholesky-factorised; the step must retry with more
+    damping (1e-16 -> 2e-16 -> 8e-16 -> 6.4e-15 -> 1.024e-13), as for any
+    rejected step, instead of raising (which killed polish_focus0)."""
+    A, g = np.diag([1.0, -1e-14]), np.array([1.0, 0.0])
+    delta, new, lam, nu, attempts = pinn.levenberg_marquardt_step(
+        A, g, 1.0, lambda d: 0.5, 1e-16, 2.0)
+    assert attempts == 5 and new == 0.5
+    assert abs(lam / 1.024e-13 - 1.0) < 1e-12
+    assert np.allclose(delta, -g / (1.0 + 1.024e-13))
+
+
 @pytest.mark.parametrize("lm, message", [
     ({"iterations": 5}, "damping"),
     ({"iterations": 5, "damping": 1e-3}, "resample_every"),
