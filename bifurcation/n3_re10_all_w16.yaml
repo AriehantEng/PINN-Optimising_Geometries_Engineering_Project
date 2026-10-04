@@ -1,0 +1,25 @@
+# Network 3, third training: twice the width. The second (network3_re10_all,
+# width 8, 165 optima) fixed the unseen 60 and 90 degree pairs (mean extra
+# drop 0.006%, was 0.23%) but underfitted: training split error up to 0.039,
+# weight decay 1e4, and the 120/180 pairs lost what the first training had
+# (0.13% mean extra drop, was 0.008%). Width 16: room for the sharp 150-degree
+# behaviour without giving up the rest. Same data, same unseen validation.
+name: network3_re10_all_w16
+seed: 7
+data: docs/bifurcation_re10-shares-all.json
+model:
+  width: 16                   # 642 parameters
+  depth: 2
+  activation: tanh
+  init_gain: 1.0
+fit:
+  split_scale: 0.001          # a split error of 0.001 weighs like a 0.1% drop error
+  drop_scale: 0.001
+  regularisation: [10.0, 100.0, 1000.0, 10000.0]   # weight decay candidates, chosen
+                                                            # by leaving one angle pair out
+  restarts: 2                 # least-squares fits from 2 initialisations; the best is kept
+  max_evaluations: 2000
+validation:                   # angle pairs it never saw, checked by finite elements
+  pairs: [[45.0, 75.0], [15.0, 105.0], [75.0, 105.0], [45.0, 135.0], [30.0, 30.0], [0.0, 90.0]]
+  shares: [0.2, 0.5, 0.8]
+  workers: 2
