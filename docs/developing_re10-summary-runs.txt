@@ -36,3 +36,4 @@ P5 G3 + 100 steps at 16k, mean of 20, 32k held-out=developing_re10_polish_g3_poi
 G5 G3 + exponential input map=developing_re10_lm_fresh_inputmap
 P6 G5 + 100 steps, mean of 20, 32k held-out=developing_re10_polish_g5
 P7 G5 + 100 steps at 16k, mean of 20, 32k held-out=developing_re10_polish_g5_points
+P8 P5 + 150 more steps at 16k=developing_re10_polish_g3_more

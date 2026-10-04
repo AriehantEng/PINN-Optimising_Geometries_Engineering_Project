@@ -735,6 +735,24 @@ def test_the_pinn_energy_budget_is_exact_on_the_developed_field(config):
     assert abs(budget["dissipation"] - 8.0 * nu * L / 3.0) < 1e-12
     assert abs(budget["total_pressure_drop"] - 2.0 * nu * L) < 1e-12
     assert budget["energy_consistency"] < 1e-12
+    assert abs(budget["resistance"] - 1.5 * nu * L) < 1e-12        # (8 nu L / 3) / (4/3)^2
+
+
+def test_the_resistance_cancels_a_flux_error_that_the_dissipation_carries(config):
+    """A developed field carrying 1e-4 too much flux is still an exact
+    solution; its dissipation is 2e-4 high, its resistance exactly right.
+    This is the PINN's case: its dissipation error was mostly twice its flux
+    error, and the resistance removed it (rms 5.1e-6 -> 1.2e-6 over eight
+    networks)."""
+    from developing_flow import energy
+    L, nu, eps = config.length, 1.0 / config.reynolds, 1e-4
+
+    def high_flux(params, xy):
+        return (1.0 + eps) * jnp.stack([1.0 - xy[1] ** 2, 0.0 * xy[0], 2.0 * nu * (L - xy[0])])
+
+    budget = energy.budget(config, high_flux, None)
+    assert abs(budget["dissipation"] / (8.0 * nu * L / 3.0) - 1.0 - (2 * eps + eps**2)) < 1e-12
+    assert abs(budget["resistance"] / (1.5 * nu * L) - 1.0) < 1e-12
 
 
 def test_scorecard_judges_a_setup_only_outside_the_reference_seed_range():

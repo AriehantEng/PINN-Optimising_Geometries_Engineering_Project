@@ -79,6 +79,12 @@ def budget(config, field, params, chunk=8192):
     q_out, total_out, static_out = through(L)
     return {"flux_in": q_in, "flux_out": q_out, "energy_in": total_in, "energy_out": total_out,
             "dissipation": dissipation,
+            # The resistance: dissipation per flux squared, with the network's
+            # OWN mean flux. A PINN carries its flux only to ~1e-6 (soft inlet
+            # and continuity), and dissipation scales as Q^2, so the raw
+            # dissipation error is mostly twice the flux error; this cancels it
+            # to first order (rms error 4x smaller over eight networks).
+            "resistance": dissipation / (0.5 * (q_in + q_out)) ** 2,
             "total_pressure_drop": (total_in - total_out) / q_in,
             "static_pressure_drop": (static_in - static_out) / q_in,
             "energy_consistency": abs(total_in - total_out - dissipation) / dissipation}

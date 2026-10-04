@@ -41,6 +41,7 @@ METRICS = (
     ("entrance_length", "entrance length"),
     ("total_pressure_drop", "total-pressure drop (the design objective)"),
     ("dissipation", "viscous dissipation"),
+    ("resistance", "resistance: dissipation / flux^2 (flux error cancelled)"),
     ("energy_consistency", "energy budget, PINN alone (no reference)"),
 )
 
@@ -72,8 +73,17 @@ def reference_floor(solution_dir):
     gci = described["grid_convergence_index"]
     floor["total_pressure_drop"] = gci["total_pressure_drop"]["gci_fine"]
     floor["dissipation"] = gci["dissipation"]["gci_fine"]
+    # The reference's flux is exact to 5e-8 (|flux / (4/3) - 1|), so its
+    # resistance is as good as its dissipation: the same GCI bounds it.
+    floor["resistance"] = gci["dissipation"]["gci_fine"]
     floor["energy_consistency"] = described["energy"]["energy_consistency"]
     return floor
+
+
+def reference_resistance(described):
+    """dissipation / (mean flux)^2 of the reference, as energy.budget defines it."""
+    energy_ = described["energy"]
+    return energy_["dissipation"] / (0.5 * (energy_["flux_in"] + energy_["flux_out"])) ** 2
 
 
 def measure(directory, solutions):
@@ -91,6 +101,7 @@ def measure(directory, solutions):
         "total_pressure_drop": abs(budget["total_pressure_drop"]
                                    / described["energy"]["total_pressure_drop"] - 1.0),
         "dissipation": abs(budget["dissipation"] / described["energy"]["dissipation"] - 1.0),
+        "resistance": abs(budget["resistance"] / reference_resistance(described) - 1.0),
         "energy_consistency": budget["energy_consistency"],
         **{key: errors[key] for key in ("u", "u_entrance", "u_developed", "v", "p")},
         # Recomputed, not read from metrics.json: runs before CENTRELINE_POINTS

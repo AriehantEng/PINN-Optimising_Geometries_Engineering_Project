@@ -110,3 +110,33 @@ drop error rose 3.6x, beyond the +-13% seed band: the design objective is an
 integral with cancellations, and its error does not follow the field errors.
 For the bifurcation study, whose objective it is, it must be ranked on its own
 and with seeds.
+
+## 9. The objective's error is mostly a flux error, and normalising removes it
+
+A PINN carries its flux only to ~1e-6 (soft inlet, soft continuity); 7 of 8
+LM networks carry 1-6e-6 too much. Dissipation scales as Q^2, and its
+relative error is close to twice each network's mean flux error (G3 6.5e-6
+predicted / 5.3e-6 measured, G4 8.9 / 10.0, P5 2.2 / 2.2, P6 3.0 / 3.0, P7
+4.4 / 4.2, in 1e-6). Normalising by the network's own mean flux cancels it:
+
+| over G3, G4, G5, P3, P5-P8 | mean (bias) | rms | worst |
+|---|---|---|---|
+| dissipation | +3.7e-6 | 5.1e-6 | 1.0e-5 |
+| **resistance = dissipation / Q^2** | **-4.6e-7** | **1.2e-6** | 2.5e-6 |
+| total-pressure drop (boundary fluxes) | +3.1e-6 | 4.5e-6 | 1.1e-5 |
+| total-pressure drop / Q | +9.5e-7 | 3.1e-6 | 7.7e-6 |
+
+The total-pressure drop improves less because it is computed from boundary
+energy fluxes, and equals dissipation / q_in only up to the network's energy
+imbalance (1e-6 to 1e-5). For the bifurcation study: evaluate the objective
+from the volume dissipation, normalised by the measured flux and rescaled to
+the prescribed one, not from boundary pressures. P5's resistance is within
+4e-8 of the reference's, P6's 1.2e-7, P7's 3.4e-7. `energy.budget` now
+reports it and the summary ranks it (reference floor: the dissipation GCI,
+1.8e-7, since the reference's flux is exact to 5e-8).
+
+## 10. Continuing P5 for 150 steps (P8)
+
+The loss kept falling (held-out medians by 25-step block 9.0, 8.2, 7.5, 7.2,
+7.0, 6.6 in 1e-9) while u moved 2% (3.59e-6 to 3.52e-6, inside the seed band)
+and v 3%: a plateau in the field errors, not in the loss.
