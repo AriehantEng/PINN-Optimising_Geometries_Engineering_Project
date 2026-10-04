@@ -23,6 +23,20 @@ whenever w1 != w2. The angles need not be equal: a 120-degree bifurcation is
 (60, 60), (30, 90) or (0, 120), among others, and which orientation loses the
 least pressure is part of the design question.
 
+The septum, between the daughters, takes one of two shapes:
+  * "tip"   a1 + a2 != 180: the inner walls, extended, meet at the tip T, and
+            the polygon is A B E2o E2i T E1i E1o C D.
+  * "face"  a1 + a2 = 180 (a T-junction such as (90, 90), or (60, 120)): the
+            inner walls are parallel and meet nowhere unless they happen to be
+            one line, so a flat far wall joins their starts, start2 and start1,
+            and the polygon is A B E2o E2i start2 start1 E1i E1o C D. (Until
+            this was written the parallel case put T at start1, which bent
+            daughter 2's inner wall whenever w1 != w2: 2.3 degrees at
+            (90, 90) and split 0.4, and 5.9 degrees at (60, 120) even at 0.5.)
+A daughter at exactly 180 degrees folds flat onto the parent's wall: with walls
+of zero thickness the passage into it closes, so it is refused, as both
+daughters straight (a zero-thickness splitter plate) is.
+
 Width rules, chosen by the caller:
   * `Geometry.from_split(split, ...)`: w1 + w2 = w0, the parent's width shared
     between the daughters (w1 = split * w0). The main design problem.
@@ -32,6 +46,9 @@ No width may approach zero: a vanishing daughter is not a bifurcation. Every
 geometry carries a REQUIRED `min_width` (no default) and refuses a narrower
 daughter; `split_bounds` gives the split range it allows, which the geometric
 network maps its output into, so no optimiser can produce a vanishing branch.
+The same minimum holds for the passage INTO each daughter at the junction,
+from its outer corner (C or B) to the septum: a daughter turned far back has a
+full width but a closing entrance (at (10, 170) the gap at B is 0.17 w2).
 
 The corners B and C and the tip T are sharp: the flow has corner singularities
 there (finite pressure drop, unbounded pressure gradient), which the
@@ -44,15 +61,23 @@ boundary position with respect to the widths and angles.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 #: The parent's width in these units (half-width 1).
 PARENT_WIDTH = 2.0
 
-#: Edge labels of the polygon, in vertex order A B E2o E2i T E1i E1o C D.
-EDGE_KINDS = ("wall", "wall", "outlet2", "wall", "wall", "outlet1", "wall", "wall", "inlet")
+#: Edge labels of the polygon by septum shape, in vertex order
+#: A B E2o E2i T E1i E1o C D ("tip") or A B E2o E2i start2 start1 E1i E1o C D ("face").
+EDGE_KINDS = {
+    "tip": ("wall", "wall", "outlet2", "wall", "wall", "outlet1", "wall", "wall", "inlet"),
+    "face": ("wall", "wall", "outlet2", "wall", "wall", "wall", "outlet1", "wall", "wall",
+             "inlet"),
+}
+
+#: |sin(a1 + a2)| below this: the inner walls are parallel, a1 + a2 = 180.
+PARALLEL = 1e-12
 
 
 class GeometryError(ValueError):
@@ -82,7 +107,7 @@ def vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     # parallel and the tip sits on the junction line, at start1 (t1 = 0).
     rhs = start2 - start1
     det = xp.sin(angle1 + angle2)
-    parallel = xp.abs(det) < 1e-12
+    parallel = xp.abs(det) < PARALLEL
     safe = xp.where(parallel, 1.0, det)
     t1 = xp.where(parallel, 0.0, (rhs[0] * (-d2[1]) - rhs[1] * (-d2[0])) / safe)
     T = start1 + t1 * d1
@@ -91,6 +116,20 @@ def vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     E2o = B + daughter_length * d2
     E2i = E2o + w2 * n2
     return xp.stack([A, B, E2o, E2i, T, E1i, E1o, C, D])
+
+
+def face_vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
+    """The polygon when a1 + a2 = 180 (`vertices` describes the tip shape and
+    is not valid there): 10 vertices, A B E2o E2i start2 start1 E1i E1o C D,
+    the far wall start2 -> start1 closing the junction. Differentiable."""
+    q = corner_points(w1, w2, angle1, angle2, parent_length, daughter_length, xp=xp)
+    return xp.stack([q["A"], q["B"], q["E2o"], q["E2i"], q["start2"], q["start1"], q["E1i"],
+                     q["E1o"], q["C"], q["D"]])
+
+
+def septum_shape(angle1, angle2):
+    """'face' when the inner walls are parallel (a1 + a2 = 180), else 'tip'. Radians."""
+    return "face" if abs(math.sin(angle1 + angle2)) < PARALLEL else "tip"
 
 
 def corner_points(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
@@ -106,12 +145,13 @@ def corner_points(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np)
                 E1o=E1o, E1i=E1i, E2o=E2o, E2i=E2i)
 
 
-def triangles(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
-    """The polygon cut into 9 triangles, as a (9, 3, 2) array, each listed
+def triangles(w1, w2, angle1, angle2, parent_length, daughter_length, septum, xp=np):
+    """The polygon cut into triangles, as an (n, 3, 2) array, each listed
     counter-clockwise (positive area):
 
         parent      A B C, A C D
-        junction    a fan of 3 over B start2 T start1 C
+        junction    a fan of 3 over B start2 T start1 C (septum 'tip'), or of 2
+                    over B start2 start1 C ('face')
         daughter 1  C start1 E1i, C E1i E1o
         daughter 2  B E2o E2i, B E2i start2
 
@@ -131,13 +171,19 @@ def triangles(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     # reflex vertex when both daughters turn). Fan it from whichever vertex
     # sees all the others: the one whose smallest fan triangle is largest.
     # The choice switches between geometries, but the area it covers does not.
-    ring = [q["B"], q["start2"], q["T"], q["start1"], q["C"]]
+    if septum == "tip":
+        ring = [q["B"], q["start2"], q["T"], q["start1"], q["C"]]
+    elif septum == "face":
+        ring = [q["B"], q["start2"], q["start1"], q["C"]]
+    else:
+        raise ValueError(f"unknown septum shape {septum!r}")
+    m = len(ring)
     fans = []
-    for apex in range(5):
-        others = [ring[(apex + k) % 5] for k in range(1, 5)]
+    for apex in range(m):
+        others = [ring[(apex + k) % m] for k in range(1, m)]
         fans.append(xp.stack([xp.stack([ring[apex], others[k], others[k + 1]])
-                              for k in range(3)]))
-    fans = xp.stack(fans)                                         # (5, 3, 3, 2)
+                              for k in range(m - 2)]))
+    fans = xp.stack(fans)                                         # (m, m - 2, 3, 2)
     a, b, c = fans[..., 0, :], fans[..., 1, :], fans[..., 2, :]
     area = 0.5 * ((b[..., 0] - a[..., 0]) * (c[..., 1] - a[..., 1])
                   - (b[..., 1] - a[..., 1]) * (c[..., 0] - a[..., 0]))
@@ -203,7 +249,8 @@ def triangle_quadrature(tris, subdivisions, xp=np):
 
 @dataclass(frozen=True)
 class Geometry:
-    """One bifurcation. Widths in the parent's half-width units, angles in degrees."""
+    """One bifurcation. Widths in the parent's half-width units, angles in degrees.
+    `septum` ('tip' or 'face') is derived from the angles, never given."""
 
     w1: float
     w2: float
@@ -212,6 +259,7 @@ class Geometry:
     parent_length: float
     daughter_length: float
     min_width: float
+    septum: str = field(init=False, compare=False)
 
     def __post_init__(self):
         for name in ("min_width", "parent_length", "daughter_length"):
@@ -223,44 +271,66 @@ class Geometry:
                     f"{name} = {getattr(self, name)} is below the minimum width {self.min_width}: "
                     "a daughter may never close")
         for name in ("angle1", "angle2"):
-            if not 0.0 <= getattr(self, name) < 180.0:
-                raise GeometryError(f"{name} must lie in [0, 180) degrees, got {getattr(self, name)}")
+            if not 0.0 <= getattr(self, name) <= 180.0:
+                raise GeometryError(f"{name} must lie in [0, 180] degrees, got {getattr(self, name)}")
+            if getattr(self, name) == 180.0:
+                raise GeometryError(
+                    f"{name} = 180 folds the daughter flat onto the parent's wall: with walls of "
+                    "zero thickness the passage into it closes. The pressure drop grows without "
+                    "bound as the angle approaches 180; give an angle below it")
         if self.angle1 + self.angle2 == 0.0:
             raise GeometryError(
                 "both daughters straight is a zero-thickness splitter plate, not a bifurcation: "
                 "give at least one daughter an angle")
-        v = self.vertices()
-        A, B, E2o, E2i, T, E1i, E1o, C, D = v
         a1, a2 = math.radians(self.angle1), math.radians(self.angle2)
+        object.__setattr__(self, "septum", septum_shape(a1, a2))
+        q = corner_points(self.w1, self.w2, a1, a2, self.parent_length, self.daughter_length)
         d1 = np.array([math.cos(a1), math.sin(a1)])
         d2 = np.array([math.cos(a2), -math.sin(a2)])
-        start1 = C + self.w1 * np.array([math.sin(a1), -math.cos(a1)])
-        start2 = B + self.w2 * np.array([math.sin(a2), math.cos(a2)])
-        # Each daughter starts at the cross-section through its outer corner
-        # (start_i on its inner wall). If the inner walls cross only DOWNSTREAM
-        # of both starting sections, the two strips overlap between those
-        # sections and the tip. In a valid bifurcation the tip lies at or
-        # upstream of at least one of them: (60, 60) both, (0, 60) one.
-        upstream1 = np.dot(T - start1, d1) <= 1e-12
-        upstream2 = np.dot(T - start2, d2) <= 1e-12
-        if not (upstream1 or upstream2):
-            raise GeometryError(
-                f"the daughters overlap after the junction: widths {self.w1:g} + {self.w2:g} are "
-                f"too large for angles {self.angle1:g}, {self.angle2:g}")
-        # The tip must not lie upstream of the junction: then the daughters
-        # would overlap inside the parent.
-        if T[0] < self.parent_length - 1e-12:
-            raise GeometryError(
-                f"the daughters overlap upstream of the junction (septum tip at x* = {T[0]:.4f} "
-                f"< {self.parent_length}): widths {self.w1:g} + {self.w2:g} too large for "
-                f"angles {self.angle1:g}, {self.angle2:g}")
-        # Each inner wall must reach its outlet beyond the tip.
-        for inner_end, d in ((E1i, v[6] - v[7]), (E2i, v[2] - v[1])):
-            if np.dot(inner_end - T, d) <= 0.0:
-                raise GeometryError("daughter_length is too short: an outlet lies upstream of the "
-                                    "septum tip")
+        if self.septum == "tip":
+            T, start1, start2 = q["T"], q["start1"], q["start2"]
+            # Each daughter starts at the cross-section through its outer corner
+            # (start_i on its inner wall). If the inner walls cross only DOWNSTREAM
+            # of both starting sections, the two strips overlap between those
+            # sections and the tip. In a valid bifurcation the tip lies at or
+            # upstream of at least one of them: (60, 60) both, (0, 60) one.
+            upstream1 = np.dot(T - start1, d1) <= 1e-12
+            upstream2 = np.dot(T - start2, d2) <= 1e-12
+            if not (upstream1 or upstream2):
+                raise GeometryError(
+                    f"the daughters overlap after the junction: widths {self.w1:g} + {self.w2:g} "
+                    f"are too large for angles {self.angle1:g}, {self.angle2:g}")
+            # The tip must not lie upstream of the junction: then the daughters
+            # would overlap inside the parent.
+            if T[0] < self.parent_length - 1e-12:
+                raise GeometryError(
+                    f"the daughters overlap upstream of the junction (septum tip at x* = "
+                    f"{T[0]:.4f} < {self.parent_length}): widths {self.w1:g} + {self.w2:g} too "
+                    f"large for angles {self.angle1:g}, {self.angle2:g}")
+            # Each inner wall must reach its outlet beyond the tip. Near a1 + a2 =
+            # 180 with unequal widths the inner walls are almost parallel and
+            # meet far away, past an outlet: the tip shape does not exist there.
+            for inner_end, d in ((q["E1i"], d1), (q["E2i"], d2)):
+                if np.dot(inner_end - T, d) <= 0.0:
+                    raise GeometryError(
+                        "the inner walls meet beyond an outlet (septum tip at "
+                        f"({T[0]:.3f}, {T[1]:.3f})): daughter_length is too short, or the "
+                        f"angles {self.angle1:g} + {self.angle2:g} are so near 180 that walls "
+                        f"{self.w1:g} and {self.w2:g} wide cannot meet near the junction. "
+                        "At exactly 180 the junction closes with a flat far wall instead")
+        v = self.vertices()
         if _self_intersects(v):
             raise GeometryError("the bifurcation polygon intersects itself for these parameters")
+        # The passage into each daughter, from its outer corner to the septum,
+        # obeys the same minimum as the widths.
+        septum = self.septum_polyline()
+        for name, corner in (("daughter 1", q["C"]), ("daughter 2", q["B"])):
+            gap = _distance_to_segments(corner, septum)
+            if gap < self.min_width - 1e-12:
+                raise GeometryError(
+                    f"the passage into {name} at the junction is {gap:.4g} wide, below the "
+                    f"minimum width {self.min_width:g}: turned this far back, the daughter's "
+                    "entrance closes")
 
     @classmethod
     def from_split(cls, split, angle1, angle2, parent_length, daughter_length, min_width):
@@ -269,21 +339,50 @@ class Geometry:
         if not lo <= split <= hi:
             raise GeometryError(f"split must lie in [{lo:g}, {hi:g}] (min_width {min_width:g} of "
                                 f"the parent's {PARENT_WIDTH:g}), got {split}")
-        return cls(PARENT_WIDTH * split, PARENT_WIDTH * (1.0 - split), angle1, angle2,
-                   parent_length, daughter_length, min_width)
+        # Rounding: 2 (1 - 0.9) is 0.19999999999999996 < 0.2, so the bound
+        # split_bounds returned would be refused. At a bound the narrow
+        # daughter is EXACTLY min_width; inside them, max() only undoes
+        # rounding, since the split was checked above.
+        w1 = min_width if split == lo else max(PARENT_WIDTH * split, min_width)
+        w2 = min_width if split == hi else max(PARENT_WIDTH * (1.0 - split), min_width)
+        return cls(w1, w2, angle1, angle2, parent_length, daughter_length, min_width)
 
     def vertices(self):
-        return vertices(self.w1, self.w2, math.radians(self.angle1), math.radians(self.angle2),
-                        self.parent_length, self.daughter_length)
+        """The polygon, counter-clockwise: 9 vertices (septum 'tip') or 10 ('face')."""
+        build = vertices if self.septum == "tip" else face_vertices
+        return build(self.w1, self.w2, math.radians(self.angle1), math.radians(self.angle2),
+                     self.parent_length, self.daughter_length)
 
     def triangles(self):
         return triangles(self.w1, self.w2, math.radians(self.angle1), math.radians(self.angle2),
-                         self.parent_length, self.daughter_length)
+                         self.parent_length, self.daughter_length, self.septum)
 
     def edges(self):
-        """[(start, end, kind)] for the 9 edges, counter-clockwise."""
+        """[(start, end, kind)] for every edge, counter-clockwise."""
         v = self.vertices()
-        return [(v[i], v[(i + 1) % len(v)], EDGE_KINDS[i]) for i in range(len(v))]
+        kinds = EDGE_KINDS[self.septum]
+        return [(v[i], v[(i + 1) % len(v)], kinds[i]) for i in range(len(v))]
+
+    def septum_polyline(self):
+        """The septum's boundary from E2i to E1i: E2i T E1i, or E2i start2 start1 E1i."""
+        v = self.vertices()
+        return v[3:6] if self.septum == "tip" else v[3:7]
+
+    def reentrant_corners(self):
+        """Wall vertices where the fluid's interior angle is at least 180 degrees:
+        the parent's corners B and C (a straight daughter leaves a 180-degree
+        one) and the septum tip. The pressure is singular at those above 180."""
+        v = self.vertices()
+        kinds = EDGE_KINDS[self.septum]
+        out = []
+        for i in range(len(v)):
+            if kinds[i - 1] != "wall" or kinds[i] != "wall":
+                continue
+            before, after = v[i] - v[i - 1], v[(i + 1) % len(v)] - v[i]
+            turn = before[0] * after[1] - before[1] * after[0]   # < 0: a right turn, reflex
+            if turn <= 1e-12 * np.linalg.norm(before) * np.linalg.norm(after):
+                out.append(v[i])
+        return np.array(out)
 
     def area(self):
         x, y = self.vertices().T
@@ -344,6 +443,15 @@ def split_bounds(min_width):
         raise GeometryError(f"min_width must lie in (0, {0.5 * PARENT_WIDTH:g}) so both daughters "
                             f"fit, got {min_width}")
     return min_width / PARENT_WIDTH, 1.0 - min_width / PARENT_WIDTH
+
+
+def _distance_to_segments(point, polyline):
+    """Distance from a point to a polyline (consecutive vertices joined)."""
+    out = np.inf
+    for a, b in zip(polyline[:-1], polyline[1:]):
+        t = np.clip(np.dot(point - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0)
+        out = min(out, float(np.linalg.norm(point - (a + t * (b - a)))))
+    return out
 
 
 def _inside(v, p):

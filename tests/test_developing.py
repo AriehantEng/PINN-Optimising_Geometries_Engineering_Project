@@ -898,7 +898,7 @@ def test_loss_terms_follow_the_formulation_and_inlet():
 
 def test_init_gain_scales_every_layer_an_activation_follows_but_not_the_output():
     key = jax.random.PRNGKey(0)
-    one, two = pinn.init_network(key, 8, 3, 3, 1.0), pinn.init_network(key, 8, 3, 3, 2.0)
+    one, two = pinn.init_network(key, 2, 8, 3, 3, 1.0), pinn.init_network(key, 2, 8, 3, 3, 2.0)
     scaled = [(one["encoder_u"], two["encoder_u"]), (one["encoder_v"], two["encoder_v"])]
     scaled += list(zip(one["hidden"], two["hidden"]))
     for a, b in scaled:
@@ -910,7 +910,7 @@ def test_init_gain_scales_every_layer_an_activation_follows_but_not_the_output()
 def test_gain_one_is_plain_glorot():
     """Stored runs were initialised before init_gain existed; gain 1 must be that."""
     key = jax.random.PRNGKey(3)
-    params = pinn.init_network(key, 8, 2, 3, 1.0)
+    params = pinn.init_network(key, 2, 8, 2, 3, 1.0)
     keys = jax.random.split(key, 2 + 3)
     expected = np.sqrt(2.0 / (2 + 8)) * np.asarray(jax.random.normal(keys[0], (8, 2), dtype=jnp.float64))
     assert np.array_equal(np.asarray(params["encoder_u"]["W"]), expected)

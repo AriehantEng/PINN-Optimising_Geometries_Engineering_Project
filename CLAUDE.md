@@ -205,3 +205,31 @@ G4's reported entrance-length error, and at 10,001 still 1.4e-7 (a new test
 caught this at 1e-7; the tolerance was kept) → bracket on a grid, then root-
 find on the field itself (`pinn.entrance_length`, Brent). Use one measuring
 function for the PINN and the reference, never two that look alike.
+
+**Equal outlet pressures make the pressure-drop optimum a width bound.**
+A finite-element split sweep at 60/60, Re 10 fell monotonically from 7.37 at
+split 0.5 to 3.05 at 0.1 and 0.9, where the narrow daughter carried 0.2% of
+the flow → with do-nothing outlets the daughters are parallel resistances
+conducting like w^3, and w1^3 + w2^3 is convex under w1 + w2 = w0, so "lowest
+pressure drop" means "close one branch" and min_width alone sets the answer →
+a design question needs the flow each daughter must deliver: the flux-defective
+outlet (`outlet1_share`, a Lagrange multiplier = outlet 1's extra pressure)
+gives an interior optimum (split 0.50 at 60/60, 30/90, 0/120, 90/90). Which
+formulation is wanted is the user's call; both are in the code and the tests.
+
+**The inlet is a segment, not the line x* = 0.** At 0/120 the reference lost
+152% of its mass through a wall → the Dirichlet data put the inlet profile on
+every node with x* = 0, and daughter 2's outer wall crosses x* = 0 at
+y* = -6.2, so that wall node got u = 1 - 6.2^2 = -37 → identify boundaries by
+distance to their own segment. `solve_bifurcation` now refuses any solution
+whose wall velocity is not exactly zero. Any geometry that turns back past the
+inlet plane hits this; Phase 2 sweeps will.
+
+**Parallel inner walls have no septum tip.** At a1 + a2 = 180 (90/90, 60/120)
+the tip was put at start1, which bent daughter 2's inner wall by 2.3 degrees
+at (90, 90) split 0.4 and 5.9 degrees at (60, 120) split 0.5, silently; 30/150
+was refused as self-intersecting → 180 degrees is a different shape: a flat far
+wall from start2 to start1 (`septum = "face"`, 10 vertices). Tests on strip
+widths now run on both shapes. Near 180 with unequal widths the walls meet
+past an outlet and the geometry refuses; one daughter at 180 folds onto the
+parent's wall and closes, and the entrance gap obeys min_width like the widths.

@@ -680,9 +680,10 @@ def _dense(key, n_in, n_out, gain):
     return {"W": _glorot(key, n_out, n_in, gain), "b": jnp.zeros((n_out,), dtype=jnp.float64)}
 
 
-def init_network(key, width, depth, n_out, gain):
+def init_network(key, n_in, width, depth, n_out, gain):
     """Modified MLP (Wang, Teng & Perdikaris 2021): two input encoders blended
-    into every hidden layer. Inputs (x, y); `n_out` raw outputs.
+    into every hidden layer. `n_in` inputs ((x, y) here; the bifurcation's
+    Network 2 adds its design parameters); `n_out` raw outputs.
 
     Glorot-normal weights, scaled by `gain` on every layer an activation
     follows (encoders and hidden layers) but not on the linear output layer.
@@ -694,9 +695,9 @@ def init_network(key, width, depth, n_out, gain):
     """
     keys = jax.random.split(key, depth + 3)
     return {
-        "encoder_u": _dense(keys[0], 2, width, gain),
-        "encoder_v": _dense(keys[1], 2, width, gain),
-        "hidden": [_dense(keys[2], 2, width, gain)]
+        "encoder_u": _dense(keys[0], n_in, width, gain),
+        "encoder_v": _dense(keys[1], n_in, width, gain),
+        "hidden": [_dense(keys[2], n_in, width, gain)]
         + [_dense(keys[3 + i], width, width, gain) for i in range(depth - 1)],
         "output": _dense(keys[depth + 2], width, n_out, 1.0),
     }
@@ -704,7 +705,7 @@ def init_network(key, width, depth, n_out, gain):
 
 def init_params(config: Config, key):
     """The network a config describes, initialised from `key`."""
-    return init_network(key, config.width, config.depth, config.n_outputs, config.init_gain)
+    return init_network(key, 2, config.width, config.depth, config.n_outputs, config.init_gain)
 
 
 #: Activation functions by config name. Applied everywhere in the modified
@@ -1127,6 +1128,18 @@ def make_gauss_newton(config: Config, field, unflatten, chunk=512):
         if inlet is not None:
             out.append((inlet, batch.inlet))
         return out
+
+    return gauss_newton(groups, unflatten, chunk)
+
+
+def gauss_newton(groups, unflatten, chunk):
+    """The generic core of `make_gauss_newton`, for any least-squares PINN.
+
+    groups(batch) -> [(fn, points)], fn(params, xy, n) -> the scaled residuals
+    at one point of a group of n points (summing their squares over the batch
+    gives the weighted loss). The bifurcation's Network 2 uses it directly.
+    Returns (normal_equations, loss) as `make_gauss_newton` documents.
+    """
 
     @functools.partial(jax.jit, static_argnums=(0, 3))
     def block(fn, theta, points, n):

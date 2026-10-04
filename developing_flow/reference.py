@@ -137,7 +137,7 @@ def taylor_hood(mesh):
 
 
 def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
-          traction_facets=None, verbose=False):
+          traction_facets=None, constraint=None, verbose=False):
     """Steady Navier-Stokes by Q2/Q1 finite elements and Newton's method.
 
     dirichlet_marker(x) -> bool over facet midpoints selects the velocity
@@ -148,6 +148,15 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
 
     The Taylor-Hood pair follows the mesh: Q2/Q1 on quadrilaterals (the
     channel), P2/P1 on triangles (the bifurcation, bifurcation/reference.py).
+
+    constraint(basis_u) -> (c, target), optional: one linear condition
+    c . U = target on the velocity, held by a Lagrange multiplier lam that
+    enters the momentum equation as lam c. When c integrates u . n over some
+    outlet facets, lam c is a constant extra pressure lam on that outlet: the
+    flux-defective boundary condition (Heywood, Rannacher & Turek 1996;
+    Formaggia, Gerbeau, Nobile & Quarteroni 2002), which prescribes an
+    outlet's flux and lets the outlet's pressure follow. lam is returned as
+    info["multiplier"].
 
     Returns (basis_u, basis_p, U, P, info).
     """
@@ -176,23 +185,39 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
 
         load = fem.asm(boundary_load, facet_basis)
 
-    def system(uu):
-        return scipy.sparse.bmat([[uu, B], [B.T, None]], format="csr")
+    if constraint is None:
+        def system(uu):
+            return scipy.sparse.bmat([[uu, B], [B.T, None]], format="csr")
+        extra, target = 0, None
+    else:
+        c, target = constraint(basis_u)
+        c = scipy.sparse.csr_matrix(np.asarray(c, dtype=np.float64).reshape(-1, 1))
+
+        def system(uu):
+            return scipy.sparse.bmat([[uu, B, c], [B.T, None, None], [c.T, None, None]],
+                                     format="csr")
+        extra = 1
 
     # Stokes: a linear solve that gives Newton a start satisfying the boundary data.
-    x = np.concatenate([U, np.zeros(np_dofs)])
+    x = np.concatenate([U, np.zeros(np_dofs + extra)])
     K = system(fem.asm(stokes_uu, basis_u))
-    rhs = np.concatenate([load, np.zeros(np_dofs)])
+    rhs = np.concatenate([load, np.zeros(np_dofs + extra)])
+    if extra:
+        rhs[-1] = target
     x = fem.solve(*fem.condense(K, rhs, x=x, D=fixed_global))
 
     history = []
     start = time.perf_counter()
     for iteration in range(1, NEWTON_MAX + 1):
-        U, P = x[:nu_dofs], x[nu_dofs:]
+        U, P = x[:nu_dofs], x[nu_dofs:nu_dofs + np_dofs]
         u0 = basis_u.interpolate(U)
         p0 = basis_p.interpolate(P)
-        R = np.concatenate([fem.asm(residual_u, basis_u, u0=u0, p0=p0) - load,
-                            fem.asm(residual_p, basis_p, u0=u0)])
+        R = [fem.asm(residual_u, basis_u, u0=u0, p0=p0) - load,
+             fem.asm(residual_p, basis_p, u0=u0)]
+        if extra:
+            R[0] = R[0] + x[-1] * c.toarray().ravel()
+            R.append(np.ravel(c.T @ U) - target)
+        R = np.concatenate(R)
         J = system(fem.asm(jacobian_uu, basis_u, u0=u0))
         delta = fem.solve(*fem.condense(J, -R, D=fixed_global))
         x = x + delta
@@ -208,9 +233,11 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
     else:
         raise RuntimeError(f"Newton did not converge in {NEWTON_MAX} iterations: {history[-1]}")
 
-    U, P = x[:nu_dofs], x[nu_dofs:]
+    U, P = x[:nu_dofs], x[nu_dofs:nu_dofs + np_dofs]
     info = {"newton": history, "seconds": time.perf_counter() - start,
             "unknowns": int(x.size), "elements": int(mesh.nelements)}
+    if extra:
+        info["multiplier"] = float(x[-1])
     return basis_u, basis_p, U, P, info
 
 

@@ -57,6 +57,82 @@ def test_one_straight_daughter_keeps_the_parent_wall_and_both_straight_is_refuse
         make(0.5, 0.0, 0.0)
 
 
+# -- a 180-degree bifurcation: parallel inner walls, a flat far wall ---------- #
+
+STRAIGHT_ACROSS = [(90.0, 90.0), (60.0, 120.0), (30.0, 150.0), (120.0, 60.0), (45.0, 135.0)]
+
+
+def daughters_are_strips(g):
+    """Both daughters are strips of their own width, whatever the septum."""
+    v = g.vertices()
+    A, B, E2o, E2i = v[:4]
+    E1i, E1o, C, D = v[-4:]
+    cross = lambda a, b: a[0] * b[1] - a[1] * b[0]               # noqa: E731
+    for outer_start, outer_end, inner_end, w in ((C, E1o, E1i, g.w1), (B, E2o, E2i, g.w2)):
+        d = (outer_end - outer_start) / np.linalg.norm(outer_end - outer_start)
+        assert abs(abs(cross(d, inner_end - outer_start)) - w) < 1e-12
+        septum_end = [p for p in g.septum_polyline() if not np.array_equal(p, inner_end)]
+        # every septum vertex next to this inner wall lies on its line
+        nearest = min(septum_end, key=lambda p: np.linalg.norm(p - inner_end))
+        assert abs(abs(cross(d, nearest - outer_start)) - w) < 1e-12
+
+
+@pytest.mark.parametrize("angles", STRAIGHT_ACROSS)
+@pytest.mark.parametrize("split", [0.3, 0.5, 0.7])
+def test_a_180_degree_bifurcation_closes_with_a_flat_far_wall(angles, split):
+    """The inner walls are parallel and meet nowhere: the junction is closed by
+    a wall from start2 to start1. Until this shape existed, the tip was put at
+    start1, bending daughter 2's inner wall whenever w1 != w2 (2.3 degrees at
+    (90, 90), split 0.4; 5.9 degrees at (60, 120) even at split 0.5)."""
+    g = make(split, *angles)
+    assert g.septum == "face" and len(g.vertices()) == 10
+    daughters_are_strips(g)
+    assert [k for *_, k in g.edges()].count("wall") == 7
+    # the same tiling and sampling guarantees as the tip shape
+    tri = g.triangles()
+    area = 0.5 * ((tri[:, 1, 0] - tri[:, 0, 0]) * (tri[:, 2, 1] - tri[:, 0, 1])
+                  - (tri[:, 1, 1] - tri[:, 0, 1]) * (tri[:, 2, 0] - tri[:, 0, 0]))
+    assert area.min() > -1e-12 and abs(area.sum() - g.area()) < 1e-10
+    rng = np.random.default_rng(0)
+    for kind in ("wall", "inlet", "outlet1", "outlet2"):
+        p, n = g.sample_boundary(rng, kind, 400)
+        assert not g.contains(p + 1e-6 * n).any()
+
+
+def test_the_far_wall_is_the_limit_of_the_tip():
+    """Approaching 180 degrees symmetrically, the tip flattens onto the far wall."""
+    face = make(0.5, 90.0, 90.0)
+    tip = make(0.5, 89.9999, 89.9999)
+    assert tip.septum == "tip"
+    assert abs(tip.area() - face.area()) < 1e-5
+    assert np.linalg.norm(tip.vertices()[4] - 0.5 * (face.vertices()[4] + face.vertices()[5])) < 1e-5
+
+
+def test_near_180_with_unequal_widths_the_walls_meet_too_far_away():
+    """At 89 + 90 degrees, walls 0.8 and 1.2 wide meet 24 units up daughter 1:
+    there is no tip near the junction, and the geometry says so."""
+    with pytest.raises(GeometryError, match="meet beyond an outlet"):
+        make(0.4, 89.0, 90.0)
+
+
+def test_a_daughter_at_180_degrees_and_a_closing_entrance_are_refused():
+    with pytest.raises(GeometryError, match="folds the daughter flat"):
+        make(0.5, 0.0, 180.0)
+    # (10, 170): full widths, but the entrance at B is 0.17 w2 = 0.174 < 0.2
+    with pytest.raises(GeometryError, match="passage into daughter 2"):
+        make(0.5, 10.0, 170.0)
+    # a wider entrance makes it valid again, and the rule is the minimum width
+    g = Geometry.from_split(0.5, 10.0, 170.0, 3.0, 8.0, min_width=0.15)
+    assert g.septum == "face"
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_the_reentrant_corners_are_b_t_and_c(case):
+    g = make(**case)
+    A, B, E2o, E2i, T, E1i, E1o, C, D = g.vertices()
+    assert np.array_equal(g.reentrant_corners(), np.stack([B, T, C]))
+
+
 def test_equal_angles_and_widths_give_a_mirror_symmetric_split():
     v = make(0.5, 50.0, 50.0).vertices()
     reflected = v * np.array([1.0, -1.0])
@@ -103,6 +179,17 @@ def test_no_width_can_reach_zero():
     with pytest.raises(TypeError):
         Geometry.from_split(0.5, 30.0, 30.0, 3.0, 8.0)          # min_width is required
     assert split_bounds(0.2) == (0.1, 0.9)
+
+
+@pytest.mark.parametrize("min_width", [0.2, 0.3, 0.1, 0.25])
+def test_both_split_bounds_are_accepted(min_width):
+    """The bounds are where an optimiser that wants unequal daughters ends up,
+    and 2 (1 - 0.9) rounds below 0.2: the bound it was told to use was refused."""
+    lo, hi = split_bounds(min_width)
+    for split in (lo, hi):
+        g = Geometry.from_split(split, 30.0, 60.0, 3.0, 8.0, min_width=min_width)
+        assert min(g.w1, g.w2) == min_width
+        assert abs(g.w1 + g.w2 - 2.0) < 1e-15
 
 
 def test_impossible_geometries_are_refused():
@@ -184,7 +271,7 @@ def test_domain_integrals_differentiate_through_the_moving_boundary():
 
     def area(params):
         split, a1, a2 = params
-        tri = triangles(2.0 * split, 2.0 * (1.0 - split), a1, a2, 3.0, 8.0, xp=jnp)
+        tri = triangles(2.0 * split, 2.0 * (1.0 - split), a1, a2, 3.0, 8.0, "tip", xp=jnp)
         _, w = triangle_quadrature(tri, 1, xp=jnp)
         return jnp.sum(w)
 
@@ -209,7 +296,7 @@ COARSE = dict(max_area=0.04, corner_levels=3, corner_radius=0.4)
 def coarse_solution(split, angle1, angle2):
     from bifurcation import reference as br
     g = make(split, angle1, angle2)
-    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, **COARSE)
+    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, **COARSE)
 
 
 def test_the_mesh_fills_the_polygon_and_is_refined_at_the_corners():
@@ -239,11 +326,66 @@ def test_mass_is_conserved_exactly_and_the_outlets_share_one_pressure():
     assert m["energy_consistency"] < 1e-3
 
 
+def test_a_daughter_turned_back_across_the_inlet_line_keeps_no_slip():
+    """At 0/120 daughter 2's outer wall crosses x* = 0 at y* = -6.2. The inlet
+    profile was applied on the LINE x* = 0, so that wall node got u = -37 and
+    mass imbalance was -152%."""
+    m = coarse_solution(0.7, 0.0, 120.0).measures()
+    assert abs(m["mass_imbalance"]) < 1e-12
+    assert m["energy_consistency"] < 1e-3
+    assert 0.0 < m["flux_out1"] and 0.0 < m["flux_out2"]
+
+
 def test_a_mirror_symmetric_bifurcation_splits_the_flow_evenly():
     m = coarse_solution(0.5, 60.0, 60.0).measures()
     assert abs(m["split_flux"] - 0.5) < 1e-4                    # the mesh is not exactly symmetric
     lopsided = coarse_solution(0.5, 20.0, 80.0).measures()
     assert lopsided["split_flux"] > 0.5 + 1e-3                  # the straighter branch takes more
+
+
+def prescribed(split, angle1, angle2, share):
+    from bifurcation import reference as br
+    g = make(split, angle1, angle2)
+    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, share, **COARSE)
+
+
+def test_prescribing_the_free_split_changes_nothing():
+    """The flux-defective outlet is the do-nothing outlet plus a pressure offset:
+    asked for the split the flow chose by itself, it must need no offset."""
+    free = coarse_solution(0.4, 30.0, 70.0).measures()
+    held = prescribed(0.4, 30.0, 70.0, free["split_flux"]).measures()
+    assert abs(held["outlet1_pressure_offset"]) < 1e-10
+    for key in ("total_pressure_drop", "split_flux", "dissipation", "static_pressure_in"):
+        assert abs(held[key] - free[key]) < 1e-10 * max(1.0, abs(free[key])), key
+
+
+def test_a_prescribed_share_is_delivered_and_paid_for_in_outlet_pressure():
+    free = coarse_solution(0.4, 30.0, 70.0).measures()
+    more = prescribed(0.4, 30.0, 70.0, free["split_flux"] + 0.1).measures()
+    assert abs(more["split_flux"] - (free["split_flux"] + 0.1)) < 1e-12
+    assert abs(more["mass_imbalance"]) < 1e-12
+    # more flow through outlet 1 than it takes freely: outlet 1 must sit lower
+    assert more["outlet1_pressure_offset"] < -1e-3
+    assert more["static_pressure_out1"] < more["static_pressure_out2"] - 1e-3
+    assert more["energy_consistency"] < 1e-3
+    with pytest.raises(ValueError, match="outlet1_share"):
+        prescribed(0.4, 30.0, 70.0, 1.0)
+
+
+def test_equal_outlet_pressures_drive_the_optimum_to_a_width_bound():
+    """Parallel daughters conduct like w^3, and w1^3 + w2^3 is convex under
+    w1 + w2 = w0: with a free split the pressure drop falls toward the most
+    unequal split, whatever the junction does."""
+    drops = [coarse_solution(s, 60.0, 60.0).measures()["total_pressure_drop"]
+             for s in (0.1, 0.3, 0.5)]
+    assert drops[0] < drops[1] < drops[2]
+
+
+def test_equal_prescribed_shares_have_an_interior_optimum():
+    """Delivering half the flow to each daughter, the symmetric split costs least."""
+    drops = [prescribed(s, 60.0, 60.0, 0.5).measures()["total_pressure_drop"]
+             for s in (0.35, 0.5, 0.65)]
+    assert drops[1] < drops[0] and drops[1] < drops[2]
 
 
 @pytest.mark.slow
@@ -252,7 +394,7 @@ def test_the_pressure_drop_converges_as_the_mesh_is_refined():
     g = make(0.4, 30.0, 70.0)
     drops = []
     for area in (0.08, 0.02, 0.005):
-        sol = br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, max_area=area,
+        sol = br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, max_area=area,
                                    corner_levels=4, corner_radius=0.4)
         drops.append(sol.measures()["total_pressure_drop"])
     changes = np.abs(np.diff(drops))

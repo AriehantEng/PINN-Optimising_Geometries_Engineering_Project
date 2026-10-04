@@ -9,6 +9,20 @@ polygon of bifurcation/geometry.py:
     walls                   u = v = 0
     outlets 1 and 2         nu du/dn - p n = 0 (do-nothing): equal outlet
                             pressures, so the flow chooses its own split
+    or, with a prescribed share of the flow through outlet 1 (`outlet1_share`):
+    outlet 1                nu du/dn - p n = -lam n, lam a constant chosen so
+                            that Q1 = share * Q_in (flux-defective condition);
+                            lam is outlet 1's pressure above outlet 2's
+
+Why both. With equal outlet pressures the daughters are parallel resistances,
+each conducting like w^3 (plane Poiseuille), and under w1 + w2 = w0 the sum
+w1^3 + w2^3 is convex: the pressure drop falls monotonically toward the most
+unequal split, and the "optimum" is whichever minimum-width bound puts the
+narrow daughter on the more turned side, carrying ~0.2% of the flow (measured:
+60/60, Re 10, total-pressure drop 7.37 at split 0.5, 3.05 at 0.1 and 0.9). A
+prescribed share asks the question a distribution network asks, how to deliver
+given flows at the least cost, and has an interior optimum (w_i ~ Q_i^(1/2)
+in the friction-dominated limit, moved by the junction and the angles).
 
 Taylor-Hood P2/P1 on a Triangle mesh (quality: minimum angle 30 degrees, a
 maximum element area), refined locally around the three re-entrant corners
@@ -43,9 +57,6 @@ from bifurcation.geometry import Geometry
 from developing_flow import pinn
 from developing_flow import reference as channel
 
-#: The re-entrant corners, by vertex index in Geometry.vertices(): B, T, C.
-CORNERS = (1, 4, 7)
-
 
 def mesh(geometry: Geometry, max_area, corner_levels, corner_radius):
     """A quality triangle mesh of the polygon, refined around the corners.
@@ -60,7 +71,7 @@ def mesh(geometry: Geometry, max_area, corner_levels, corner_radius):
     out = triangle.triangulate(pslg, f"pq30a{max_area:.12f}Q")
     m = fem.MeshTri(np.ascontiguousarray(out["vertices"].T),
                     np.ascontiguousarray(out["triangles"].T))
-    corners = v[list(CORNERS)]
+    corners = geometry.reentrant_corners()
     for k in range(corner_levels):
         centroid = m.p[:, m.t].mean(axis=1).T
         distance = np.min(np.linalg.norm(centroid[:, None, :] - corners[None], axis=2), axis=1)
@@ -90,9 +101,17 @@ def boundary_facets(m, geometry: Geometry, tol=1e-9):
     return {kind: np.concatenate(parts) for kind, parts in kinds.items()}
 
 
-def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, max_area,
-                      corner_levels, corner_radius, verbose=False):
-    """Solve one geometry. `inlet(y) -> (u, v)` arrays: the inflow at x* = 0."""
+def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, outlet1_share,
+                      max_area, corner_levels, corner_radius, verbose=False):
+    """Solve one geometry. `inlet(y) -> (u, v)` arrays: the inflow at x* = 0.
+
+    outlet1_share  None: both outlets do-nothing, the flow chooses its split.
+                   A number in (0, 1): outlet 1 carries exactly that share of
+                   the inflow (Q1 = share * Q_in, both measured on the
+                   discrete solution), and its pressure follows.
+    """
+    if outlet1_share is not None and not 0.0 < outlet1_share < 1.0:
+        raise ValueError(f"outlet1_share must be None or lie in (0, 1), got {outlet1_share}")
     a, nu = pinn.scaling_coefficients(reynolds, pressure_scaling)
     m = mesh(geometry, max_area, corner_levels, corner_radius)
     facets = boundary_facets(m, geometry)
@@ -111,17 +130,40 @@ def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, max
     def value(x, y):
         x, y = np.asarray(x), np.asarray(y)
         u, v = np.zeros_like(x), np.zeros_like(x)
-        at_inlet = np.abs(x) < 1e-12
+        # The inlet is the segment D-A, not the line x* = 0: a daughter turned
+        # back past ~112 degrees crosses x* = 0 too, and its wall node there
+        # was given the inlet profile (u = 1 - 6.2^2 = -37, a jet through the wall).
+        at_inlet = _distance_to_segment(np.stack([x, y], axis=1), a_in, b_in) < 1e-9
         if at_inlet.any():
             ui, vi = inlet(y[at_inlet])
             u[at_inlet], v[at_inlet] = ui, vi
         return u, v
 
+    constraint = None
+    if outlet1_share is not None:
+        def constraint(basis_u):
+            # Q1 - share * Q_in = 0, with Q_in = -(flux out through the inlet):
+            # c . U = b1 . U + share * b_in . U, b_k . U = the outflow through k.
+            def outflow(kind):
+                return _outflow_vector(fem.FacetBasis(m, basis_u.elem, facets=facets[kind],
+                                                      intorder=8))
+            return outflow("outlet1") + outlet1_share * outflow("inlet"), 0.0
+
     start = time.perf_counter()
-    basis_u, basis_p, U, P, info = channel.solve(m, a, nu, marker, value, verbose=verbose)
+    basis_u, basis_p, U, P, info = channel.solve(m, a, nu, marker, value, constraint=constraint,
+                                                 verbose=verbose)
     info = {**info, "total_seconds": time.perf_counter() - start, "triangles": int(m.nelements),
             "dirichlet_facets": int(len(dirichlet))}
+    wall = basis_u.get_dofs(facets["wall"]).all()
+    if np.any(U[wall] != 0.0):
+        raise RuntimeError(f"no-slip is broken at {int(np.count_nonzero(U[wall]))} wall "
+                           "velocity values: the boundary data are wrong")
     return BifurcationSolution(geometry, m, facets, basis_u, basis_p, U, P, info, a, nu)
+
+
+def _outflow_vector(facet_basis):
+    """b with b . U = the integral of u . n over the facets: the outflow."""
+    return fem.LinearForm(lambda w_, extra: dot(w_.value, extra.n)).assemble(facet_basis)
 
 
 class BifurcationSolution:
@@ -164,6 +206,7 @@ class BifurcationSolution:
             "resistance": dissipation / q_in**2,
             "energy_consistency": abs(e_in - e1 - e2 - dissipation) / dissipation,
             "static_pressure_in": p_in, "static_pressure_out1": p1, "static_pressure_out2": p2,
+            "outlet1_pressure_offset": self.info.get("multiplier", 0.0),
             "seconds": self.info["total_seconds"], "triangles": self.info["triangles"],
             "unknowns": self.info["unknowns"],
         }
@@ -206,14 +249,15 @@ def network_inlet(run_directory, station):
 
 
 def sweep_split(splits, angle1, angle2, parent_length, daughter_length, min_width, reynolds,
-                pressure_scaling, inlet, max_area, corner_levels, corner_radius, verbose=False):
+                pressure_scaling, inlet, outlet1_share, max_area, corner_levels, corner_radius,
+                verbose=False):
     """The objective at each split for fixed angles: the brute-force proof of a minimum."""
     rows = []
     for s in splits:
         g = Geometry.from_split(float(s), angle1, angle2, parent_length, daughter_length,
                                 min_width)
-        sol = solve_bifurcation(g, reynolds, pressure_scaling, inlet, max_area, corner_levels,
-                                corner_radius)
+        sol = solve_bifurcation(g, reynolds, pressure_scaling, inlet, outlet1_share, max_area,
+                                corner_levels, corner_radius)
         rows.append({"split": float(s), **sol.measures()})
         if verbose:
             r = rows[-1]
