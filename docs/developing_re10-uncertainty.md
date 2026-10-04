@@ -86,8 +86,27 @@ then combines the input map with the 16,384-point polish.
 | G5 + averaged polish (P6) | 4.59e-6 | 3.96e-6 | 4.92e-6 | 9.2e-5 | 1.67e-5 | 1.42e-6 | 4.4e-9 |
 | G3 + the same polish (P3) | 4.62e-6 | 6.58e-6 | 2.91e-6 | 1.36e-4 | 2.01e-5 | 1.97e-6 | 1.1e-8 |
 
-The polish took G5 to the lowest loss of any run and raised its u error, all
-of it in the developed region: the loss weights the inlet corners 64% (section
-3), so minimising it further trades developed-flow accuracy for corner
-accuracy. With the polish protocol held equal (P3 vs P6) the exponential map
-improves v 32%, p 17%, the total-pressure drop 28% and leaves u unchanged.
+The 4,096-point polish took G5 to a lower loss and raised its u error, all of
+it in the developed region. With the polish protocol held equal (P3 vs P6) the
+exponential map improves v 32%, p 17%, the total-pressure drop 28% and leaves
+u unchanged.
+
+**Correction (after P7).** I first put the developed-region loss down to the
+loss weighting the inlet corners 64%. P7 (below) lowered the loss further and
+kept the developed region at G5's level, so a lower loss does not inherently
+cost developed-flow accuracy. The better explanation is sampling noise: at
+4,096 points a draw holds ~1,200 points in the developed region, too few to pin
+it down in each step, and the polish's scatter lands there.
+
+## 8. G5 + averaged polish at 16,384 points (P7): best field errors
+
+| | u | u, entrance | u, developed | v | p | total-pressure drop | dissipation | fresh-point loss |
+|---|---|---|---|---|---|---|---|---|
+| G5 | 3.63e-6 | 4.45e-6 | 3.05e-6 | 1.08e-4 | 1.71e-5 | 1.07e-6 | 3.2e-6 | 7.3e-9 |
+| P7 | **3.08e-6** | 2.98e-6 | 3.14e-6 | **6.85e-5** | 1.72e-5 | 3.85e-6 | 4.2e-6 | 3.5e-9 |
+
+Best u and v of any run, p at the reference's limit. But the total-pressure
+drop error rose 3.6x, beyond the +-13% seed band: the design objective is an
+integral with cancellations, and its error does not follow the field errors.
+For the bifurcation study, whose objective it is, it must be ranked on its own
+and with seeds.
