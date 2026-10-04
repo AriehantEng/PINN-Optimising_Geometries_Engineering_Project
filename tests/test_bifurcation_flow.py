@@ -22,12 +22,12 @@ BASE = {
     "outlets": {"split": "prescribed", "outlet1_share": 0.5},
     "inlet": {"profile": "parabola"},
     "model": {"width": 8, "depth": 2, "activation": "tanh", "init_gain": 1.0,
-              "input_scale": 2.0, "distance_order": 1},
+              "input_scale": 2.0, "distance_order": 1, "formulation": "velocity_pressure"},
     "sampling": {"n_interior": 64, "corner_fraction": 0.25, "corner_radius": 0.5,
                  "corner_exclusion": 0.05, "n_inlet": 16, "n_outlet": 16, "n_validation": 128,
                  "n_flux": 32},
     "weights": {"momentum_x": 1.0, "momentum_y": 2.0, "continuity": 3.0, "inlet": 4.0,
-                "outlet": 5.0, "flux": 6.0},
+                "outlet": 5.0, "flux": 6.0, "corner_radius": 0.0},
     "training": {
         "adam": {"steps": 0, "learning_rate": 1e-3, "decay_rate": 0.9, "decay_steps": 1000,
                  "resample_every": 10},
@@ -141,7 +141,7 @@ def r_times_residual(c, corner, r, seed=0):
     """r * |momentum-x residual| of an untrained network at distance r from a
     vertex, approached from inside the fluid."""
     g = c.geometry()
-    field = flow.make_field(c, g)
+    field = flow.make_field(c, g, 4.0 / 3.0)
     params = flow.init_params(c, jax.random.PRNGKey(seed))
     inside = g.sample_interior(np.random.default_rng(0), 4000)
     far = inside[np.linalg.norm(inside - corner, axis=1) > 0.2]
@@ -195,7 +195,7 @@ def test_no_collocation_point_enters_a_corner_disc():
 def test_no_slip_holds_exactly_for_any_parameters():
     c = config()
     g = c.geometry()
-    field = flow.make_field(c, g)
+    field = flow.make_field(c, g, 4.0 / 3.0)
     for seed in range(3):
         params = flow.init_params(c, jax.random.PRNGKey(seed))
         exact = jax.vmap(lambda xy: field(params, xy))(parent_wall_points(g))
@@ -209,7 +209,7 @@ def test_point_and_batched_losses_agree():
     use batched derivatives. They must be the same loss."""
     c = config()
     g = c.geometry()
-    field = flow.make_field(c, g)
+    field = flow.make_field(c, g, 4.0 / 3.0)
     groups, batched_loss = flow.make_residuals(c, g, field, 4.0 / 3.0)
     params = flow.init_params(c, jax.random.PRNGKey(0))
     params["offset"] = jnp.asarray(0.37)
@@ -253,7 +253,7 @@ def test_the_outlet_residual_is_the_do_nothing_traction():
 def test_the_flux_residual_is_the_outlet_flux_minus_its_share():
     c = config()
     g = c.geometry()
-    field = flow.make_field(c, g)
+    field = flow.make_field(c, g, 4.0 / 3.0)
     groups, _ = flow.make_residuals(c, g, field, 4.0 / 3.0)
     params = flow.init_params(c, jax.random.PRNGKey(1))
     *_, (flux, row) = groups(flow.sample_batch(np.random.default_rng(0), c, g,
@@ -330,3 +330,124 @@ def test_a_resumed_run_is_the_uninterrupted_run(tmp_path):
     b = ravel_pytree(resumed_params)[0]
     assert np.array_equal(np.asarray(a), np.asarray(b))
     assert [r["heldout_loss"] for r in full_history] == [r["heldout_loss"] for r in resumed_history]
+
+
+# -- the stream-function formulation ----------------------------------------- #
+
+STREAM = {"model.formulation": "stream_pressure", "model.blend_exponent": 2.0,
+          "weights.continuity": None, "weights.flux": None}
+FREE_STREAM = {**STREAM, "outlets.split": "free", "outlets.outlet1_share": None}
+
+
+def test_stream_keys_are_required_and_inapplicable_ones_refused():
+    c = config(**STREAM)
+    assert c.stream and "continuity" not in c.weights and "flux" not in c.weights
+    with pytest.raises(pinn.ConfigError, match="no effect"):
+        config(**{**STREAM, "weights.continuity": 1.0})
+    with pytest.raises(pinn.ConfigError, match="blend_exponent"):
+        config(**{k: v for k, v in STREAM.items() if k != "model.blend_exponent"})
+    with pytest.raises(pinn.ConfigError, match="blend_exponent"):
+        config(**{**STREAM, "model.blend_exponent": 1.5})
+    # a free split still needs Q_in for the stream function's wall values
+    free = config(**FREE_STREAM)
+    assert free.n_flux == 32
+    with pytest.raises(pinn.ConfigError, match="n_flux"):
+        config(**{**FREE_STREAM, "sampling.n_flux": None})
+
+
+def test_three_wall_chains_cover_every_wall():
+    for angles in ((30.0, 70.0), (90.0, 90.0), (0.0, 60.0)):
+        c = config(**{"geometry.angle1": angles[0], "geometry.angle2": angles[1]})
+        g = c.geometry()
+        chains = flow.wall_chains(g)
+        assert len(chains) == 3
+        assert sum(len(chain) for chain in chains) == len(flow.wall_segments(g))
+        A, B = g.vertices()[0], g.vertices()[1]
+        assert np.allclose(chains[0][0][0], A)                    # the lower chain starts at A
+        D = g.vertices()[-1]
+        assert np.allclose(chains[2][-1][1], D)                   # the upper chain ends at D
+
+
+@pytest.mark.parametrize("changes", [STREAM, FREE_STREAM], ids=["prescribed", "free"])
+def test_the_stream_function_conserves_mass_and_carries_the_share_exactly(changes):
+    """Continuity holds identically, and daughter 2's flux is the septum's
+    stream function value: (1 - share) Q_in, or share2 Q_in when it is free."""
+    c = config(**changes)
+    g = c.geometry()
+    field = flow.make_field(c, g, 4.0 / 3.0)
+    params = flow.init_params(c, jax.random.PRNGKey(2))
+    if not c.prescribed:
+        params["share2"] = jnp.asarray(0.37)
+    inside = jnp.asarray(g.sample_interior(np.random.default_rng(0), 200))
+    d = pinn.batched_derivatives(lambda q: field(params, q), inside)
+    assert np.max(np.abs(np.asarray(pinn.continuity(d)))) < 1e-11
+    expected2 = (0.37 if not c.prescribed else 1.0 - c.outlet1_share) * 4.0 / 3.0
+    for kind, expected in (("outlet2", expected2), ("outlet1", 4.0 / 3.0 - expected2),
+                           ("inlet", -4.0 / 3.0)):
+        nodes, weights, normal = g.line_quadrature(kind, 200)
+        nodes = nodes - 1e-9 * normal
+        values = np.asarray(jax.vmap(lambda q: field(params, q))(jnp.asarray(nodes)))
+        assert abs(weights @ (values[:, :2] @ normal) - expected) < 1e-8
+
+
+def test_the_stream_function_satisfies_no_slip():
+    """u, v ~ distance to the wall: exact on the wall, with the gradient of
+    the blend zero there (blend exponent 2)."""
+    c = config(**STREAM)
+    g = c.geometry()
+    field = flow.make_field(c, g, 4.0 / 3.0)
+    params = flow.init_params(c, jax.random.PRNGKey(3))
+    points, normals = g.sample_boundary(np.random.default_rng(1), "wall", 300)
+    corners = np.concatenate([g.vertices(), g.singular_corners()])
+    keep = np.min(np.linalg.norm(points[:, None] - corners[None], axis=2), axis=1) > 0.05
+    points, normals = points[keep], normals[keep]
+    speeds = []
+    for h in (1e-4, 1e-6):
+        inside = jnp.asarray(points - h * normals)
+        values = np.asarray(jax.vmap(lambda q: field(params, q))(inside))
+        speeds.append(np.max(np.hypot(values[:, 0], values[:, 1])))
+    assert speeds[1] < 2e-2 * speeds[0]                        # ~ linear in the distance
+    assert speeds[1] < 1e-4
+
+
+def test_point_and_batched_losses_agree_for_the_stream_function():
+    c = config(**{**FREE_STREAM, "weights.corner_radius": 0.3})
+    g = c.geometry()
+    field = flow.make_field(c, g, 4.0 / 3.0)
+    groups, batched_loss = flow.make_residuals(c, g, field, 4.0 / 3.0)
+    params = flow.init_params(c, jax.random.PRNGKey(0))
+    flat, unflatten = ravel_pytree(params)
+    _, lm_loss = pinn.gauss_newton(groups, unflatten, 16)
+    batch = flow.sample_batch(np.random.default_rng(0), c, g, flow.inlet_function(c), 64)
+    a, b = lm_loss(flat, batch), float(batched_loss(params, batch))
+    assert abs(a - b) < 1e-10 * b
+
+
+def test_corner_weighting_scales_the_interior_residual_by_r_over_rho():
+    rho = 0.3
+    c0, c1 = config(), config(**{"weights.corner_radius": rho})
+    g = c0.geometry()
+    field = flow.make_field(c0, g, 4.0 / 3.0)
+    params = flow.init_params(c0, jax.random.PRNGKey(0))
+    corner = g.singular_corners()[0]
+    inside = g.sample_interior(np.random.default_rng(0), 4000)
+    r = np.linalg.norm(inside - corner, axis=1)
+    near = inside[(r > 0.1) & (r < 0.2)][0]
+    far = inside[np.min(np.linalg.norm(inside[:, None] - g.singular_corners()[None], axis=2),
+                        axis=1) > 0.5][0]
+    plain = flow.make_residuals(c0, g, field, 4.0 / 3.0)[0]
+    weighted = flow.make_residuals(c1, g, field, 4.0 / 3.0)[0]
+    batch = flow.sample_batch(np.random.default_rng(0), c0, g, flow.inlet_function(c0), 8)
+    interior0, interior1 = plain(batch)[0][0], weighted(batch)[0][0]
+    for point, factor in ((near, np.linalg.norm(near - corner) / rho), (far, 1.0)):
+        a = np.asarray(interior0(params, jnp.asarray(point), 1))
+        b = np.asarray(interior1(params, jnp.asarray(point), 1))
+        assert np.allclose(b, factor * a, rtol=1e-12, atol=0)
+
+
+def test_every_stored_bifurcation_run_still_loads():
+    """CLAUDE.md: a newly required key must be migrated into every stored run."""
+    import pathlib
+    root = pathlib.Path(flow.HERE) / "runs"
+    for directory in sorted(root.glob("*/params.npz")):
+        flow.load_run(directory.parent)

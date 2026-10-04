@@ -33,6 +33,7 @@ model:
   init_gain: 1.0
   input_scale: 2.0            # x* - centre of the bounding box, divided by this
   distance_order: 1           # R-equivalence order of the wall distance
+  formulation: "velocity_pressure"
 sampling:
   n_interior: 8192
   corner_fraction: 0.1        # extra points, uniform in area, near the singular corners
@@ -48,6 +49,7 @@ weights:
   continuity: 1.0
   inlet: 1.0
   outlet: 1.0
+  corner_radius: 0.0
   flux: 1.0
 training:
   adam:

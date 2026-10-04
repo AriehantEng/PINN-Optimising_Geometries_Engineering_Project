@@ -16,6 +16,28 @@ boundary conditions, so the two can be compared point for point.
                           the reference's flux-defective outlet.
     pressure              p = N_p, free: the outlet conditions fix its level.
 
+Two formulations (model.formulation):
+    velocity_pressure  u = D N_u, v = D N_v; continuity, and a prescribed
+                       share, are loss terms. The first run lost 6.3% of the
+                       mass (daughter 2 delivered 0.580 of its 0.667): soft
+                       continuity drifts, as Phase 1's Case B did.
+    stream_pressure    u = d(psi)/dy, v = -d(psi)/dx, psi = G + D^2 N_psi.
+                       G takes a constant value on each of the three wall
+                       chains (0 on daughter 2's outer wall and the parent's
+                       lower wall, Q_in on daughter 1's outer wall and the
+                       parent's upper wall, Q2 on the septum) and has zero
+                       normal derivative there: a transfinite (Shepard)
+                       interpolation G = sum_k psi_k prod_{j != k} D_j^mu /
+                       sum_k prod_{j != k} D_j^mu, mu = model.blend_exponent
+                       >= 2 (Sukumar & Srivastava 2022, sec. 6). Mass is then
+                       conserved and Q2 is daughter 2's flux EXACTLY: set to
+                       (1 - share) Q_in, or trained when the split is free.
+
+Near a reflex corner every residual grows like 1/r (see `corner_points`);
+weights.corner_radius rho > 0 multiplies the interior residuals by
+min(1, r / rho), so they stay bounded and cannot dominate the fit (in the
+first run, 0.5% of the points held 47% of the loss).
+
 D is an approximate distance to the walls built with R-functions (Sukumar &
 Srivastava 2022, CMAME 389, 114333): for each wall segment the trimmed
 distance phi_i, which vanishes on that segment and nowhere else, then
@@ -81,6 +103,7 @@ CHOICES = {
     "inlet.profile": ("parabola", "network1"),
     "model.activation": ("tanh", "silu"),
     "model.distance_order": (1, 2),
+    "model.formulation": ("velocity_pressure", "stream_pressure"),
 }
 
 SCHEMA = {
@@ -92,12 +115,12 @@ SCHEMA = {
     "outlets": {"split": str},
     "inlet": {"profile": str},
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
-              "input_scale": float, "distance_order": int},
+              "input_scale": float, "distance_order": int, "formulation": str},
     "sampling": {"n_interior": int, "corner_fraction": float, "corner_radius": float,
                  "corner_exclusion": float, "n_inlet": int, "n_outlet": int,
                  "n_validation": int},
-    "weights": {"momentum_x": float, "momentum_y": float, "continuity": float, "inlet": float,
-                "outlet": float},
+    "weights": {"momentum_x": float, "momentum_y": float, "inlet": float, "outlet": float,
+                "corner_radius": float},
     "training": {
         "adam": {"steps": int, "learning_rate": float, "decay_rate": float, "decay_steps": int,
                  "resample_every": int},
@@ -114,8 +137,14 @@ SCHEMA = {
 CONDITIONAL = {
     # outlets.split = prescribed
     ("outlets", "outlet1_share"): float,
+    # prescribed, or stream_pressure (Q_in sets the stream function's values)
     ("sampling", "n_flux"): int,
+    # prescribed and velocity_pressure
     ("weights", "flux"): float,
+    # velocity_pressure (continuity holds identically for a stream function)
+    ("weights", "continuity"): float,
+    # stream_pressure
+    ("model", "blend_exponent"): float,
     # inlet.profile = network1
     ("inlet", "run"): str,
     ("inlet", "station"): float,
@@ -145,6 +174,9 @@ class Config:
     init_gain: float
     input_scale: float
     distance_order: int
+    formulation: str
+    blend_exponent: float | None
+    corner_weight_radius: float
     n_interior: int
     corner_fraction: float
     corner_radius: float
@@ -176,6 +208,10 @@ class Config:
     def prescribed(self) -> bool:
         return self.outlet_split == "prescribed"
 
+    @property
+    def stream(self) -> bool:
+        return self.formulation == "stream_pressure"
+
     def geometry(self) -> Geometry:
         return Geometry.from_split(self.split, self.angle1, self.angle2, self.parent_length,
                                    self.daughter_length, self.min_width)
@@ -197,9 +233,13 @@ def parse_config(document) -> Config:
                               f"got {document[section][key]!r}")
     prescribed = document["outlets"]["split"] == "prescribed"
     network1 = document["inlet"]["profile"] == "network1"
-    needed = {("outlets", "outlet1_share"): prescribed, ("sampling", "n_flux"): prescribed,
-              ("weights", "flux"): prescribed, ("inlet", "run"): network1,
-              ("inlet", "station"): network1}
+    stream = document["model"]["formulation"] == "stream_pressure"
+    needed = {("outlets", "outlet1_share"): prescribed,
+              ("sampling", "n_flux"): prescribed or stream,
+              ("weights", "flux"): prescribed and not stream,
+              ("weights", "continuity"): not stream,
+              ("model", "blend_exponent"): stream,
+              ("inlet", "run"): network1, ("inlet", "station"): network1}
     for (section, key), required in needed.items():
         where = f"{section}.{key}"
         if required and (section, key) not in conditional:
@@ -234,8 +274,16 @@ def parse_config(document) -> Config:
         if not value > 0.0:
             raise ConfigError(f"{where} must be positive, got {value}")
     weights = dict(document["weights"])
-    if prescribed:
-        weights["flux"] = conditional[("weights", "flux")]
+    corner_weight_radius = float(weights.pop("corner_radius"))
+    if corner_weight_radius < 0.0:
+        raise ConfigError("weights.corner_radius must be >= 0 (0: no corner weighting)")
+    for key in ("flux", "continuity"):
+        if ("weights", key) in conditional:
+            weights[key] = conditional[("weights", key)]
+    blend = conditional.get(("model", "blend_exponent"))
+    if blend is not None and not blend >= 2.0:
+        raise ConfigError("model.blend_exponent must be >= 2: below it the blend's normal "
+                          "derivative at a wall is not zero, and no-slip fails")
     config = Config(
         name=document["name"], seed=document["seed"],
         reynolds=float(p["reynolds"]), pressure_scaling=p["pressure_scaling"],
@@ -249,7 +297,9 @@ def parse_config(document) -> Config:
         inlet_station=(None if not network1 else float(conditional[("inlet", "station")])),
         width=m["width"], depth=m["depth"], activation=m["activation"],
         init_gain=float(m["init_gain"]), input_scale=float(m["input_scale"]),
-        distance_order=m["distance_order"],
+        distance_order=m["distance_order"], formulation=m["formulation"],
+        blend_exponent=None if blend is None else float(blend),
+        corner_weight_radius=corner_weight_radius,
         n_interior=s["n_interior"], corner_fraction=float(s["corner_fraction"]),
         corner_radius=float(s["corner_radius"]),
         corner_exclusion=float(s["corner_exclusion"]), n_inlet=s["n_inlet"],
@@ -364,8 +414,44 @@ def wall_distance(xy, segments, order):
     return jnp.sum(phis ** (-order)) ** (-1.0 / order)
 
 
+def wall_chains(geometry: Geometry):
+    """The walls as three chains, in polygon order from the inlet: daughter 2's
+    outer wall with the parent's lower wall, the septum, daughter 1's outer
+    wall with the parent's upper wall. Openings separate them. Each chain's
+    consecutive collinear edges are merged (see `wall_segments`)."""
+    edges = geometry.edges()
+    n = len(edges)
+    first = next(i for i in range(n) if edges[i][2] == "inlet") + 1
+    chains, current = [], None
+    for k in range(n):
+        a, b, kind = edges[(first + k) % n]
+        if kind != "wall":
+            current = None
+            continue
+        if current is None:
+            current = []
+            chains.append(current)
+        if current:
+            d0, d1 = current[-1][1] - current[-1][0], b - a
+            cross = d0[0] * d1[1] - d0[1] * d1[0]
+            if (abs(cross) <= 1e-12 * np.linalg.norm(d0) * np.linalg.norm(d1)
+                    and np.dot(d0, d1) > 0.0):
+                current[-1] = [current[-1][0], b.copy()]
+                continue
+        current.append([a.copy(), b.copy()])
+    if len(chains) != 3:
+        raise AssertionError(f"expected 3 wall chains, found {len(chains)}")
+    return [np.array(chain) for chain in chains]
+
+
 def init_params(config: Config, key):
-    params = {"net": pinn.init_network(key, 2, config.width, config.depth, 3, config.init_gain)}
+    n_out = 2 if config.stream else 3
+    params = {"net": pinn.init_network(key, 2, config.width, config.depth, n_out,
+                                       config.init_gain)}
+    if config.stream and not config.prescribed:
+        # daughter 2's share of the flow, trained: the septum's stream function
+        # value is share2 * Q_in, and the flow chooses its own split
+        params["share2"] = jnp.asarray(0.5, dtype=jnp.float64)
     if config.prescribed:
         # outlet 1's pressure above outlet 2's: the PINN's version of the
         # reference's Lagrange multiplier
@@ -373,19 +459,42 @@ def init_params(config: Config, key):
     return params
 
 
-def make_field(config: Config, geometry: Geometry):
-    """field(params, xy) -> (u, v, p) at one point."""
+def make_field(config: Config, geometry: Geometry, q_in):
+    """field(params, xy) -> (u, v, p) at one point. q_in, the inflow, sets the
+    stream function's wall values (unused by velocity_pressure)."""
     segments = jnp.asarray(wall_segments(geometry))
     lo, hi = geometry.bounding_box()
     centre = jnp.asarray(0.5 * (lo + hi))
     scale = config.input_scale
     activation, order = config.activation, config.distance_order
 
-    def field(params, xy):
-        raw = pinn.apply_network(params["net"], (xy - centre) / scale, activation)
-        distance = wall_distance(xy, segments, order)
-        return jnp.stack([distance * raw[0], distance * raw[1], raw[2]])
+    if not config.stream:
+        def field(params, xy):
+            raw = pinn.apply_network(params["net"], (xy - centre) / scale, activation)
+            distance = wall_distance(xy, segments, order)
+            return jnp.stack([distance * raw[0], distance * raw[1], raw[2]])
+        return field
 
+    chains = [jnp.asarray(chain) for chain in wall_chains(geometry)]
+    mu = config.blend_exponent
+    fixed_share2 = None if not config.prescribed else 1.0 - config.outlet1_share
+
+    def psi(params, point):
+        raw = pinn.apply_network(params["net"], (point - centre) / scale, activation)
+        share2 = fixed_share2 if fixed_share2 is not None else params["share2"]
+        values = (0.0, share2 * q_in, q_in)             # lower chain, septum, upper chain
+        d = [wall_distance(point, chain, order) ** mu for chain in chains]
+        # Shepard weights times prod_j D_j^mu: w_k = prod_{j != k} D_j^mu, so
+        # nothing is divided by zero on a wall, and on chain k only w_k is nonzero
+        w = (d[1] * d[2], d[0] * d[2], d[0] * d[1])
+        blend = (values[1] * w[1] + values[2] * w[2]) / (w[0] + w[1] + w[2])
+        return blend + wall_distance(point, segments, order) ** 2 * raw[0], raw
+
+    def field(params, xy):
+        gradient, raw = jax.grad(lambda q: psi(params, q), has_aux=True)(xy)
+        return jnp.stack([gradient[1], -gradient[0], raw[1]])
+
+    field.psi = psi
     return field
 
 
@@ -497,15 +606,25 @@ def make_residuals(config: Config, geometry: Geometry, field, q_in):
     w = config.weights
     normal1 = jnp.asarray(outlet_normal(geometry, "outlet1"))
     normal2 = jnp.asarray(outlet_normal(geometry, "outlet2"))
+    corners = jnp.asarray(geometry.singular_corners())
+    rho = config.corner_weight_radius
 
-    def interior_values(d, n):
-        return [jnp.sqrt(w["momentum_x"] / n) * pinn.momentum_x(d, reynolds, scaling),
-                jnp.sqrt(w["momentum_y"] / n) * pinn.momentum_y(d, reynolds, scaling),
-                jnp.sqrt(w["continuity"] / n) * pinn.continuity(d)]
+    def corner_weight(xy):
+        """min(1, r / rho), r the distance to the nearest singular corner."""
+        if rho == 0.0 or corners.shape[0] == 0:
+            return 1.0
+        return jnp.minimum(1.0, jnp.min(jnp.linalg.norm(corners - xy, axis=1)) / rho)
+
+    def interior_values(d, n, weight):
+        out = [jnp.sqrt(w["momentum_x"] / n) * pinn.momentum_x(d, reynolds, scaling),
+               jnp.sqrt(w["momentum_y"] / n) * pinn.momentum_y(d, reynolds, scaling)]
+        if not config.stream:
+            out.append(jnp.sqrt(w["continuity"] / n) * pinn.continuity(d))
+        return [weight * r for r in out]
 
     def interior(params, xy, n):
         d = pinn.point_derivatives(lambda q: field(params, q), xy)
-        return jnp.stack(interior_values(d, n))
+        return jnp.stack(interior_values(d, n, corner_weight(xy)))
 
     def inlet(params, row, n):
         value = field(params, row[:2])
@@ -523,7 +642,7 @@ def make_residuals(config: Config, geometry: Geometry, field, q_in):
     def outlet2(params, xy, n):
         return jnp.sqrt(w["outlet"] / n) * traction(params, xy, normal2, 0.0)
 
-    if config.prescribed:
+    if config.prescribed and not config.stream:
         nodes, weights, _ = geometry.line_quadrature("outlet1", config.n_flux)
         nodes, weights = jnp.asarray(nodes), jnp.asarray(weights)
         target = config.outlet1_share * q_in
@@ -540,14 +659,15 @@ def make_residuals(config: Config, geometry: Geometry, field, q_in):
     def groups(batch: Batch):
         out = [(interior, batch.interior), (inlet, batch.inlet),
                (outlet1, batch.outlet1), (outlet2, batch.outlet2)]
-        if config.prescribed:
+        if config.prescribed and not config.stream:
             out.append((flux, placeholder))
         return out
 
     def batched_loss(params, batch: Batch):
         n = batch.interior.shape[0]
         d = pinn.batched_derivatives(lambda q: field(params, q), batch.interior)
-        total = sum(jnp.sum(r**2) for r in interior_values(d, n))
+        weight = jax.vmap(corner_weight)(jnp.asarray(batch.interior))
+        total = sum(jnp.sum(r**2) for r in interior_values(d, n, weight))
         for fn, points in groups(batch)[1:]:
             m = points.shape[0]
             total = total + jnp.sum(jax.vmap(lambda row: fn(params, row, m))(points) ** 2)
@@ -590,8 +710,8 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
         raise ValueError("resume needs the checkpoint to resume from")
     geometry = config.geometry()
     inlet = inlet_function(config)
-    q_in = inlet_flux(inlet, config.n_flux) if config.prescribed else None
-    field = make_field(config, geometry)
+    q_in = inlet_flux(inlet, config.n_flux) if config.n_flux is not None else None
+    field = make_field(config, geometry, q_in)
     groups, batched_loss = make_residuals(config, geometry, field, q_in)
     model_key, draws, heldout_rng = _streams(config.seed)
     params = init_params(config, model_key)
@@ -662,11 +782,14 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
                "heldout_average": held_average, "seconds": time.time() - started}
         if config.prescribed:
             row["offset"] = float(unflatten(vector)["offset"])
+        if config.stream and not config.prescribed:
+            row["share2"] = float(unflatten(vector)["share2"])
         history.append(row)
         if verbose:
             print(f"  {phase:>6} {iteration:>7d} {loss:>12.4e} {held:>12.4e}"
                   + ("" if average is None else f"   averaged {held_average:.4e}")
-                  + (f"   offset {row['offset']:+.5f}" if config.prescribed else ""), flush=True)
+                  + (f"   offset {row['offset']:+.5f}" if "offset" in row else "")
+                  + (f"   share2 {row['share2']:.5f}" if "share2" in row else ""), flush=True)
 
     phases = ("start", "adam", "lbfgs", "lm")
     order = phases.index(position[0])
@@ -842,11 +965,13 @@ def evaluate(config: Config, params, verbose=True):
     """The PINN against the finite-element solution of the same problem."""
     from bifurcation import reference
     geometry = config.geometry()
-    field = make_field(config, geometry)
+    inlet = inlet_function(config)
+    q_in = inlet_flux(inlet, config.n_flux) if config.n_flux is not None else None
+    field = make_field(config, geometry, q_in)
     model = predictor(field, params)
     start = time.perf_counter()
     solution = reference.solve_bifurcation(
-        geometry, config.reynolds, config.pressure_scaling, inlet_function(config),
+        geometry, config.reynolds, config.pressure_scaling, inlet,
         config.outlet1_share if config.prescribed else None, config.fe_max_area,
         config.fe_corner_levels, config.fe_corner_radius)
     fe_seconds = time.perf_counter() - start
@@ -932,7 +1057,9 @@ def load_run(directory):
     if flat.shape != flat_template.shape:
         raise ValueError("saved parameters do not match the config's network")
     params = unflatten(jnp.asarray(flat))
-    model = predictor(make_field(config, config.geometry()), params)
+    q_in = (inlet_flux(inlet_function(config), config.n_flux) if config.n_flux is not None
+            else None)
+    model = predictor(make_field(config, config.geometry(), q_in), params)
     model.config = config
     return model, config, params
 
