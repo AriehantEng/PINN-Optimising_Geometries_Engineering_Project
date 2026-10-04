@@ -24,7 +24,8 @@ BASE = {
     "model": {"width": 8, "depth": 2, "activation": "tanh", "init_gain": 1.0,
               "input_scale": 2.0, "distance_order": 1},
     "sampling": {"n_interior": 64, "corner_fraction": 0.25, "corner_radius": 0.5,
-                 "n_inlet": 16, "n_outlet": 16, "n_validation": 128, "n_flux": 32},
+                 "corner_exclusion": 0.05, "n_inlet": 16, "n_outlet": 16, "n_validation": 128,
+                 "n_flux": 32},
     "weights": {"momentum_x": 1.0, "momentum_y": 2.0, "continuity": 3.0, "inlet": 4.0,
                 "outlet": 5.0, "flux": 6.0},
     "training": {
@@ -134,6 +135,59 @@ def test_the_segment_distance_has_no_cancellation_inside_the_trimming_circle():
     for h in (1e-3, 1e-6, 1e-9):
         d = float(flow.segment_distance(jnp.array([1.0, h]), a, b))
         assert abs(d / h - 1.0) < 1e-12
+
+
+def r_times_residual(c, corner, r, seed=0):
+    """r * |momentum-x residual| of an untrained network at distance r from a
+    vertex, approached from inside the fluid."""
+    g = c.geometry()
+    field = flow.make_field(c, g)
+    params = flow.init_params(c, jax.random.PRNGKey(seed))
+    inside = g.sample_interior(np.random.default_rng(0), 4000)
+    far = inside[np.linalg.norm(inside - corner, axis=1) > 0.2]
+    d = far[np.argmin(np.linalg.norm(far - corner, axis=1))] - corner
+    xy = jnp.asarray(corner + r * d / np.linalg.norm(d))
+    dd = pinn.point_derivatives(lambda q: field(params, q), xy)
+    return r * abs(float(pinn.momentum_x(dd, c.reynolds, c.pressure_scaling)))
+
+
+def test_the_residual_grows_like_one_over_r_at_a_singular_corner():
+    """Why corner_exclusion exists: near a reflex corner the wall distance is
+    ~ the distance to a point, whose Laplacian is ~ 1/r, so for ANY network
+    the residual of u = D N is ~ 1/r (u itself is ~ r^0.54 there, so N cannot
+    be smooth). Its square is not integrable against a 1/r point density, and
+    a draw's loss was dominated by its closest point (1.4e3 vs a held-out 21)."""
+    c = config()
+    for corner in c.geometry().singular_corners():
+        near, nearer = r_times_residual(c, corner, 1e-3), r_times_residual(c, corner, 1e-5)
+        assert nearer > 0.5 * near > 0.0
+
+
+def test_a_straight_daughter_leaves_no_false_corner_in_the_wall_distance():
+    """Where daughter 1 at 0 degrees continues the parent's wall, the two
+    collinear edges are one segment, and the residual stays bounded there."""
+    c = config(**{"geometry.angle1": 0.0, "geometry.angle2": 60.0})
+    g = c.geometry()
+    C = g.vertices()[7]
+    assert len(flow.wall_segments(g)) == 5                     # C-D and E1o-C merged
+    assert not any(np.allclose(C, k) for k in g.singular_corners())
+    assert any(np.allclose(C, k) for k in g.reentrant_corners())  # still refined in the mesh
+    # bounded: the residual itself (r * residual / r) is the same size at
+    # 1e-5 as at 1e-3, where a singular corner's grows 100-fold
+    assert r_times_residual(c, C, 1e-5) / 1e-5 < 2.0 * r_times_residual(c, C, 1e-3) / 1e-3
+
+
+def test_no_collocation_point_enters_a_corner_disc():
+    c = config()
+    g = c.geometry()
+    batch = flow.sample_batch(np.random.default_rng(4), c, g, flow.inlet_function(c), 20000)
+    corners = g.singular_corners()
+    distance = np.linalg.norm(batch.interior[:, None] - corners[None], axis=2).min(axis=1)
+    assert distance.min() > c.corner_exclusion
+    # the extra points are uniform in AREA near the corners: no pile-up at the disc's edge
+    band = distance[distance < c.corner_radius]
+    inner = np.mean(band < 0.5 * (c.corner_exclusion + c.corner_radius))
+    assert inner < 0.5
 
 
 # -- the field and its residuals -------------------------------------------- #

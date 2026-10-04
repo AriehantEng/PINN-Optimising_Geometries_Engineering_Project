@@ -35,8 +35,9 @@ model:
   distance_order: 1           # R-equivalence order of the wall distance
 sampling:
   n_interior: 8192
-  corner_fraction: 0.25       # share of interior points within corner_radius of B, T, C
+  corner_fraction: 0.1        # extra points, uniform in area, near the singular corners
   corner_radius: 0.5
+  corner_exclusion: 0.05      # no point closer to B, T, C: the residual grows like 1/r there
   n_inlet: 256
   n_outlet: 256               # per outlet
   n_validation: 32768

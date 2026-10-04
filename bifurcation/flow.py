@@ -94,7 +94,8 @@ SCHEMA = {
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
               "input_scale": float, "distance_order": int},
     "sampling": {"n_interior": int, "corner_fraction": float, "corner_radius": float,
-                 "n_inlet": int, "n_outlet": int, "n_validation": int},
+                 "corner_exclusion": float, "n_inlet": int, "n_outlet": int,
+                 "n_validation": int},
     "weights": {"momentum_x": float, "momentum_y": float, "continuity": float, "inlet": float,
                 "outlet": float},
     "training": {
@@ -147,6 +148,7 @@ class Config:
     n_interior: int
     corner_fraction: float
     corner_radius: float
+    corner_exclusion: float
     n_inlet: int
     n_outlet: int
     n_validation: int
@@ -214,6 +216,8 @@ def parse_config(document) -> Config:
                                            "training"))
     if not 0.0 <= s["corner_fraction"] < 1.0:
         raise ConfigError("sampling.corner_fraction must lie in [0, 1)")
+    if not 0.0 < s["corner_exclusion"] < s["corner_radius"]:
+        raise ConfigError("sampling.corner_exclusion must lie in (0, corner_radius)")
     for where, value in (("model.width", m["width"]), ("model.depth", m["depth"]),
                          ("sampling.n_interior", s["n_interior"]),
                          ("sampling.n_inlet", s["n_inlet"]), ("sampling.n_outlet", s["n_outlet"]),
@@ -247,7 +251,9 @@ def parse_config(document) -> Config:
         init_gain=float(m["init_gain"]), input_scale=float(m["input_scale"]),
         distance_order=m["distance_order"],
         n_interior=s["n_interior"], corner_fraction=float(s["corner_fraction"]),
-        corner_radius=float(s["corner_radius"]), n_inlet=s["n_inlet"], n_outlet=s["n_outlet"],
+        corner_radius=float(s["corner_radius"]),
+        corner_exclusion=float(s["corner_exclusion"]), n_inlet=s["n_inlet"],
+        n_outlet=s["n_outlet"],
         n_validation=s["n_validation"], n_flux=conditional.get(("sampling", "n_flux")),
         weights={k: float(v) for k, v in weights.items()},
         adam_steps=t["adam"]["steps"], adam_learning_rate=float(t["adam"]["learning_rate"]),
@@ -320,8 +326,35 @@ def segment_distance(xy, a, b):
 
 
 def wall_segments(geometry: Geometry):
-    """(S, 2, 2): the wall edges of the polygon."""
-    return np.stack([np.stack([a, b]) for a, b, kind in geometry.edges() if kind == "wall"])
+    """(S, 2, 2): the walls of the polygon, consecutive collinear wall edges
+    merged into one segment.
+
+    Merging matters: where a straight daughter continues the parent's wall,
+    two segments meet at 180 degrees, and the R-function composition of their
+    trimmed distances has a Laplacian ~ 1/r at the joint, so the momentum
+    residual of u = D N grows like 1/r there (measured: r * residual constant
+    from r = 1e-2 to 1e-4) although the flow is smooth. One segment has no joint.
+    """
+    edges = geometry.edges()
+    n = len(edges)
+    # start from an edge that is not a wall, so every wall run is contiguous
+    first = next(i for i in range(n) if edges[i][2] != "wall")
+    runs, current = [], None
+    for k in range(1, n + 1):
+        a, b, kind = edges[(first + k) % n]
+        if kind != "wall":
+            current = None
+            continue
+        if current is not None:
+            d0, d1 = current[1] - current[0], b - a
+            cross = d0[0] * d1[1] - d0[1] * d1[0]
+            if (abs(cross) <= 1e-12 * np.linalg.norm(d0) * np.linalg.norm(d1)
+                    and np.dot(d0, d1) > 0.0):
+                current[1] = b
+                continue
+        current = [a.copy(), b.copy()]
+        runs.append(current)
+    return np.stack([np.stack(run) for run in runs])
 
 
 def wall_distance(xy, segments, order):
@@ -380,19 +413,45 @@ def sample_triangles(rng, tris, n):
     return a[which] + s[:, None] * (b - a)[which] + t[:, None] * (c - a)[which]
 
 
-def corner_points(rng, geometry: Geometry, n, radius):
-    """n points within `radius` of the re-entrant corners (B, C and the septum
-    tip; Geometry.reentrant_corners), inside the polygon, with density ~ 1/r: r = radius * s, s uniform. The corners carry
-    the pressure singularities; uniform sampling would barely see them."""
-    corners = geometry.reentrant_corners()
+def outside_corners(points, corners, exclusion):
+    """True for points farther than `exclusion` from every corner."""
+    if len(corners) == 0:
+        return np.ones(len(points), dtype=bool)
+    distance = np.linalg.norm(points[:, None, :] - corners[None, :, :], axis=2)
+    return np.min(distance, axis=1) > exclusion
+
+
+def uniform_points(rng, geometry: Geometry, n, exclusion):
+    """n points uniform over the polygon, none within `exclusion` of a singular corner."""
+    corners, tris = geometry.singular_corners(), geometry.triangles()
+    out, need = [], n
+    while need > 0:
+        trial = sample_triangles(rng, tris, need + need // 8 + 16)
+        keep = trial[outside_corners(trial, corners, exclusion)]
+        out.append(keep[:need])
+        need -= len(out[-1])
+    return np.concatenate(out)[:n]
+
+
+def corner_points(rng, geometry: Geometry, n, radius, exclusion):
+    """n extra points around the singular corners (Geometry.singular_corners),
+    uniform in AREA over the annulus exclusion < r < radius, inside the
+    polygon. Near such a corner u ~ r^0.54 while the wall distance D ~ r, so
+    no network makes the residual of u = D N bounded: it grows like 1/r
+    (measured). Its square is not integrable with a 1/r point density (one
+    draw scored 1.4e3 against a held-out 21), so no point comes closer than
+    `exclusion` and the extra points add a constant density, not a 1/r one."""
+    corners = geometry.singular_corners()
+    if n == 0 or len(corners) == 0:
+        return np.zeros((0, 2))
     out, need = [], n
     while need > 0:
         m = 2 * need + 16
         centre = corners[rng.integers(len(corners), size=m)]
-        r = radius * rng.random(m)
+        r = np.sqrt(exclusion**2 + (radius**2 - exclusion**2) * rng.random(m))
         angle = 2.0 * np.pi * rng.random(m)
         trial = centre + r[:, None] * np.stack([np.cos(angle), np.sin(angle)], axis=1)
-        keep = trial[geometry.contains(trial) & (r > 0.0)]
+        keep = trial[geometry.contains(trial) & outside_corners(trial, corners, exclusion)]
         out.append(keep[:need])
         need -= len(out[-1])
     return np.concatenate(out)[:n]
@@ -400,9 +459,11 @@ def corner_points(rng, geometry: Geometry, n, radius):
 
 def sample_batch(rng, config: Config, geometry: Geometry, inlet, n_interior) -> Batch:
     n_corner = int(round(n_interior * config.corner_fraction))
+    if len(geometry.singular_corners()) == 0:
+        n_corner = 0
     interior = np.concatenate([
-        sample_triangles(rng, geometry.triangles(), n_interior - n_corner),
-        corner_points(rng, geometry, n_corner, config.corner_radius)])
+        uniform_points(rng, geometry, n_interior - n_corner, config.corner_exclusion),
+        corner_points(rng, geometry, n_corner, config.corner_radius, config.corner_exclusion)])
     # inlet y crowds toward the corners, as in Network 1
     y = np.sin(0.5 * np.pi * rng.uniform(-1.0, 1.0, config.n_inlet))
     u, v = inlet(y)
@@ -752,9 +813,11 @@ def opening_measures(model, geometry: Geometry, a, n_line):
             "static_pressure_out2": out["outlet2"]["pressure"]}
 
 
-def relative_errors(solution, model):
+def relative_errors(solution, model, corners=None, exclusion=None):
     """Relative L2 errors of u, v, p against the finite-element solution,
-    integrated on ITS mesh (CLAUDE.md: a grid sum over-weights the corners)."""
+    integrated on ITS mesh (CLAUDE.md: a grid sum over-weights the corners).
+    With `corners` and `exclusion`, only over the part of the domain farther
+    than `exclusion` from every corner (both norms restricted alike)."""
     import skfem as fem
     basis = solution.basis_u
     basis_p = fem.Basis(solution.mesh, solution.basis_p.elem, quadrature=basis.quadrature)
@@ -763,6 +826,10 @@ def relative_errors(solution, model):
     reference_u = basis.interpolate(solution.U).value
     reference_p = basis_p.interpolate(solution.P).value
     u, v, p = model(x, y)
+    if corners is not None:
+        keep = outside_corners(np.stack([x.ravel(), y.ravel()], axis=1), corners,
+                               exclusion).reshape(x.shape)
+        weights = weights * keep
     out = {}
     for name, mine, ref in (("u", u, reference_u[0]), ("v", v, reference_u[1]),
                             ("p", p, reference_p)):
@@ -787,8 +854,11 @@ def evaluate(config: Config, params, verbose=True):
     mine = opening_measures(model, geometry, a, config.n_line)
     theirs = opening_measures(solution, geometry, a, config.n_line)
     errors = relative_errors(solution, model)
+    away = relative_errors(solution, model, geometry.singular_corners(), config.corner_exclusion)
     metrics = {
         "relative_l2": errors,
+        # where the PINN was trained: the corner discs hold the singularity
+        "relative_l2_outside_corners": away,
         "pinn": mine, "reference": theirs,
         "reference_own": solution.measures(),
         "objective_relative_error": abs(mine["total_pressure_drop"]
@@ -802,6 +872,8 @@ def evaluate(config: Config, params, verbose=True):
                              "reference": solution.info["multiplier"]}
     if verbose:
         print(f"  relative L2: u {errors['u']:.3e}  v {errors['v']:.3e}  p {errors['p']:.3e}")
+        print(f"  outside the corner discs: u {away['u']:.3e}  v {away['v']:.3e}  "
+              f"p {away['p']:.3e}")
         print(f"  total-pressure drop: PINN {mine['total_pressure_drop']:.6f}  "
               f"reference {theirs['total_pressure_drop']:.6f}  "
               f"(relative error {metrics['objective_relative_error']:.2e})")

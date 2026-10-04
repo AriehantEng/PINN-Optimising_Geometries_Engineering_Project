@@ -140,3 +140,32 @@ reports it and the summary ranks it (reference floor: the dissipation GCI,
 The loss kept falling (held-out medians by 25-step block 9.0, 8.2, 7.5, 7.2,
 7.0, 6.6 in 1e-9) while u moved 2% (3.59e-6 to 3.52e-6, inside the seed band)
 and v 3%: a plateau in the field errors, not in the loss.
+
+## 11. P7 on three seeds: the band of the best network
+
+The same polish of G5 (100 averaged LM steps at 16,384 points, 32k
+held-out) on seeds 1, 2 and 3. Relative errors against the reference,
+integrated on its mesh:
+
+| P7 | seed 1 | seed 2 | seed 3 | mean | max / min |
+|---|---|---|---|---|---|
+| u | 3.08e-6 | 4.00e-6 | 2.71e-6 | 3.26e-6 | 1.48 |
+| v | 6.84e-5 | 7.19e-5 | 7.22e-5 | 7.08e-5 | 1.05 |
+| p | 1.72e-5 | 1.78e-5 | 1.68e-5 | 1.73e-5 | 1.06 |
+| entrance length | 4.24e-5 | 1.94e-5 | 4.18e-5 | 3.45e-5 | 2.18 |
+| total-pressure drop | 3.85e-6 | 7.21e-6 | 5.5e-7 | 3.87e-6 | 13.1 |
+| resistance | 3.39e-7 | 8.06e-7 | 1.87e-6 | 1.01e-6 | 5.5 |
+| training (min) | 72 | 75 | 75 | 74 | |
+
+The fields are tight: v and p vary by 5-6% between seeds, and p sits on the
+reference's own floor (1.5e-5), so p cannot be ranked further. u varies by
+1.5x, like the baseline band (section 1). The objectives are not tight:
+the total-pressure drop spans 13x and the resistance 5.5x, so a single
+seed's objective error is a draw from a range, not a property of the setup.
+Seed 1's resistance (3.4e-7, quoted in section 9) was the lucky end; the
+honest figure for P7 is ~1e-6, and P5's single-seed 4.4e-8 is most likely
+selection luck too (one seed; section 1 showed the same of the baseline).
+
+For the bifurcation: a single trained network's pressure drop should be
+quoted with a seed band, and comparisons between designs closer than about
+1e-5 relative are not resolved by one network per design.

@@ -368,6 +368,23 @@ class Geometry:
         v = self.vertices()
         return v[3:6] if self.septum == "tip" else v[3:7]
 
+    def singular_corners(self):
+        """Wall vertices where the fluid's interior angle EXCEEDS 180 degrees:
+        the corners where the velocity gradient and the pressure are singular
+        (u ~ r^0.54 at 270 degrees, for Stokes flow). A straight daughter's
+        180-degree vertex is not one."""
+        v = self.vertices()
+        kinds = EDGE_KINDS[self.septum]
+        out = []
+        for i in range(len(v)):
+            if kinds[i - 1] != "wall" or kinds[i] != "wall":
+                continue
+            before, after = v[i] - v[i - 1], v[(i + 1) % len(v)] - v[i]
+            turn = before[0] * after[1] - before[1] * after[0]
+            if turn < -1e-12 * np.linalg.norm(before) * np.linalg.norm(after):
+                out.append(v[i])
+        return np.array(out).reshape(-1, 2)
+
     def reentrant_corners(self):
         """Wall vertices where the fluid's interior angle is at least 180 degrees:
         the parent's corners B and C (a straight daughter leaves a 180-degree

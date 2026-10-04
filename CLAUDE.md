@@ -233,3 +233,17 @@ wall from start2 to start1 (`septum = "face"`, 10 vertices). Tests on strip
 widths now run on both shapes. Near 180 with unequal widths the walls meet
 past an outlet and the geometry refuses; one daughter at 180 folds onto the
 parent's wall and closes, and the entrance gap obeys min_width like the widths.
+
+**At a reflex corner the residual of u = D N grows like 1/r, for any network.**
+Network 2's first tiny runs looked like overfitting (held-out 20-50x the
+training loss; one draw scored 1.4e3 against a held-out 21) → near B, C and
+the septum tip the wall distance D is ~ the distance to a point, whose
+Laplacian is ~ 1/r, and the true u ~ r^0.54 means N = u/D cannot be smooth:
+r * residual was constant from r = 1e-2 to 1e-4 at an UNTRAINED network. Its
+square is not integrable against a 1/r point density, so each draw's loss was
+its closest corner point → collocate outside a disc (`sampling.corner_exclusion`)
+and add corner points uniform in area. Held-out then tracked training (ratio
+~1) and fell 67x. Merging collinear wall edges removed a false 1/r at a
+straight daughter's 180-degree joint, an artefact of the R-function
+composition. The parametric network and every Phase 2 geometry with a septum
+inherit this.
