@@ -33,6 +33,7 @@ model:
   init_gain: 1.0
   input_scale: 2.0            # x* - centre of the bounding box, divided by this
   distance_order: 1           # R-equivalence order of the wall distance
+  wall_extension: 0.0
   formulation: "velocity_pressure"
 sampling:
   n_interior: 8192

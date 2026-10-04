@@ -1,0 +1,72 @@
+# Network 2, third run: the stream-function run (bifurcation_re10_3090_equal_stream:
+# u 1.9e-2, v 2.6e-2, p 5.2e-3, total-pressure drop 0.40% low, mass and
+# share exact) with its walls extended past the openings. In that run one
+# point, near daughter 1's outlet corner, held 86% of a held-out loss: the
+# stream function's third derivatives of the wall distances are large where
+# a wall segment ends, and there the walls ended at the outlet. Extended by
+# 0.5, an untrained network's residual near the opening corners fell from
+# 14-50x its largest elsewhere to below it.
+name: bifurcation_re10_3090_equal_stream_ext
+seed: 13
+physics:
+  reynolds: 10.0              # Re_h of the parent, as Network 1
+  pressure_scaling: inertial
+geometry:
+  split: 0.5                  # w1 / w0
+  angle1: 30.0                # degrees from the parent's axis, daughter 1 up
+  angle2: 90.0                # daughter 2 down
+  parent_length: 3.0
+  daughter_length: 4.0
+  min_width: 0.2
+outlets:
+  split: prescribed           # or free: equal outlet pressures
+  outlet1_share: 0.5
+inlet:
+  profile: parabola           # the developed inflow; network1 couples Network 1
+model:
+  width: 40                   # 5,363 parameters with the outlet offset (psi, p outputs)
+  depth: 4
+  activation: tanh
+  init_gain: 1.0
+  input_scale: 2.0            # x* - centre of the bounding box, divided by this
+  distance_order: 1           # R-equivalence order of the wall distance
+  wall_extension: 0.5         # walls run on 0.5 past the inlet and outlets
+  formulation: stream_pressure  # u, v from psi = G + D^2 N: mass and share exact
+  blend_exponent: 2.0         # G's Shepard weights ~ D^2: zero normal derivative at walls
+sampling:
+  n_interior: 8192
+  corner_fraction: 0.1        # extra points, uniform in area, near the singular corners
+  corner_radius: 0.5
+  corner_exclusion: 0.02      # no point closer to B, T, C (the weighting bounds the rest)
+  n_inlet: 256
+  n_outlet: 256               # per outlet
+  n_validation: 32768
+  n_flux: 64                  # Gauss-Legendre points for Q_in, the stream function's top value
+weights:
+  momentum_x: 1.0
+  momentum_y: 1.0
+  inlet: 1.0
+  outlet: 1.0
+  corner_radius: 0.3          # interior residuals x min(1, r / 0.3) near B, T, C
+training:
+  adam:
+    steps: 3000
+    learning_rate: 1.0e-3
+    decay_rate: 0.9
+    decay_steps: 1000
+    resample_every: 250
+  lbfgs:
+    cycles: 4
+    iterations_per_cycle: 500
+    gtol: 1.0e-14
+  lm:
+    iterations: 150
+    damping: 1.0e-4
+    resample_every: 1         # fresh points every step, as Network 1's polish
+    average: 20
+  check_every: 250
+evaluation:
+  max_area: 0.002             # the reference's mesh
+  corner_levels: 6
+  corner_radius: 0.4
+  n_line: 256                 # Gauss-Legendre points on each opening

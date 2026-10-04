@@ -34,6 +34,7 @@ model:
   init_gain: 1.0
   input_scale: 2.0            # x* - centre of the bounding box, divided by this
   distance_order: 1           # R-equivalence order of the wall distance
+  wall_extension: 0.0
   formulation: stream_pressure  # u, v from psi = G + D^2 N: mass and share exact
   blend_exponent: 2.0         # G's Shepard weights ~ D^2: zero normal derivative at walls
 sampling:

@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+import yaml
 from jax.flatten_util import ravel_pytree
 
 from bifurcation import flow
@@ -22,7 +23,8 @@ BASE = {
     "outlets": {"split": "prescribed", "outlet1_share": 0.5},
     "inlet": {"profile": "parabola"},
     "model": {"width": 8, "depth": 2, "activation": "tanh", "init_gain": 1.0,
-              "input_scale": 2.0, "distance_order": 1, "formulation": "velocity_pressure"},
+              "input_scale": 2.0, "distance_order": 1, "formulation": "velocity_pressure",
+              "wall_extension": 0.0},
     "sampling": {"n_interior": 64, "corner_fraction": 0.25, "corner_radius": 0.5,
                  "corner_exclusion": 0.05, "n_inlet": 16, "n_outlet": 16, "n_validation": 128,
                  "n_flux": 32},
@@ -108,7 +110,7 @@ def test_an_impossible_geometry_is_refused_before_training():
 @pytest.mark.parametrize("order", [1, 2])
 def test_the_distance_vanishes_on_every_wall_and_only_there(angles, order):
     g = Geometry.from_split(0.4, *angles, 3.0, 4.0, min_width=0.2)
-    segments = jnp.asarray(flow.wall_segments(g))
+    segments = jnp.asarray(flow.wall_segments(g, 0.0))
     distance = jax.vmap(lambda xy: flow.wall_distance(xy, segments, order))
     assert np.all(np.asarray(distance(parent_wall_points(g))) == 0.0)
     assert np.max(np.asarray(distance(wall_points(g)))) < ON_WALL
@@ -124,7 +126,7 @@ def test_the_distance_is_normalised_to_first_order():
     """Near a wall, away from its ends, D ~ the distance to it (Sukumar &
     Srivastava's normalisation), so N_u is the wall-normal gradient there."""
     g = Geometry.from_split(0.5, 60.0, 60.0, 3.0, 4.0, min_width=0.2)
-    segments = jnp.asarray(flow.wall_segments(g))
+    segments = jnp.asarray(flow.wall_segments(g, 0.0))
     for h in (1e-3, 1e-4, 1e-5):
         d = float(flow.wall_distance(jnp.array([1.5, -1.0 + h]), segments, 1))
         assert abs(d / h - 1.0) < 2.0 * h
@@ -169,7 +171,7 @@ def test_a_straight_daughter_leaves_no_false_corner_in_the_wall_distance():
     c = config(**{"geometry.angle1": 0.0, "geometry.angle2": 60.0})
     g = c.geometry()
     C = g.vertices()[7]
-    assert len(flow.wall_segments(g)) == 5                     # C-D and E1o-C merged
+    assert len(flow.wall_segments(g, 0.0)) == 5                     # C-D and E1o-C merged
     assert not any(np.allclose(C, k) for k in g.singular_corners())
     assert any(np.allclose(C, k) for k in g.reentrant_corners())  # still refined in the mesh
     # bounded: the residual itself (r * residual / r) is the same size at
@@ -359,9 +361,9 @@ def test_three_wall_chains_cover_every_wall():
     for angles in ((30.0, 70.0), (90.0, 90.0), (0.0, 60.0)):
         c = config(**{"geometry.angle1": angles[0], "geometry.angle2": angles[1]})
         g = c.geometry()
-        chains = flow.wall_chains(g)
+        chains = flow.wall_chains(g, 0.0)
         assert len(chains) == 3
-        assert sum(len(chain) for chain in chains) == len(flow.wall_segments(g))
+        assert sum(len(chain) for chain in chains) == len(flow.wall_segments(g, 0.0))
         A, B = g.vertices()[0], g.vertices()[1]
         assert np.allclose(chains[0][0][0], A)                    # the lower chain starts at A
         D = g.vertices()[-1]
@@ -448,6 +450,56 @@ def test_corner_weighting_scales_the_interior_residual_by_r_over_rho():
 def test_every_stored_bifurcation_run_still_loads():
     """CLAUDE.md: a newly required key must be migrated into every stored run."""
     import pathlib
+    from bifurcation import geometric
     root = pathlib.Path(flow.HERE) / "runs"
     for directory in sorted(root.glob("*/params.npz")):
-        flow.load_run(directory.parent)
+        document = yaml.safe_load((directory.parent / "config.yaml").read_text())
+        if "outlets" in document:
+            flow.load_run(directory.parent)              # Network 2
+        else:
+            geometric.load_run(directory.parent)         # Network 3
+
+
+@pytest.mark.parametrize("seed", [1, 2])
+def test_extending_the_walls_removes_the_spike_at_the_opening_corners(seed):
+    """The stream function needs third derivatives of the wall distances, which
+    are large in a thin band where a wall segment ENDS. Near the inlet's and
+    outlets' corners an untrained network's residual reached 14-50x its
+    largest value elsewhere; one point there held 86% of a trained run's
+    held-out loss. Extended past the openings, the walls end outside the domain."""
+    ratios = {}
+    for extension in (0.0, 0.5):
+        c = config(**{**STREAM, "model.wall_extension": extension})
+        g = c.geometry()
+        field = flow.make_field(c, g, 4.0 / 3.0)
+        params = flow.init_params(c, jax.random.PRNGKey(seed))
+        points = g.sample_interior(np.random.default_rng(0), 40000)
+        opening = g.vertices()[[0, 2, 3, 5, 6, 8]]                  # A E2o E2i E1i E1o D
+        near = np.min(np.linalg.norm(points[:, None] - opening[None], axis=2), axis=1)
+        singular = np.min(np.linalg.norm(points[:, None] - g.singular_corners()[None], axis=2),
+                          axis=1)
+
+        def largest(selected):
+            d = pinn.batched_derivatives(lambda q: field(params, q), jnp.asarray(selected[:400]))
+            return np.max(np.abs(np.asarray(pinn.momentum_x(d, c.reynolds, c.pressure_scaling))))
+
+        ratios[extension] = (largest(points[near < 0.15])
+                             / largest(points[(near > 0.3) & (singular > 0.3)]))
+    assert ratios[0.0] > 10.0
+    assert ratios[0.5] < 2.0
+
+
+def test_with_no_extension_the_walls_are_the_polygon_edges():
+    """Stored runs were trained with walls ending at the openings; extension 0
+    must rebuild exactly those segments (they are migrated to 0)."""
+    for angles in ((30.0, 90.0), (0.0, 60.0), (90.0, 90.0)):
+        c = config(**{"geometry.angle1": angles[0], "geometry.angle2": angles[1]})
+        g = c.geometry()
+        segments = flow.wall_segments(g, 0.0)
+        vertices = g.vertices()
+        for a, b in segments:
+            assert any(np.array_equal(a, v) for v in vertices)
+            assert any(np.array_equal(b, v) for v in vertices)
+        extended = flow.wall_segments(g, 0.5)
+        moved = np.sum(np.any(extended != segments, axis=(1, 2)))
+        assert moved in (3, 4, 5, 6)              # each chain's two end segments, once or twice

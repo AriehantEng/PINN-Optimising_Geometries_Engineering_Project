@@ -12,6 +12,7 @@ ACTUALLY did:
                                             stream function existed
     weights.corner_radius = 0.0             no corner weighting existed: every
                                             interior residual had weight 1
+    model.wall_extension = 0.0              walls ended at the openings
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -34,6 +35,9 @@ MIGRATIONS = (
     ("model.formulation", "velocity_pressure", r"^  distance_order: .*$",
      lambda d: "formulation" not in d.get("model", {}),
      "before model.formulation existed the network always output u, v, p"),
+    ("model.wall_extension", 0.0, r"^  distance_order: .*$",
+     lambda d: "wall_extension" not in d.get("model", {}),
+     "before model.wall_extension existed every wall ended at the openings"),
     ("weights.corner_radius", 0.0, r"^  outlet: .*$",
      lambda d: "corner_radius" not in d.get("weights", {}),
      "before weights.corner_radius existed no residual was weighted near the corners"),
@@ -42,8 +46,8 @@ MIGRATIONS = (
 
 def plan(path: pathlib.Path):
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(document, dict):
-        return None
+    if not isinstance(document, dict) or "outlets" not in document:
+        return None                       # not a Network 2 run (Network 3's have "data")
     return [(key, value, anchor, reason)
             for key, value, anchor, applies, reason in MIGRATIONS if applies(document)]
 
@@ -88,6 +92,9 @@ def main(argv=None) -> int:
             print(f"{directory.name}: unfinished, skipped")
             continue
         additions = plan(directory / "config.yaml")
+        if additions is None:
+            print(f"{directory.name}: not a Network 2 run, skipped")
+            continue
         if not additions:
             print(f"{directory.name}: already complete")
             continue

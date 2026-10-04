@@ -79,7 +79,7 @@ import yaml  # noqa: E402
 from jax.flatten_util import ravel_pytree  # noqa: E402
 from scipy.optimize import minimize  # noqa: E402
 
-from bifurcation.geometry import Geometry  # noqa: E402
+from bifurcation.geometry import Geometry, GeometryError  # noqa: E402
 from developing_flow import pinn  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -115,7 +115,8 @@ SCHEMA = {
     "outlets": {"split": str},
     "inlet": {"profile": str},
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
-              "input_scale": float, "distance_order": int, "formulation": str},
+              "input_scale": float, "distance_order": int, "formulation": str,
+              "wall_extension": float},
     "sampling": {"n_interior": int, "corner_fraction": float, "corner_radius": float,
                  "corner_exclusion": float, "n_inlet": int, "n_outlet": int,
                  "n_validation": int},
@@ -174,6 +175,7 @@ class Config:
     init_gain: float
     input_scale: float
     distance_order: int
+    wall_extension: float
     formulation: str
     blend_exponent: float | None
     corner_weight_radius: float
@@ -256,6 +258,8 @@ def parse_config(document) -> Config:
                                            "training"))
     if not 0.0 <= s["corner_fraction"] < 1.0:
         raise ConfigError("sampling.corner_fraction must lie in [0, 1)")
+    if not m["wall_extension"] >= 0.0:
+        raise ConfigError("model.wall_extension must be >= 0 (0: walls end at the openings)")
     if not 0.0 < s["corner_exclusion"] < s["corner_radius"]:
         raise ConfigError("sampling.corner_exclusion must lie in (0, corner_radius)")
     for where, value in (("model.width", m["width"]), ("model.depth", m["depth"]),
@@ -297,7 +301,8 @@ def parse_config(document) -> Config:
         inlet_station=(None if not network1 else float(conditional[("inlet", "station")])),
         width=m["width"], depth=m["depth"], activation=m["activation"],
         init_gain=float(m["init_gain"]), input_scale=float(m["input_scale"]),
-        distance_order=m["distance_order"], formulation=m["formulation"],
+        distance_order=m["distance_order"], wall_extension=float(m["wall_extension"]),
+        formulation=m["formulation"],
         blend_exponent=None if blend is None else float(blend),
         corner_weight_radius=corner_weight_radius,
         n_interior=s["n_interior"], corner_fraction=float(s["corner_fraction"]),
@@ -375,36 +380,10 @@ def segment_distance(xy, a, b):
     return jnp.sqrt(f**2 + trim**2)
 
 
-def wall_segments(geometry: Geometry):
-    """(S, 2, 2): the walls of the polygon, consecutive collinear wall edges
-    merged into one segment.
-
-    Merging matters: where a straight daughter continues the parent's wall,
-    two segments meet at 180 degrees, and the R-function composition of their
-    trimmed distances has a Laplacian ~ 1/r at the joint, so the momentum
-    residual of u = D N grows like 1/r there (measured: r * residual constant
-    from r = 1e-2 to 1e-4) although the flow is smooth. One segment has no joint.
-    """
-    edges = geometry.edges()
-    n = len(edges)
-    # start from an edge that is not a wall, so every wall run is contiguous
-    first = next(i for i in range(n) if edges[i][2] != "wall")
-    runs, current = [], None
-    for k in range(1, n + 1):
-        a, b, kind = edges[(first + k) % n]
-        if kind != "wall":
-            current = None
-            continue
-        if current is not None:
-            d0, d1 = current[1] - current[0], b - a
-            cross = d0[0] * d1[1] - d0[1] * d1[0]
-            if (abs(cross) <= 1e-12 * np.linalg.norm(d0) * np.linalg.norm(d1)
-                    and np.dot(d0, d1) > 0.0):
-                current[1] = b
-                continue
-        current = [a.copy(), b.copy()]
-        runs.append(current)
-    return np.stack([np.stack(run) for run in runs])
+def wall_segments(geometry: Geometry, extension):
+    """(S, 2, 2): the walls of the polygon as one array of segments: the three
+    chains of `wall_chains`, merged and extended as it describes."""
+    return np.concatenate(wall_chains(geometry, extension))
 
 
 def wall_distance(xy, segments, order):
@@ -414,11 +393,26 @@ def wall_distance(xy, segments, order):
     return jnp.sum(phis ** (-order)) ** (-1.0 / order)
 
 
-def wall_chains(geometry: Geometry):
+def wall_chains(geometry: Geometry, extension):
     """The walls as three chains, in polygon order from the inlet: daughter 2's
     outer wall with the parent's lower wall, the septum, daughter 1's outer
-    wall with the parent's upper wall. Openings separate them. Each chain's
-    consecutive collinear edges are merged (see `wall_segments`)."""
+    wall with the parent's upper wall. Openings separate them.
+
+    Consecutive collinear edges are merged into one segment: where a straight
+    daughter continues the parent's wall, two segments meeting at 180 degrees
+    give the R-function composition a Laplacian ~ 1/r at the joint, so the
+    residual of u = D N grows like 1/r there (measured) although the flow is
+    smooth. One segment has no joint.
+
+    Each chain is then extended by `extension` past both of its ends, which
+    are at openings (the inlet, an outlet), along its end segments, outside
+    the domain. The distance functions are smooth along a segment and not at
+    its end, and the stream function needs their THIRD derivatives: with no
+    extension the residual near an outlet's outer corner rose to ~10 at
+    r = 1e-3 for a trained network, and one point there held 86% of a
+    held-out loss. Extended, no wall end lies on the domain's closure except
+    at the reflex corners. 0 = no extension.
+    """
     edges = geometry.edges()
     n = len(edges)
     first = next(i for i in range(n) if edges[i][2] == "inlet") + 1
@@ -441,7 +435,23 @@ def wall_chains(geometry: Geometry):
         current.append([a.copy(), b.copy()])
     if len(chains) != 3:
         raise AssertionError(f"expected 3 wall chains, found {len(chains)}")
-    return [np.array(chain) for chain in chains]
+    chains = [np.array(chain) for chain in chains]
+    if extension > 0.0:
+        for chain in chains:
+            for which, (start, end) in (("start", (chain[0][1], chain[0][0])),
+                                        ("end", (chain[-1][0], chain[-1][1]))):
+                direction = (end - start) / np.linalg.norm(end - start)
+                tip = end + extension * direction
+                along = end + np.linspace(0.0, 1.0, 64)[1:, None] * (tip - end)
+                if geometry.contains(along).any():
+                    raise GeometryError(
+                        f"extending a wall by {extension:g} past an opening enters the domain: "
+                        "use a shorter model.wall_extension")
+                if which == "start":
+                    chain[0][0] = tip
+                else:
+                    chain[-1][1] = tip
+    return chains
 
 
 def init_params(config: Config, key):
@@ -462,7 +472,7 @@ def init_params(config: Config, key):
 def make_field(config: Config, geometry: Geometry, q_in):
     """field(params, xy) -> (u, v, p) at one point. q_in, the inflow, sets the
     stream function's wall values (unused by velocity_pressure)."""
-    segments = jnp.asarray(wall_segments(geometry))
+    segments = jnp.asarray(wall_segments(geometry, config.wall_extension))
     lo, hi = geometry.bounding_box()
     centre = jnp.asarray(0.5 * (lo + hi))
     scale = config.input_scale
@@ -475,7 +485,7 @@ def make_field(config: Config, geometry: Geometry, q_in):
             return jnp.stack([distance * raw[0], distance * raw[1], raw[2]])
         return field
 
-    chains = [jnp.asarray(chain) for chain in wall_chains(geometry)]
+    chains = [jnp.asarray(chain) for chain in wall_chains(geometry, config.wall_extension)]
     mu = config.blend_exponent
     fixed_share2 = None if not config.prescribed else 1.0 - config.outlet1_share
 
