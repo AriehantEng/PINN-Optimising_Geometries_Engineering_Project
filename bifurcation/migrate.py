@@ -1,4 +1,5 @@
-"""Backfill config keys added after a bifurcation (Network 2 or 3) run finished.
+"""Backfill config keys added after a bifurcation (Network 2, parametric or not, or 3)
+run finished.
 
     python -m bifurcation.migrate            # dry run, changes nothing
     python -m bifurcation.migrate --write
@@ -53,12 +54,18 @@ NETWORK3_MIGRATIONS = (
 )
 
 
+#: The same for parametric Network 2 (bifurcation/parametric.py) runs: none yet.
+PARAMETRIC_MIGRATIONS = ()
+
+
 def plan(path: pathlib.Path):
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(document, dict):
         return None
     if "outlets" in document:                         # Network 2
         table = MIGRATIONS
+    elif "design" in document:                        # Network 2, parametric
+        table = PARAMETRIC_MIGRATIONS
     elif "data" in document and "fit" in document:    # Network 3
         table = NETWORK3_MIGRATIONS
     else:

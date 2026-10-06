@@ -716,8 +716,6 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
     written at every boundary (Adam check, L-BFGS cycle, LM step) and `resume`
     continues from it; the draws are numpy generators whose state is saved, so
     a resumed run draws the same points as an uninterrupted one."""
-    if resume and checkpoint is None:
-        raise ValueError("resume needs the checkpoint to resume from")
     geometry = config.geometry()
     inlet = inlet_function(config)
     q_in = inlet_flux(inlet, config.n_flux) if config.n_flux is not None else None
@@ -725,13 +723,47 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
     groups, batched_loss = make_residuals(config, geometry, field, q_in)
     model_key, draws, heldout_rng = _streams(config.seed)
     params = init_params(config, model_key)
-    flat, unflatten = ravel_pytree(params)
-    normal_equations, lm_loss = pinn.gauss_newton(groups, unflatten, LM_CHUNK)
 
     def draw():
         return sample_batch(draws, config, geometry, inlet, config.n_interior)
 
     heldout = sample_batch(heldout_rng, config, geometry, inlet, config.n_validation)
+
+    def describe(p):
+        """What the log shows beside the losses: the trained scalars."""
+        out = {}
+        if config.prescribed:
+            out["offset"] = float(p["offset"])
+        if config.stream and not config.prescribed:
+            out["share2"] = float(p["share2"])
+        return out
+
+    best, history, info = optimise(config, params, groups, batched_loss, draws, draw, heldout,
+                                   _fingerprint(config), describe, verbose, checkpoint, resume)
+    info["inlet_flux"] = q_in
+    return best, history, info
+
+
+def optimise(config, params, groups, batched_loss, draws, draw, heldout, fingerprint, describe,
+             verbose=True, checkpoint=None, resume=False):
+    """The training loop Network 2 and its parametric version share: Adam with
+    resampling, L-BFGS cycles on fresh draws, then Levenberg-Marquardt with
+    fresh points every lm.resample_every steps and iterate averaging; the
+    parameters with the lowest held-out loss are returned.
+
+    config     the training settings (adam_*, lbfgs_*, lm_*, check_every)
+    groups, batched_loss   pinn.gauss_newton's point groups and the same loss batched
+    draws, draw   the numpy generator behind draw() and draw() itself: the
+               generator's state goes into the checkpoint, so a resumed run
+               draws the same points
+    heldout    the held-out batch
+    fingerprint   identifies config and code: a checkpoint from others is refused
+    describe(params) -> {name: float}, logged beside the losses
+    Returns (best params, history, info)."""
+    if resume and checkpoint is None:
+        raise ValueError("resume needs the checkpoint to resume from")
+    flat, unflatten = ravel_pytree(params)
+    normal_equations, lm_loss = pinn.gauss_newton(groups, unflatten, LM_CHUNK)
 
     def heldout_loss(vector):
         return lm_loss(vector, heldout)
@@ -741,7 +773,6 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
     lm_log = {"iterations": 0, "rejected": 0, "stalled": 0}
     started = time.time()
     position, saved, meta = ("start", 0), {}, {}
-    fingerprint = _fingerprint(config)
     if resume:
         with np.load(checkpoint) as stored:
             meta = json.loads(str(stored["meta"]))
@@ -790,16 +821,13 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
             best.update(heldout=held_average, flat=average, where=f"{phase}_average:{iteration}")
         row = {"phase": phase, "iteration": iteration, "train_loss": loss, "heldout_loss": held,
                "heldout_average": held_average, "seconds": time.time() - started}
-        if config.prescribed:
-            row["offset"] = float(unflatten(vector)["offset"])
-        if config.stream and not config.prescribed:
-            row["share2"] = float(unflatten(vector)["share2"])
+        extras = describe(unflatten(vector))
+        row.update(extras)
         history.append(row)
         if verbose:
             print(f"  {phase:>6} {iteration:>7d} {loss:>12.4e} {held:>12.4e}"
                   + ("" if average is None else f"   averaged {held_average:.4e}")
-                  + (f"   offset {row['offset']:+.5f}" if "offset" in row else "")
-                  + (f"   share2 {row['share2']:.5f}" if "share2" in row else ""), flush=True)
+                  + "".join(f"   {k} {v:+.5f}" for k, v in extras.items()), flush=True)
 
     phases = ("start", "adam", "lbfgs", "lm")
     order = phases.index(position[0])
@@ -895,8 +923,10 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
                            "points; refusing to return the random initialisation")
     info = {"parameter_count": int(flat.size), "total_seconds": time.time() - started,
             "selected": best["where"], "selected_heldout_loss": best["heldout"],
-            "levenberg_marquardt": lm_log, "inlet_flux": q_in}
+            "levenberg_marquardt": lm_log}
     return unflatten(best["flat"]), history, info
+
+
 
 
 # --------------------------------------------------------------------------- #

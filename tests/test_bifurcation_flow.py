@@ -450,12 +450,14 @@ def test_corner_weighting_scales_the_interior_residual_by_r_over_rho():
 def test_every_stored_bifurcation_run_still_loads():
     """CLAUDE.md: a newly required key must be migrated into every stored run."""
     import pathlib
-    from bifurcation import geometric
+    from bifurcation import geometric, parametric
     root = pathlib.Path(flow.HERE) / "runs"
     for directory in sorted(root.glob("*/params.npz")):
         document = yaml.safe_load((directory.parent / "config.yaml").read_text())
         if "outlets" in document:
             flow.load_run(directory.parent)              # Network 2
+        elif "design" in document:
+            parametric.load_run(directory.parent)        # Network 2, parametric
         else:
             geometric.load_run(directory.parent)         # Network 3
 
