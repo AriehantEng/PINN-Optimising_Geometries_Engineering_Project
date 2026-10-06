@@ -233,7 +233,7 @@ Two tests check the construction:
 
 The range is checked before training: a range across which the polygon changes shape, or where any geometry is invalid, is refused. Once trained, the network gives J(s) over the whole range from line integrals alone. Its argmin is located by a 61-point scan followed by Brent's method and compared with the finite-element argmin (Section 3.6).
 
-[The first run, 30/90 with s ∈ [0.35, 0.65] and q = 0.5, is training at the time of writing; its results go to Section 5.]
+[First run, 30/90 with s ∈ [0.35, 0.65] and q = 0.5: `docs/bifurcation_re10-parametric.md`. Its optimum was 0.4845 against the finite-element 0.4848, with regret below 0.01%. The results go to Section 5.]
 
 ### 3.5 Network 3: optimal widths from the angles and the share
 

@@ -247,3 +247,15 @@ and add corner points uniform in area. Held-out then tracked training (ratio
 straight daughter's 180-degree joint, an artefact of the R-function
 composition. The parametric network and every Phase 2 geometry with a septum
 inherit this.
+
+**A parametric PINN is least accurate at the edges of its range, and that is
+harmless only if the optimum is not there.** `parametric_re10_3090_equal`
+(split as an input, 0.35-0.65) had a drop error of 0.06-0.11% at 0.45-0.50 and
+1.4-2.1% at 0.60-0.65, and its velocity errors were also largest at both ends
+-> the edge splits are sampled from one side only -> it still located the
+optimum to 0.0003 (inside the 0.002 search tolerance), because the argmin
+depends on the error's SLOPE near the optimum, which was flat there. Set the
+range wider than the region where the answer can lie, and check the error
+slope around the argmin, not the worst error. L-BFGS on one fixed draw also
+over-fitted it (held-out 4.3x training, rising); Levenberg-Marquardt with
+fresh points every step recovered it.
