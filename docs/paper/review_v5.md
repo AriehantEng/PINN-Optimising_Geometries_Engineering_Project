@@ -39,7 +39,11 @@ The literature review's last sentence ("Section 3 sets out the design problem") 
 2. **Network 1, "about three times … the reference's own estimated error"**: 3.26 × 10⁻⁶ / 8.7 × 10⁻⁷ = 3.7, so *"about four times"*. The "sixty times" for the objective is right (58).
 3. **"its pressure agrees to within the reference's error"**: the pressure error is 1.73 × 10⁻⁵ against the reference's own 1.5 × 10⁻⁵, a ratio of 1.15. Replace with: *"its pressure error (1.7 × 10⁻⁵) is at the level of the reference's own (1.5 × 10⁻⁵), so it cannot be resolved further."*
 4. **H1's "to within the resolution of the reference"**: the search resolves s to ±0.001, but gently turned layouts depart by 0.002–0.007 (0/60 by 0.007; 10/80 by 0.010). Stated this way, H1 is falsified by your own data. See C4.
-5. **"an energy-consistency check … becomes its only internal diagnostic (Appendix A.6)"** was a promise: the check had never been computed for the bifurcation networks. It now has been (`bifurcation/energy.py`, `docs/bifurcation_re10-energy.md`); report it in Section 6.
+5. **"an energy-consistency check … becomes its only internal diagnostic (Appendix A.6)"** was a promise: the check had never been computed for the bifurcation networks. It now has been (`bifurcation/energy.py`, `docs/bifurcation_re10-energy.md`, ten cases), and the result tempers the claim:
+   - it catches gross failures: 5.2% for the velocity–pressure run, whose true drop error is 4.5%, and 2.6% at the edge of the parametric range;
+   - for a working network it is off by a factor of 0.3–5, and its rank correlation with the true error is weak (ρ = 0.53).
+
+   Write it as *"a reference-free alarm"*, not as a diagnostic that measures the error (Section 6.3).
 
 ### C3. The constraint w₁ + w₂ = w₀ needs a reason, and the reason is now in the data
 

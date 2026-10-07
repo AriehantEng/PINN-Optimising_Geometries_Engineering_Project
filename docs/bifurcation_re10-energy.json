@@ -1,0 +1,122 @@
+[
+ {
+  "run": "bifurcation_re10_3090_equal",
+  "split": 0.5,
+  "drop_net": 3.867830419126467,
+  "drop_ref": 4.051575963401137,
+  "drop_error": -0.045351622661030655,
+  "dissipation_net": 4.891193499007402,
+  "dissipation_ref": 5.402141651706985,
+  "dissipation_error": -0.09458251664654738,
+  "inconsistency_net": 0.052382301642520175,
+  "inconsistency_ref": 7.472438662951094e-06
+ },
+ {
+  "run": "bifurcation_re10_3090_equal_stream",
+  "split": 0.5,
+  "drop_net": 4.035571872712625,
+  "drop_ref": 4.051575963401137,
+  "drop_error": -0.003950090244655757,
+  "dissipation_net": 5.465661035340558,
+  "dissipation_ref": 5.402141651706985,
+  "dissipation_error": 0.011758185499171736,
+  "inconsistency_net": 0.015533077854890033,
+  "inconsistency_ref": 7.472438662951094e-06
+ },
+ {
+  "run": "bifurcation_re10_3090_equal_stream_ext",
+  "split": 0.5,
+  "drop_net": 4.06843179773066,
+  "drop_ref": 4.051575963401137,
+  "drop_error": 0.004160315512231616,
+  "dissipation_net": 5.417212743622953,
+  "dissipation_ref": 5.402141651706985,
+  "dissipation_error": 0.002789836492200326,
+  "inconsistency_net": 0.0013591835936780357,
+  "inconsistency_ref": 7.472438662951094e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.35,
+  "drop_net": 5.476081151584956,
+  "drop_ref": 5.46480781411741,
+  "drop_error": 0.0020628973334473333,
+  "dissipation_net": 7.323818611802719,
+  "dissipation_ref": 7.286442395238009,
+  "dissipation_error": 0.005129556309830585,
+  "inconsistency_net": 0.003055383747494985,
+  "inconsistency_ref": 4.388481108242102e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.4,
+  "drop_net": 4.560125349715265,
+  "drop_ref": 4.547837504959358,
+  "drop_error": 0.0027019093673656958,
+  "dissipation_net": 6.089553544270043,
+  "dissipation_ref": 6.063819858293547,
+  "dissipation_error": 0.004243807794075405,
+  "inconsistency_net": 0.0015413956455282716,
+  "inconsistency_ref": 6.022333874182996e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.45,
+  "drop_net": 4.120844804246105,
+  "drop_ref": 4.118193080100681,
+  "drop_error": 0.0006439047645039331,
+  "dissipation_net": 5.512143844246598,
+  "dissipation_ref": 5.49095373960281,
+  "dissipation_error": 0.003859093638133748,
+  "inconsistency_net": 0.0032082082310394004,
+  "inconsistency_ref": 5.396658451333895e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.5,
+  "drop_net": 4.056054679886564,
+  "drop_ref": 4.051575963401137,
+  "drop_error": 0.0011054257715725768,
+  "dissipation_net": 5.421896964404436,
+  "dissipation_ref": 5.402141651706985,
+  "dissipation_error": 0.003656940889583904,
+  "inconsistency_net": 0.0025496718177727556,
+  "inconsistency_ref": 7.472438662951094e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.55,
+  "drop_net": 4.369197755817104,
+  "drop_ref": 4.339893020754231,
+  "drop_error": 0.0067524095462103695,
+  "dissipation_net": 5.809062771505538,
+  "dissipation_ref": 5.786567475768347,
+  "dissipation_error": 0.0038875025360700644,
+  "inconsistency_net": 0.002846282937707417,
+  "inconsistency_ref": 7.508440231202228e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.6,
+  "drop_net": 5.153567931819218,
+  "drop_ref": 5.08127049816818,
+  "drop_error": 0.014228219827521649,
+  "dissipation_net": 6.806018903623242,
+  "dissipation_ref": 6.775093409274586,
+  "dissipation_error": 0.0045645856788218975,
+  "inconsistency_net": 0.009609877138930302,
+  "inconsistency_ref": 9.753132493542557e-06
+ },
+ {
+  "run": "parametric_re10_3090_equal",
+  "split": 0.65,
+  "drop_net": 6.401962012321506,
+  "drop_ref": 6.536078258892202,
+  "drop_error": -0.020519375879294866,
+  "dissipation_net": 8.764464819032948,
+  "dissipation_ref": 8.714843945902777,
+  "dissipation_error": 0.005693833812537852,
+  "inconsistency_net": 0.026072951856077522,
+  "inconsistency_ref": 8.368944636002965e-06
+ }
+]

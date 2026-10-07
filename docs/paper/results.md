@@ -1,6 +1,6 @@
 # Title, Abstract, Introduction (version 6, condensed), and Sections 5–8
 
-[Continuation of the draft, numbered to follow the Literature Review (Section 2) and `methods.md` (Sections 3–4). Every number comes from the repository: the source file is named in brackets, to be deleted before submission. ⟨Energy⟩ marks the numbers from `docs/bifurcation_re10-energy.md`.]
+[Continuation of the draft, numbered to follow the Literature Review (Section 2) and `methods.md` (Sections 3–4). Every number comes from the repository: the source file is named in brackets, to be deleted before submission.]
 
 ---
 
@@ -21,7 +21,7 @@ We then test three neural networks as substitutes for the solver:
 - **Network 2**, a physics-informed network with the width split as an input and no flow data, locates the optimal split to within 0.0003. Its design error follows the slope of its pressure-drop error, not the error's size. It costs 19 times the finite-element search for one design question.
 - **Network 3**, trained on the finite-element optima, proposes splits within 0.016% of the optimal pressure drop in milliseconds, and repays its data and training after about 900 design queries.
 
-A reference-free energy check flags the failed network, but it overstates the errors of the good ones by a factor of three to ten ⟨Energy⟩.
+A reference-free energy check catches gross failures, but it estimates a working network's pressure-drop error only to within a factor of three to five.
 
 [About 270 words. Section 8 keeps the extension to higher Reynolds number, so the abstract does not promise it.]
 
@@ -202,9 +202,28 @@ Imposing continuity as a penalty lost 6.3% of the mass, and with it the prescrib
 
 Network 2 conserves mass and its shares exactly, so those cannot reveal its errors. The energy balance, |Q₀J − Φ|/Φ from the network's own field, still can (Appendix A.6). Table 6.3 compares it with the true errors.
 
-**Table 6.3.** ⟨Energy table, filled from the run.⟩
+**Table 6.3.** The energy inconsistency of each network, against its true errors.
 
-⟨Energy findings.⟩
+| network | split | energy inconsistency | pressure-drop error | dissipation error |
+|---|---|---|---|---|
+| velocity–pressure | 0.50 | 5.2% | −4.5% | −9.5% |
+| stream function | 0.50 | 1.6% | −0.40% | +1.2% |
+| + walls extended | 0.50 | 0.14% | +0.42% | +0.28% |
+| parametric | 0.35 | 0.31% | +0.21% | +0.51% |
+| parametric | 0.40 | 0.15% | +0.27% | +0.42% |
+| parametric | 0.45 | 0.32% | +0.06% | +0.39% |
+| parametric | 0.50 | 0.26% | +0.11% | +0.37% |
+| parametric | 0.55 | 0.29% | +0.68% | +0.39% |
+| parametric | 0.60 | 0.96% | +1.42% | +0.46% |
+| parametric | 0.65 | 2.6% | −2.05% | +0.57% |
+
+The finite-element reference's own inconsistency is (4–10) × 10⁻⁶ on the same meshes, so the check resolves anything above about 10⁻⁵.
+
+The check flags gross failures:
+- the velocity–pressure network scores 5.2% against a true drop error of 4.5%;
+- within the parametric range, the two splits with the largest errors, at the upper edge, score 0.96% and 2.6%.
+
+It does not estimate a working network's error. Its ratio to the true pressure-drop error ranges from 0.33 to 5.0 (median 1.2), and over the ten cases its rank correlation with the true error is weak (Spearman ρ = 0.53, not significant at n = 10). Two cases show the limit. The two stream-function runs have nearly equal drop errors, 0.40% and 0.42%, yet score 1.6% and 0.14%. The check follows the momentum residual weighted by the velocity, which the better run reduced fourfold, rather than the objective. It is a useful alarm and a guide to which part of a parametric range to trust; it is not a substitute for a reference.
 
 ### 6.4 Network 2, parametric: one network for every split
 
@@ -272,7 +291,7 @@ The optimal widths do not equalise wall shear (Table 5.4). Up to 90° the mismat
 
 **RQ1.** With the junction resolved at Re_h = 10, the planar Murray split remains a good design rule wherever the daughters turn by similar amounts, to within 0.01 at every share (H1, with 75/75 at 150° the narrow exception). It fails where one daughter turns much more than the other, by up to 0.072 at 0/150. The direction of the failure follows one junction-loss model, which widens the daughter with the larger junction loss: the more-turned daughter or, at equal turning, the higher-flow one (H2, below 180°). At 180° the departure vanishes, unexplained. Relaxing the width constraint, the resolved volume-optimal total width stays within 3% of the planar square law.
 
-**RQ2.** Neural networks can take over the search, not the solve. Physics-informed networks reproduced the flow to 3 × 10⁻⁶ in a channel and 1% in a bifurcation, with mass and shares exact, but at 19–150 times the cost of the finite-element solves they replace. Trained with the split as an input, a PINN located the optimum to within the search tolerance despite pressure-drop errors of up to 2% elsewhere in its range, because its error was flat near the optimum (H3). A small network trained on finite-element optima answers design questions in milliseconds, at the accuracy of the search that produced its data, and repays its cost after about 900 queries inside its training range.
+**RQ2.** Neural networks can take over the search, not the solve. Physics-informed networks reproduced the flow to 3 × 10⁻⁶ in a channel and 1% in a bifurcation, with mass and shares exact, but at 19–150 times the cost of the finite-element solves they replace. Trained with the split as an input, a PINN located the optimum to within the search tolerance despite pressure-drop errors of up to 2% elsewhere in its range, because its error was flat near the optimum (H3). The reference-free energy check matched the channel network's objective error (2.6 × 10⁻⁶ against 3.9 × 10⁻⁶). In the bifurcation it caught only gross failures, and it was off by up to a factor of five for working networks. A small network trained on finite-element optima answers design questions in milliseconds, at the accuracy of the search that produced its data, and repays its cost after about 900 queries inside its training range.
 
 **Limitations.**
 - **Flow model:** two-dimensional flow at a single Reynolds number, with daughters of equal length.
