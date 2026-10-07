@@ -1,12 +1,12 @@
-# 2. Problem formulation, 3. Methods, and Appendix A
+# 3. Problem formulation, 4. Methods, and Appendix A
 
-[Version 1 · Companion to `introduction.md` (version 5): same notation, APA 7th edition author–date citations. Every number is taken from the repository: the code it describes is named beside it, and results files are under `docs/`. Bracketed notes are for the authors; delete them before submission. Citations new to the paper are listed at the end and must be read before submission, as for the introduction.]
+[Version 2 · Renumbered to follow the Literature Review (Section 2). Companion to `introduction.md` (version 5): same notation, APA 7th edition author–date citations. Every number is taken from the repository: the code it describes is named beside it, and results files are under `docs/`. Bracketed notes are for the authors; delete them before submission. Citations new to the paper are listed at the end and must be read before submission, as for the introduction.]
 
 ---
 
-## 2. Problem formulation
+## 3. Problem formulation
 
-### 2.1 Geometry
+### 3.1 Geometry
 
 A straight parent channel of width w₀ divides into two straight daughter channels (Figure 1). All lengths are scaled by the parent's half-width h = w₀/2, so the parent occupies 0 ≤ x ≤ L_p, −1 ≤ y ≤ 1, and w₀ = 2. Daughter 1 leaves the parent's upper corner C = (L_p, 1) at an angle α₁ above the parent's axis, and daughter 2 leaves the lower corner B = (L_p, −1) at α₂ below it. An angle of 0° continues straight on and an angle above 90° turns back. Each daughter is a strip of uniform width wᵢ. Its outer wall runs from its corner along the unit direction d₁ = (cos α₁, sin α₁) or d₂ = (cos α₂, −sin α₂) for a length L_d. Its inner wall runs parallel at a distance wᵢ. Its outlet closes the strip perpendicular to it. The two inner walls meet at the septum tip T, which lies off the centreline whenever w₁ ≠ w₂. The fluid domain is therefore the polygon A B E₂ₒ E₂ᵢ T E₁ᵢ E₁ₒ C D, with A = (0, −1) and D = (0, 1), and the edges are labelled inlet (D–A), outlet 1 (E₁ᵢ–E₁ₒ), outlet 2 (E₂ₒ–E₂ᵢ) and wall (all others) (`bifurcation/geometry.py`).
 
@@ -25,11 +25,11 @@ A geometry is refused, never silently altered, when any of the following holds:
 - the inner walls meet beyond an outlet;
 - the polygon intersects itself.
 
-The vertices are written with interchangeable array back-ends (NumPy or JAX) and without branching on values, so every boundary position is differentiable with respect to w₁, w₂, α₁ and α₂ (Section 3.4.5).
+The vertices are written with interchangeable array back-ends (NumPy or JAX) and without branching on values, so every boundary position is differentiable with respect to w₁, w₂, α₁ and α₂ (Section 4.4.5).
 
 [Figure 1: the polygon with A, B, C, D, T, E₁ᵢ, E₁ₒ, E₂ᵢ, E₂ₒ labelled, α₁ and α₂ marked from the axis, w₁, w₂, L_p, L_d dimensioned; inset of the face septum at α₁ + α₂ = 180°.]
 
-### 2.2 Governing equations
+### 3.2 Governing equations
 
 The flow is steady, incompressible, Newtonian and two-dimensional. With velocities scaled by the parent's inlet centreline speed U_c and pressure by ρU_c², the equations are
 
@@ -37,14 +37,14 @@ The flow is steady, incompressible, Newtonian and two-dimensional. With velociti
 
 with Re_h = U_c h/ν = 10 throughout. The Reynolds number based on hydraulic diameter is Re_Dh = (8/3) Re_h ≈ 27 (Appendix A.7). The viscous term is written in Laplacian form. The natural boundary condition of its weak form is then ν ∂u/∂n − p n = 0, which is the do-nothing outlet condition used below (ν = 1/Re_h).
 
-### 2.3 Boundary conditions
+### 3.3 Boundary conditions
 
-- **Inlet** (x = 0): the developed profile u = 1 − y², v = 0, which carries Q₀ = 4/3. Network 1 shows how far downstream of a nearly flat inlet this holds. At Re_h = 10 the centreline reaches 99% of its developed value 1.78 half-widths from the inlet (Section 3.3).
+- **Inlet** (x = 0): the developed profile u = 1 − y², v = 0, which carries Q₀ = 4/3. Network 1 shows how far downstream of a nearly flat inlet this holds. At Re_h = 10 the centreline reaches 99% of its developed value 1.78 half-widths from the inlet (Section 4.3).
 - **Walls**: no-slip, u = v = 0.
 - **Outlet 2**: do-nothing, ν ∂u/∂n − p n = 0.
-- **Outlet 1**: ν ∂u/∂n − p n = −λ n, where the constant λ is chosen so that outlet 1 carries the prescribed share of the flow, Q₁ = q Q₀. This is the flux-defective boundary condition (Formaggia et al., 2002; Heywood et al., 1996): the outlet's flux is prescribed and its pressure follows, λ being outlet 1's pressure above outlet 2's. With λ = 0 both outlets are do-nothing at equal pressure, and the flow chooses its own split. The study includes that case for reference (Section 2.4).
+- **Outlet 1**: ν ∂u/∂n − p n = −λ n, where the constant λ is chosen so that outlet 1 carries the prescribed share of the flow, Q₁ = q Q₀. This is the flux-defective boundary condition (Formaggia et al., 2002; Heywood et al., 1996): the outlet's flux is prescribed and its pressure follows, λ being outlet 1's pressure above outlet 2's. With λ = 0 both outlets are do-nothing at equal pressure, and the flow chooses its own split. The study includes that case for reference (Section 3.4).
 
-### 2.4 Objective and design problem
+### 3.4 Objective and design problem
 
 The objective is the flux-weighted total-pressure drop
 
@@ -56,11 +56,11 @@ For each pair of angles (α₁, α₂) and each share q ∈ (0, 1) that daughter
 
   s*(α₁, α₂, q) = argmin over s ∈ [0.1, 0.9] of J(s; α₁, α₂, q),
 
-subject to every geometry rule of Section 2.1.
+subject to every geometry rule of Section 3.1.
 
-The shares must be prescribed. With equal outlet pressures the daughters act as parallel resistances, each conducting like wᵢ³, so J falls monotonically toward the most unequal split allowed (Appendix A.1). The resulting "optimum" closes one daughter down to w_min, where it carries 0.1–0.2% of the flow (Section 4).
+The shares must be prescribed. With equal outlet pressures the daughters act as parallel resistances, each conducting like wᵢ³, so J falls monotonically toward the most unequal split allowed (Appendix A.1). The resulting "optimum" closes one daughter down to w_min, where it carries 0.1–0.2% of the flow (Section 5).
 
-### 2.5 The Murray split
+### 3.5 The Murray split
 
 When the junction is ignored and each daughter is treated as fully developed plane Poiseuille flow, the design problem has an exact answer. Minimising the daughters' dissipation under w₁ + w₂ = w₀ gives w₁/w₂ = (L₁/L₂)^(1/4) (Q₁/Q₂)^(1/2) (Appendix A.2). For daughters of equal length, as here, this is the planar Murray split
 
@@ -74,9 +74,9 @@ which is 7.0 at q = 0.5. Neither expression contains the angles (Appendix A.2(ii
 
 ---
 
-## 3. Methods
+## 4. Methods
 
-### 3.1 Finite-element reference
+### 4.1 Finite-element reference
 
 Every network result, and every point of the design dataset, is computed or judged by one finite-element solver (`bifurcation/reference.py`, built on `developing_flow/reference.py`).
 
@@ -84,7 +84,7 @@ Every network result, and every point of the design dataset, is computed or judg
 
 **Boundary data.** Boundary facets are assigned to the polygon edge they lie on, by distance to that edge's segment. The inlet profile is applied only on the inlet segment D–A, not on the line x = 0. A daughter turned back beyond about 112° crosses x = 0 with its outer wall, and an earlier version that used the line applied the inlet velocity to a wall node there, producing a 152% mass error. Each solve now refuses any solution whose wall velocity values are not exactly zero.
 
-**Prescribed share.** The share is the single linear constraint c·U = 0, with c = b₁ + q b_in, where b_k·U is the discrete outflow through opening k. It is enforced by a Lagrange multiplier λ. Because c integrates u·n over outlet 1, λc enters the momentum equation as a uniform extra pressure on that outlet. This is the flux-defective condition of Section 2.3, holding exactly on the discrete solution.
+**Prescribed share.** The share is the single linear constraint c·U = 0, with c = b₁ + q b_in, where b_k·U is the discrete outflow through opening k. It is enforced by a Lagrange multiplier λ. Because c integrates u·n over outlet 1, λc enters the momentum equation as a uniform extra pressure on that outlet. This is the flux-defective condition of Section 3.3, holding exactly on the discrete solution.
 
 **Nonlinear solve.** A Stokes solve gives the initial iterate. Newton's method follows, with the exact Jacobian of the convective term and a sparse direct solve at each step, until the relative update falls below 10⁻¹³ (at most 30 iterations).
 
@@ -103,7 +103,7 @@ On the bifurcation, the test suite (`tests/test_bifurcation.py`) requires the fo
 
 The reference used to score Network 2 (A_max = 0.002, six corner rounds; 28,399 triangles, 129,562 unknowns, 37 s per solve) has energy consistency 7.5 × 10⁻⁶.
 
-### 3.2 The design dataset
+### 4.2 The design dataset
 
 The design dataset is the set of finite-element optima s*(α₁, α₂, q) and their pressure drops J* (`bifurcation/design_study.py`). It is the ground truth for the first research question and the training data for Network 3.
 
@@ -161,7 +161,7 @@ The two source studies are kept beside the merged file. To reproduce the dataset
     python -m bifurcation.design_study --config bifurcation/study_re10_angles.yaml --out docs/bifurcation_re10-angles
     python -m bifurcation.design_study --merge docs/bifurcation_re10-shares.json docs/bifurcation_re10-angles.json --out docs/bifurcation_re10-shares-all
 
-### 3.3 Network 1: developing flow in the parent channel
+### 4.3 Network 1: developing flow in the parent channel
 
 Network 1 (`developing_flow/pinn.py`) solves the same equations in a straight channel, 0 ≤ x ≤ 10, −1 ≤ y ≤ 1, at Re_h = 10. The inlet is the flat-topped profile u = U₀(1 − y¹⁶), v = 0, with U₀ = (2/3)(2m + 1)/(2m) and m = 8, so the flux is 4/3. This is a uniform inlet rounded off just enough to satisfy no-slip at the corners: a true top hat demands an unbounded network output there (CLAUDE.md, "A top-hat inlet cannot be imposed on hard no-slip walls").
 
@@ -180,11 +180,11 @@ The reference is a Q2/Q1 finite-element solution on a tensor mesh graded toward 
 
 **Entrance length.** This is where the centreline first reaches 0.99 of its developed value (0.75 × the outlet mean velocity). It is located by bracketing on a grid and then Brent's method on the field itself, identically for the network and the reference. Network 1 gives 1.7795 half-widths in all three seeds; the reference gives 1.7794; Durst et al.'s (2005) flat-inlet correlation gives 1.88.
 
-### 3.4 Network 2: the bifurcation PINN
+### 4.4 Network 2: the bifurcation PINN
 
-Network 2 (`bifurcation/flow.py`) solves the problem of Section 2 for one geometry, with the share prescribed. It is built so that no-slip, mass conservation and the share hold exactly for any parameters. The equations and the outlet conditions are left to the loss.
+Network 2 (`bifurcation/flow.py`) solves the problem of Section 3 for one geometry, with the share prescribed. It is built so that no-slip, mass conservation and the share hold exactly for any parameters. The equations and the outlet conditions are left to the loss.
 
-**3.4.1 Wall distance.** For each wall segment, φᵢ is the trimmed distance of Sukumar and Srivastava (2022, Section 5.1): zero on the segment and positive everywhere else. The segments are composed by R-equivalence (Rvachev & Sheiko, 1995) of order 1,
+**4.4.1 Wall distance.** For each wall segment, φᵢ is the trimmed distance of Sukumar and Srivastava (2022, Section 5.1): zero on the segment and positive everywhere else. The segments are composed by R-equivalence (Rvachev & Sheiko, 1995) of order 1,
 
   D = (Σᵢ φᵢ⁻¹)⁻¹,
 
@@ -195,13 +195,13 @@ which vanishes on every wall and only there. The walls form three chains, separa
 
 Collinear consecutive edges are merged into one segment. A straight daughter continuing the parent's wall would otherwise leave a 180° joint, at which the composed distance has a Laplacian of order 1/r, so the residual grows like 1/r although the flow is smooth. Each chain is also extended by 0.5 beyond each opening, along its end segment and outside the domain. The stream function needs third derivatives of D, which are large where a segment ends. With the walls ending at the outlets, one point near an outlet corner held 86% of a held-out loss.
 
-**3.4.2 Stream function.** The velocity is the curl of a stream function,
+**4.4.2 Stream function.** The velocity is the curl of a stream function,
 
   ψ = G + D² N_ψ,  u = ∂ψ/∂y,  v = −∂ψ/∂x,
 
 with the pressure as a second network output, so continuity holds identically. G blends the constant values ψ = 0 (lower chain), (1 − q)Q₀ (septum) and Q₀ (upper chain) with Shepard-type weights (Shepard, 1968) w_k = Π_{j≠k} D_j^μ, μ = 2. Because ψ is constant along each chain, the flux through outlet 2 is exactly (1 − q)Q₀ and through outlet 1 exactly qQ₀, for any parameters. Because μ ≥ 2 and the correction carries D², the normal derivative of ψ also vanishes on the walls, so u = v = 0 there exactly. Q₀ is computed from the inlet profile by 64-point Gauss–Legendre quadrature.
 
-**3.4.3 Loss.** The loss is the sum of squared, unweighted residuals of four kinds:
+**4.4.3 Loss.** The loss is the sum of squared, unweighted residuals of four kinds:
 - x- and y-momentum at interior points;
 - the inlet velocity against the profile;
 - the do-nothing traction ν ∂u/∂n − p n at outlet 2;
@@ -209,7 +209,7 @@ with the pressure as a second network output, so continuity holds identically. G
 
 The four term weights are 1. Near a reflex corner the exact velocity behaves like r^λ with λ < 1 (λ ≈ 0.54 at a 270° corner in Stokes flow; [cite Dean & Montagnon, 1949; Moffatt, 1964, as in the introduction]), while D behaves like r, so N_ψ cannot be smooth there. For any network, an untrained one included, the momentum residual then grows like 1/r. Its square is not integrable against a point density that rises toward the corner, so each draw's loss would be decided by its closest corner point. Interior points are therefore never placed within 0.02 of a reflex corner (B, C, T). A further 10% of the points are placed uniformly by area in the annulus 0.02 < r < 0.5 around those corners, and each interior residual is multiplied by min(1, r/0.3).
 
-**3.4.4 Network and training.** The network is the same modified MLP (width 40, depth 4, tanh), with inputs (x − x_c)/2, where x_c is the centre of the geometry's bounding box. It has 5,363 parameters including λ.
+**4.4.4 Network and training.** The network is the same modified MLP (width 40, depth 4, tanh), with inputs (x − x_c)/2, where x_c is the centre of the geometry's bounding box. It has 5,363 parameters including λ.
 
 Each draw has 8,192 interior points, 256 inlet points crowded toward the walls (y = sin(πξ/2), ξ uniform) and 256 points on each outlet. The schedule is:
 - Adam for 3,000 steps (learning rate 10⁻³, decayed by 0.9 every 1,000 steps), with fresh points every 250;
@@ -223,25 +223,25 @@ The method was developed in three stages on one geometry: 30/90, s = 0.5, L_d = 
 - The stream function made mass and the share exact.
 - Extending the walls removed the outlet-corner spike.
 
-Section 5 reports all three.
+Section 6 reports all three.
 
-**3.4.5 Parametric Network 2.** The parametric version (`bifurcation/parametric.py`) takes the split as an input, (x, y, s), over a range [s_min, s_max] at fixed angles and share. Everything that depends on the geometry is recomputed from s through the differentiable polygon of Section 2.1: the wall segments (merged and extended as in 3.4.1), the singular corners and the septum tip. No-slip, mass and the share therefore remain exact at every s. Outlet 1's offset becomes a trained Chebyshev series λ(s) of degree 4. Each draw takes 16 splits, stratified one per sixteenth of the range, with 1,024 interior points in each split's own polygon. The held-out set uses 32 splits.
+**4.4.5 Parametric Network 2.** The parametric version (`bifurcation/parametric.py`) takes the split as an input, (x, y, s), over a range [s_min, s_max] at fixed angles and share. Everything that depends on the geometry is recomputed from s through the differentiable polygon of Section 3.1: the wall segments (merged and extended as in 4.4.1), the singular corners and the septum tip. No-slip, mass and the share therefore remain exact at every s. Outlet 1's offset becomes a trained Chebyshev series λ(s) of degree 4. Each draw takes 16 splits, stratified one per sixteenth of the range, with 1,024 interior points in each split's own polygon. The held-out set uses 32 splits.
 
 Two tests check the construction:
 - At every split tested, on three angle pairs, the wall segments equal the fixed-geometry construction for that geometry.
 - With its s-weights set to zero, the parametric network at a fixed split reproduces the fixed-geometry network's field and loss exactly (residuals equal to 2 × 10⁻¹⁵).
 
-The range is checked before training: a range across which the polygon changes shape, or where any geometry is invalid, is refused. Once trained, the network gives J(s) over the whole range from line integrals alone. Its argmin is located by a 61-point scan followed by Brent's method and compared with the finite-element argmin (Section 3.6).
+The range is checked before training: a range across which the polygon changes shape, or where any geometry is invalid, is refused. Once trained, the network gives J(s) over the whole range from line integrals alone. Its argmin is located by a 61-point scan followed by Brent's method and compared with the finite-element argmin (Section 4.6).
 
-[First run, 30/90 with s ∈ [0.35, 0.65] and q = 0.5: `docs/bifurcation_re10-parametric.md`. Its optimum was 0.4845 against the finite-element 0.4848, with regret below 0.01%. The results go to Section 5.]
+[First run, 30/90 with s ∈ [0.35, 0.65] and q = 0.5: `docs/bifurcation_re10-parametric.md`. Its optimum was 0.4845 against the finite-element 0.4848, with regret below 0.01%. The results go to Section 6.]
 
-### 3.5 Network 3: optimal widths from the angles and the share
+### 4.5 Network 3: optimal widths from the angles and the share
 
 Network 3 (`bifurcation/geometric.py`) is not physics-informed. It maps (α₁, α₂, q) to the optimal split and the lowest pressure drop, and it learns only what the friction law does not supply.
 
 **Baselines.**
 - For the split: s_M(q), the Murray split.
-- For the drop: J_M(q), the Murray drop of Section 2.5.
+- For the drop: J_M(q), the Murray drop of Section 3.5.
 
 **Architecture.** A modified MLP N, with inputs α₁/90 − 1, α₂/90 − 1 and 2q − 1, width 16 and depth 2 (498 parameters), corrects both baselines:
 
@@ -262,13 +262,13 @@ so a split error of 0.001 weighs like a 0.1% drop error. The minimiser is MINPAC
 **Regularisation.** The weight decay λ_r ∈ {100, 1,000, 10,000} is chosen by leave-one-angle-pair-out cross-validation: 15 folds, each trained on 14 layouts and scored on the 11 optima of the layout left out. The value chosen was λ_r = 1,000. The folds run in parallel and are cached as they finish, so an interrupted run resumes with identical results (tested). The final network is refitted on all 165 optima, taking 3.8 h on four cores including the cross-validation.
 
 **Validation.** The six held-out pairs (45/75, 15/105, 75/105, 45/135, 30/30, 0/90) are each evaluated at q = 0.2, 0.5 and 0.8. For each of these 18 cases:
-1. the finite-element optimum is found by the full procedure of Section 3.2;
+1. the finite-element optimum is found by the full procedure of Section 4.2;
 2. the network's proposed split is solved by finite elements;
 3. the Murray split is solved by finite elements.
 
-The score is the regret of each proposal (Section 3.6), with the friction law as the baseline Network 3 must beat.
+The score is the regret of each proposal (Section 4.6), with the friction law as the baseline Network 3 must beat.
 
-### 3.6 Accuracy and design metrics
+### 4.6 Accuracy and design metrics
 
 Loss values are never used as accuracy. Configurations with different loss terms are not comparable by loss (CLAUDE.md). Every accuracy figure is measured against the finite-element reference:
 - **Field error:** relative L2 error of u, v and p, ‖f_net − f_FE‖/‖f_FE‖, integrated on the reference's own mesh by its element quadrature. It is also reported outside discs of radius 0.02 around the reflex corners, where the network is not trained.
@@ -278,7 +278,7 @@ Loss values are never used as accuracy. Configurations with different loss terms
 - **Argmin error:** s*_net − s*_FE.
 - **Regret:** J_FE(s*_net)/J_FE(s*_FE) − 1, the extra pressure drop paid for adopting a network's split, with both evaluated by the reference. Near the optimum the regret is about (J″/J)(δs)²/2, which is 0.22% for δs = 0.01 (Appendix A.3). On the coarse mesh, regrets below about 10⁻⁴ (0.01%) are within the reference's noise and can come out slightly negative.
 
-### 3.7 Implementation and reproducibility
+### 4.7 Implementation and reproducibility
 
 **Software.**
 - Python 3.11, JAX 0.10 (Bradbury et al., 2018) and Optax 0.2;
@@ -305,11 +305,11 @@ Loss values are never used as accuracy. Configurations with different loss terms
 
 ## Appendix A
 
-Notation: per unit depth, a daughter of width wᵢ and length Lᵢ carrying flow Qᵢ in plane Poiseuille flow has a pressure drop of 12μLᵢQᵢ/wᵢ³ and dissipates Pᵢ = 12μLᵢQᵢ²/wᵢ³. In the non-dimensional variables of Section 2.2, μ is replaced by ν = 1/Re_h.
+Notation: per unit depth, a daughter of width wᵢ and length Lᵢ carrying flow Qᵢ in plane Poiseuille flow has a pressure drop of 12μLᵢQᵢ/wᵢ³ and dissipates Pᵢ = 12μLᵢQᵢ²/wᵢ³. In the non-dimensional variables of Section 3.2, μ is replaced by ν = 1/Re_h.
 
 ### A.1 Equal outlet pressures put the optimum on a width bound
 
-With both outlets at the same pressure, the daughters are parallel resistances: Qᵢ = wᵢ³Δp/(12μLᵢ). For equal lengths, the drop at fixed Q₀ is Δp = 12μL_d Q₀/(w₁³ + w₂³). Under w₁ + w₂ = w₀, f(s) = s³ + (1 − s)³ has f″(s) = 6 > 0. It is convex, with its minimum at s = ½ and its maxima at the ends of the range. The pressure drop is therefore largest at equal widths and falls monotonically toward either width bound, whatever the junction adds, as long as the daughters dominate. At s = 0.1 the narrow daughter carries s³/(s³ + (1 − s)³) = 0.14% of the flow. The finite-element floors give 0.1–0.2% (Section 4). [Tested: `test_equal_outlet_pressures_drive_the_optimum_to_a_width_bound`.]
+With both outlets at the same pressure, the daughters are parallel resistances: Qᵢ = wᵢ³Δp/(12μLᵢ). For equal lengths, the drop at fixed Q₀ is Δp = 12μL_d Q₀/(w₁³ + w₂³). Under w₁ + w₂ = w₀, f(s) = s³ + (1 − s)³ has f″(s) = 6 > 0. It is convex, with its minimum at s = ½ and its maxima at the ends of the range. The pressure drop is therefore largest at equal widths and falls monotonically toward either width bound, whatever the junction adds, as long as the daughters dominate. At s = 0.1 the narrow daughter carries s³/(s³ + (1 − s)³) = 0.14% of the flow. The finite-element floors give 0.1–0.2% (Section 5). [Tested: `test_equal_outlet_pressures_drive_the_optimum_to_a_width_bound`.]
 
 ### A.2 The planar Murray split
 
@@ -319,7 +319,7 @@ With both outlets at the same pressure, the daughters are parallel resistances: 
 
   w₁/w₂ = (L₁/L₂)^(1/4) (Q₁/Q₂)^(1/2).
 
-For L₁ = L₂ this is s_M = √q/(√q + √(1 − q)). Substituting wᵢ = w₀√qᵢ/S, with S = √q + √(1 − q), gives Σ Qᵢ²/wᵢ³ = Q₀²S⁴/w₀³. The daughters' drop per unit flow is therefore 12νL_dQ₀S⁴/w₀³ = 1.5νL_dQ₀S⁴ for w₀ = 2. Adding the parent's 12νL_pQ₀/w₀³ gives J_M of Section 2.5. At q = 0.5, with ν = 0.1, L_d = 8, L_p = 3 and Q₀ = 4/3, J_M = 6.4 + 0.6 = 7.0. [Tested: `test_the_friction_law_split`, `test_the_friction_drop_is_parallel_poiseuille`.]
+For L₁ = L₂ this is s_M = √q/(√q + √(1 − q)). Substituting wᵢ = w₀√qᵢ/S, with S = √q + √(1 − q), gives Σ Qᵢ²/wᵢ³ = Q₀²S⁴/w₀³. The daughters' drop per unit flow is therefore 12νL_dQ₀S⁴/w₀³ = 1.5νL_dQ₀S⁴ for w₀ = 2. Adding the parent's 12νL_pQ₀/w₀³ gives J_M of Section 3.5. At q = 0.5, with ν = 0.1, L_d = 8, L_p = 3 and Q₀ = 4/3, J_M = 6.4 + 0.6 = 7.0. [Tested: `test_the_friction_law_split`, `test_the_friction_drop_is_parallel_poiseuille`.]
 
 (iii) *The angles.* Neither expression contains α₁ or α₂: in the fully developed model the junction costs nothing, and the angles could enter only through the lengths, which are equal here. The model's split is therefore the same for every layout, and any dependence of s* on the angles is a junction effect.
 
@@ -345,7 +345,7 @@ Model the junction as a minor loss in each daughter, Kᵢ ½ρUᵢ² with Uᵢ =
 
   J_j(s) = (ρQ₀²/(2w₀²)) [K₁q³/s² + K₂(1 − q)³/(1 − s)²].
 
-At q = ½ and s = ½, dJ_j/ds = (ρQ₀²/(2w₀²)) × 2(K₂ − K₁). If daughter 2 turns more (K₂ > K₁), J_j increases with s, and the optimum moves below s_M, widening the turned daughter by about −J_j′/J″ (Appendix A.3). The model predicts only the sign of the shift. At q = 0.5 the finite-element optima have that sign in all eight layouts with α₁ + α₂ < 180° and unequal angles. The turned daughter is wider in each, by an amount that grows with the bifurcation angle and the asymmetry: s* = 0.4977 at 0/30, 0.4988 at 20/40, 0.4948 at 0/60, 0.4930 at 10/80, 0.4925 at 30/90, 0.4808 at 0/120, 0.4683 at 30/120 and 0.4437 at 0/150, against s_M = 0.5. At 180°, where the septum is a flat face (Section 2.1), no shift is detectable: 0.5000 at 60/120 and 0.5006 at 30/150, both within the search tolerance of 0.001. The Kᵢ were not fitted, so the size of the shift is not a prediction of this model. [H2 must be stated for α₁ + α₂ < 180°, or the 180° result explained.]
+At q = ½ and s = ½, dJ_j/ds = (ρQ₀²/(2w₀²)) × 2(K₂ − K₁). If daughter 2 turns more (K₂ > K₁), J_j increases with s, and the optimum moves below s_M, widening the turned daughter by about −J_j′/J″ (Appendix A.3). The model predicts only the sign of the shift. At q = 0.5 the finite-element optima have that sign in all eight layouts with α₁ + α₂ < 180° and unequal angles. The turned daughter is wider in each, by an amount that grows with the bifurcation angle and the asymmetry: s* = 0.4977 at 0/30, 0.4988 at 20/40, 0.4948 at 0/60, 0.4930 at 10/80, 0.4925 at 30/90, 0.4808 at 0/120, 0.4683 at 30/120 and 0.4437 at 0/150, against s_M = 0.5. At 180°, where the septum is a flat face (Section 3.1), no shift is detectable: 0.5000 at 60/120 and 0.5006 at 30/150, both within the search tolerance of 0.001. The Kᵢ were not fitted, so the size of the shift is not a prediction of this model. [H2 must be stated for α₁ + α₂ < 180°, or the 180° result explained.]
 
 ### A.6 Mechanical energy balance
 
@@ -353,7 +353,7 @@ Dot the momentum equation with u and integrate over the domain. Using ∇·u = 0
 
   E_in − E₁ − E₂ = Φ + (viscous-flux terms on the inlet and outlets).
 
-The opening terms vanish for parallel, developed flow (∂u/∂n = 0 and v = 0 there) and are small for nearly developed flow. The flux-weighted total-pressure drop of Section 2.4 is therefore Φ/Q₀ to that accuracy. For any computed field, |E_in − E₁ − E₂ − Φ|/Φ can be evaluated from the field alone, which makes it a check that needs no reference. It is 7.5 × 10⁻⁶ for the finite-element reference of Section 3.1 and below 10⁻³ in every coarse-mesh verification test. For the networks, whose mass and shares are exact by construction, it is the only internal diagnostic left. [Implemented for the channel in `developing_flow/energy.py`; confirm against a textbook statement of the mechanical energy equation before citing.]
+The opening terms vanish for parallel, developed flow (∂u/∂n = 0 and v = 0 there) and are small for nearly developed flow. The flux-weighted total-pressure drop of Section 3.4 is therefore Φ/Q₀ to that accuracy. For any computed field, |E_in − E₁ − E₂ − Φ|/Φ can be evaluated from the field alone, which makes it a check that needs no reference. It is 7.5 × 10⁻⁶ for the finite-element reference of Section 4.1 and below 10⁻³ in every coarse-mesh verification test. For the networks, whose mass and shares are exact by construction, it is the only internal diagnostic left. [Implemented for the channel in `developing_flow/energy.py`; confirm against a textbook statement of the mechanical energy equation before citing.]
 
 ### A.7 Reynolds numbers
 
