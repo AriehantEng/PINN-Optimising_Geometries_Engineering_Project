@@ -1,0 +1,26 @@
+# Must the daughters share the parent's width? The classical width rules
+# against finite elements, and a scan of the daughters' total width, for five
+# of the design study's layouts (symmetric, turned, strongly turned, and the
+# 180-degree T). Geometry, physics and mesh are the design study's check mesh,
+# so its optima (shared_optimum) reproduce exactly. bifurcation/width_rules.py
+name: width_rules_re10
+physics:
+  reynolds: 10.0
+  pressure_scaling: inertial
+geometry:
+  parent_length: 3.0
+  daughter_length: 8.0
+  min_width: 0.2
+data: docs/bifurcation_re10-shares-all.json
+angles: [[60.0, 60.0], [30.0, 90.0], [0.0, 120.0], [0.0, 150.0], [90.0, 90.0]]
+shares: [0.5, 0.2]
+rules: [equal, shared_murray, shared_optimum, square, cube]
+scan:                         # total width k w0 at the friction-law proportions
+  angles: [[60.0, 60.0], [0.0, 150.0]]
+  share: 0.5
+  scales: [1.0, 1.1, 1.2, 1.3, 1.414213562373095, 1.5, 1.6, 1.8, 2.0]
+mesh:                         # the design study's check mesh
+  max_area: 0.005
+  corner_levels: 5
+  corner_radius: 0.4
+workers: 4
