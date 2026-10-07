@@ -218,7 +218,9 @@ def markdown(summary):
             lines.append(f"| {a1:g}/{a2:g} | {r['share']:g} | {r['rule']} | {r['w1']:.3f}, "
                          f"{r['w2']:.3f} | {r['width_sum']:.3f} | refused: {r['refused']} | | | | |")
             continue
-        rel = (lambda key: "" if ref is None else f"{100 * (r[key] / ref[key] - 1):+.1f}%")
+        def rel(key, r=r, ref=ref):
+            return "" if ref is None else f"{100 * (r[key] / ref[key] - 1):+.1f}%"
+
         lines.append(f"| {a1:g}/{a2:g} | {r['share']:g} | {r['rule']} | {r['w1']:.3f}, {r['w2']:.3f} "
                      f"| {r['width_sum']:.3f} | {r['drop']:.4f} | {rel('drop')} | {r['area']:.3f} | "
                      f"{r['murray_cost']:.4f} | {rel('murray_cost')} |")

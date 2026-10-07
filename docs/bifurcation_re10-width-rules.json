@@ -1,0 +1,1384 @@
+{
+ "config": {
+  "name": "width_rules_re10",
+  "physics": {
+   "reynolds": 10.0,
+   "pressure_scaling": "inertial"
+  },
+  "geometry": {
+   "parent_length": 3.0,
+   "daughter_length": 8.0,
+   "min_width": 0.2
+  },
+  "data": "docs/bifurcation_re10-shares-all.json",
+  "angles": [
+   [
+    60.0,
+    60.0
+   ],
+   [
+    30.0,
+    90.0
+   ],
+   [
+    0.0,
+    120.0
+   ],
+   [
+    0.0,
+    150.0
+   ],
+   [
+    90.0,
+    90.0
+   ]
+  ],
+  "shares": [
+   0.5,
+   0.2
+  ],
+  "rules": [
+   "equal",
+   "shared_murray",
+   "shared_optimum",
+   "square",
+   "cube"
+  ],
+  "scan": {
+   "angles": [
+    [
+     60.0,
+     60.0
+    ],
+    [
+     0.0,
+     150.0
+    ]
+   ],
+   "share": 0.5,
+   "scales": [
+    1.0,
+    1.1,
+    1.2,
+    1.3,
+    1.414213562373095,
+    1.5,
+    1.6,
+    1.8,
+    2.0
+   ]
+  },
+  "mesh": {
+   "max_area": 0.005,
+   "corner_levels": 5,
+   "corner_radius": 0.4
+  },
+  "workers": 4
+ },
+ "murray_price": 0.39999999999999997,
+ "rows": [
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.371558185051084,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 5.030660161085695e-06,
+   "area": 23.154700538379245,
+   "murray_cost": 19.090624462086474,
+   "seconds": 17.373897435000003
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.371558185051084,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 5.030660161085695e-06,
+   "area": 23.154700538379245,
+   "murray_cost": 19.090624462086474,
+   "seconds": 17.18330949099999
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.000653921748608,
+   "w2": 0.9993460782513921,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.3715762621211915,
+   "delivered_share": 0.5,
+   "energy_consistency": 5.221673114922461e-06,
+   "area": 23.154701279027826,
+   "murray_cost": 19.090648861106054,
+   "seconds": 16.854434861999977,
+   "study_drop": 7.3715762621211915
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.4142135623730951,
+   "w2": 1.4142135623730951,
+   "width_sum": 1.4142135623730951,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.0642822042207927,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 4.3480035171547754e-06,
+   "area": 30.161352514111535,
+   "murray_cost": 16.150250611272334,
+   "seconds": 18.386526704999994
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.5874010519681996,
+   "w2": 1.5874010519681996,
+   "width_sum": 1.5874010519681996,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.3809860008344064,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 4.785836054534531e-06,
+   "area": 33.03218074633554,
+   "murray_cost": 16.387520299646756,
+   "seconds": 17.020691604999996
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 9.852656579421998,
+   "delivered_share": 0.19999999999999996,
+   "energy_consistency": 7.097542757051063e-06,
+   "area": 23.154700538379245,
+   "murray_cost": 22.398755654581027,
+   "seconds": 14.268432934999993
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 0.6666666666666666,
+   "w2": 1.3333333333333335,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.12025035578697,
+   "delivered_share": 0.2,
+   "energy_consistency": 6.251651485283091e-06,
+   "area": 23.347150628109123,
+   "murray_cost": 17.499194058959606,
+   "seconds": 11.643955640000001
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 0.6630016509948043,
+   "w2": 1.3369983490051958,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.119404482237337,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 6.3723618972968845e-06,
+   "area": 23.351405889173723,
+   "murray_cost": 17.499768331985933,
+   "seconds": 11.50353162799999,
+   "study_drop": 6.119404482237337
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 0.8944271909999159,
+   "w2": 1.7888543819998317,
+   "width_sum": 1.3416407864998738,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.946057497168227,
+   "delivered_share": 0.19999999999999998,
+   "energy_consistency": 6.9382029062468145e-06,
+   "area": 29.294468668746738,
+   "murray_cost": 15.645864130389663,
+   "seconds": 14.422677661000023
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.1696070952851465,
+   "w2": 1.8566355334451117,
+   "width_sum": 1.513121314365129,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.394481876787509,
+   "delivered_share": 0.19999999999999996,
+   "energy_consistency": 6.0258462054084314e-06,
+   "area": 32.00951595454063,
+   "murray_cost": 15.996448884199596,
+   "seconds": 14.61734333999999
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.251515705591236,
+   "delivered_share": 0.5,
+   "energy_consistency": 1.498203089045223e-05,
+   "area": 23.422649730810374,
+   "murray_cost": 19.03774749977913,
+   "seconds": 11.666862500999969
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.251515705591236,
+   "delivered_share": 0.5,
+   "energy_consistency": 1.498203089045223e-05,
+   "area": 23.422649730810374,
+   "murray_cost": 19.03774749977913,
+   "seconds": 11.636824288000014
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 0.9850540237475153,
+   "w2": 1.0149459762524846,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.244103118796962,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 1.5149760419939354e-05,
+   "area": 23.452928592645883,
+   "murray_cost": 19.0399755954543,
+   "seconds": 12.467328809000037,
+   "study_drop": 7.244103118796962
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.4142135623730951,
+   "w2": 1.4142135623730951,
+   "width_sum": 1.4142135623730951,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.03767026978774,
+   "delivered_share": 0.4999999999999997,
+   "energy_consistency": 1.3430984037467957e-05,
+   "area": 30.30114358433646,
+   "murray_cost": 16.17068446011824,
+   "seconds": 15.233540319999975
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.5874010519681996,
+   "w2": 1.5874010519681996,
+   "width_sum": 1.5874010519681996,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.368329484166855,
+   "delivered_share": 0.4999999999999998,
+   "energy_consistency": 1.3971536445102765e-05,
+   "area": 33.118387420798626,
+   "murray_cost": 16.405127613875255,
+   "seconds": 15.184156152000014
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 9.970952880175444,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 2.7808228234585384e-05,
+   "area": 23.422649730810374,
+   "murray_cost": 22.66366373255807,
+   "seconds": 14.64446323300001
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 0.6666666666666666,
+   "w2": 1.3333333333333335,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.051156294298655,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 2.022084588096335e-05,
+   "area": 24.281766487206923,
+   "murray_cost": 17.780914987280973,
+   "seconds": 14.32731647899999
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 0.6420856251368263,
+   "w2": 1.3579143748631737,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.0305645202713025,
+   "delivered_share": 0.19999999999999993,
+   "energy_consistency": 2.0964207461720435e-05,
+   "area": 24.36035886506222,
+   "murray_cost": 17.784896239719956,
+   "seconds": 15.396670088000008,
+   "study_drop": 6.0305645202713025
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 0.8944271909999159,
+   "w2": 1.7888543819998317,
+   "width_sum": 1.3416407864998738,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.9611898004508017,
+   "delivered_share": 0.19999999999999996,
+   "energy_consistency": 1.9995945850154947e-05,
+   "area": 30.35114102497009,
+   "murray_cost": 16.08870947725577,
+   "seconds": 18.086115124999992
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "w1": 1.1696070952851465,
+   "w2": 1.8566355334451117,
+   "width_sum": 1.513121314365129,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.461156053332035,
+   "delivered_share": 0.1999999999999999,
+   "energy_consistency": 1.7176618137255753e-05,
+   "area": 32.80573329795942,
+   "murray_cost": 16.40383472362648,
+   "seconds": 19.058434165999984
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.941373018909913,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 3.167755315086335e-05,
+   "area": 23.73205080756887,
+   "murray_cost": 18.747984348240763,
+   "seconds": 13.796327808000001
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.941373018909913,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 3.167755315086335e-05,
+   "area": 23.73205080756887,
+   "murray_cost": 18.747984348240763,
+   "seconds": 14.563627927000027
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 0.9615365846141292,
+   "w2": 1.0384634153858707,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.892397465251831,
+   "delivered_share": 0.4999999999999998,
+   "energy_consistency": 2.701915196078486e-05,
+   "area": 23.86785444234493,
+   "murray_cost": 18.737005063940416,
+   "seconds": 14.382207461000007,
+   "study_drop": 6.892397465251831
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.4142135623730951,
+   "w2": 1.4142135623730951,
+   "width_sum": 1.4142135623730951,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.990978188444409,
+   "delivered_share": 0.5,
+   "energy_consistency": 3.239863793145437e-05,
+   "area": 30.26041015982497,
+   "murray_cost": 16.092134981855864,
+   "seconds": 15.35134855299998
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.5874010519681996,
+   "w2": 1.5874010519681996,
+   "width_sum": 1.5874010519681996,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.360347220379534,
+   "delivered_share": 0.5,
+   "energy_consistency": 3.296351619910314e-05,
+   "area": 32.93125870457295,
+   "murray_cost": 16.31963310900189,
+   "seconds": 15.126177556000016
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 10.09674420316712,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 6.519265297981579e-05,
+   "area": 23.73205080756887,
+   "murray_cost": 22.955145927250374,
+   "seconds": 14.940269849000003
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 0.6666666666666666,
+   "w2": 1.3333333333333335,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 5.963561877585287,
+   "delivered_share": 0.19999999999999996,
+   "energy_consistency": 4.0273072963431716e-05,
+   "area": 25.079201435678,
+   "murray_cost": 17.983096411051584,
+   "seconds": 16.79622485899995
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 0.6204017690107778,
+   "w2": 1.379598230989222,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 5.894787942293337,
+   "delivered_share": 0.19999999999999998,
+   "energy_consistency": 4.527063645453517e-05,
+   "area": 25.296597196741708,
+   "murray_cost": 17.9783561350878,
+   "seconds": 15.137663583000005,
+   "study_drop": 5.894787942293337
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 0.8944271909999159,
+   "w2": 1.7888543819998317,
+   "width_sum": 1.3416407864998738,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.9903750113888203,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 4.92861926085442e-05,
+   "area": 31.02651947631561,
+   "murray_cost": 16.397774472378003,
+   "seconds": 17.300931974000036
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "w1": 1.1696070952851465,
+   "w2": 1.8566355334451117,
+   "width_sum": 1.513121314365129,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.5446341546235414,
+   "delivered_share": 0.19999999999999993,
+   "energy_consistency": 4.690404252623527e-05,
+   "area": 33.18433292691672,
+   "murray_cost": 16.66657871026474,
+   "seconds": 20.842644194000002
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.375501205147356,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 4.52577324449624e-05,
+   "area": 25.732050807568882,
+   "murray_cost": 18.79348859655736,
+   "seconds": 16.46347830000002
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.375501205147356,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 4.52577324449624e-05,
+   "area": 25.732050807568882,
+   "murray_cost": 18.79348859655736,
+   "seconds": 16.976066155000012
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 0.8874901083435142,
+   "w2": 1.1125098916564857,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.0679172242316,
+   "delivered_share": 0.5,
+   "energy_consistency": 3.5506153213120713e-05,
+   "area": 26.619078146136516,
+   "murray_cost": 18.738187557430074,
+   "seconds": 15.468199483000035,
+   "study_drop": 6.0679172242316
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.4142135623730951,
+   "w2": 1.4142135623730951,
+   "width_sum": 1.4142135623730951,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.86833775790996,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 3.8106585103132087e-05,
+   "area": 32.313494992171066,
+   "murray_cost": 16.749848340748372,
+   "seconds": 18.916073221999966
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.5874010519681996,
+   "w2": 1.5874010519681996,
+   "width_sum": 1.5874010519681996,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.29865114157263,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 3.627092699161204e-05,
+   "area": 35.03801445081473,
+   "murray_cost": 17.080073969089398,
+   "seconds": 20.867784408000034
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 10.171198959510445,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 9.743056745916354e-05,
+   "area": 25.732050807568882,
+   "murray_cost": 23.854418935708146,
+   "seconds": 16.274843302000022
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 0.6666666666666666,
+   "w2": 1.3333333333333335,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 5.57216814422452,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 6.786960591232368e-05,
+   "area": 28.63475699123357,
+   "murray_cost": 18.88346032212612,
+   "seconds": 16.602149939000014
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 0.5225561517794508,
+   "w2": 1.4774438482205492,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 5.1377900722428445,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 5.412608695355795e-05,
+   "area": 30.146470996384338,
+   "murray_cost": 18.90897516154419,
+   "seconds": 18.863399912999967,
+   "study_drop": 5.1377900722428445
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 0.8944271909999159,
+   "w2": 1.7888543819998317,
+   "width_sum": 1.3416407864998738,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.8658706971290666,
+   "delivered_share": 0.20000000000000004,
+   "energy_consistency": 6.382849830462539e-05,
+   "area": 35.251486665306885,
+   "murray_cost": 17.921755595628174,
+   "seconds": 21.42098109799997
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.1696070952851465,
+   "w2": 1.8566355334451117,
+   "width_sum": 1.513121314365129,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.5527857919086525,
+   "delivered_share": 0.19999999999999996,
+   "energy_consistency": 6.351582221094273e-05,
+   "area": 36.87585712787976,
+   "murray_cost": 18.154057240363443,
+   "seconds": 22.546092541999997
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.509773678148474,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 2.0555016062774363e-05,
+   "area": 23.999999999999996,
+   "murray_cost": 19.61303157086463,
+   "seconds": 14.431587246999982
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.509773678148474,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 2.0555016062774363e-05,
+   "area": 23.999999999999996,
+   "murray_cost": 19.61303157086463,
+   "seconds": 13.763316471999985
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 0.9993483009846588,
+   "w2": 1.0006516990153411,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.509861533289184,
+   "delivered_share": 0.5,
+   "energy_consistency": 1.6645587641455615e-05,
+   "area": 24.0,
+   "murray_cost": 19.613148711052247,
+   "seconds": 11.767284330999985,
+   "study_drop": 7.509861533289184
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.4142135623730951,
+   "w2": 1.4142135623730951,
+   "width_sum": 1.4142135623730951,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.179019766476173,
+   "delivered_share": 0.5,
+   "energy_consistency": 1.408960504992173e-05,
+   "area": 31.455844122715703,
+   "murray_cost": 16.821030671054512,
+   "seconds": 16.42581512999999
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.5874010519681996,
+   "w2": 1.5874010519681996,
+   "width_sum": 1.5874010519681996,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.483769127360965,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 1.5654724222335188e-05,
+   "area": 34.57321893542759,
+   "murray_cost": 17.140979743985653,
+   "seconds": 18.12500644199997
+  },
+  {
+   "kind": "rule",
+   "rule": "equal",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 10.018368533690003,
+   "delivered_share": 0.19999999999999993,
+   "energy_consistency": 2.8356973411639407e-05,
+   "area": 23.999999999999996,
+   "murray_cost": 22.95782471158667,
+   "seconds": 17.484225050999953
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_murray",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 0.6666666666666666,
+   "w2": 1.3333333333333335,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.353555402116782,
+   "delivered_share": 0.1999999999999999,
+   "energy_consistency": 2.4745324383544553e-05,
+   "area": 24.000000000000007,
+   "murray_cost": 18.07140720282238,
+   "seconds": 14.118429673000037
+  },
+  {
+   "kind": "rule",
+   "rule": "shared_optimum",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 0.664229992372066,
+   "w2": 1.335770007627934,
+   "width_sum": 1.0,
+   "share": 0.2,
+   "refused": null,
+   "drop": 6.353445867534472,
+   "delivered_share": 0.2,
+   "energy_consistency": 2.8541995665636e-05,
+   "area": 24.0,
+   "murray_cost": 18.07126115671263,
+   "seconds": 13.956503268999995,
+   "study_drop": 6.353445867534472
+  },
+  {
+   "kind": "rule",
+   "rule": "square",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 0.8944271909999159,
+   "w2": 1.7888543819998317,
+   "width_sum": 1.3416407864998738,
+   "share": 0.2,
+   "refused": null,
+   "drop": 3.1263491900100426,
+   "delivered_share": 0.2,
+   "energy_consistency": 2.8402256409769146e-05,
+   "area": 30.149534156997724,
+   "murray_cost": 16.228279249479144,
+   "seconds": 15.418478199999981
+  },
+  {
+   "kind": "rule",
+   "rule": "cube",
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "w1": 1.1696070952851465,
+   "w2": 1.8566355334451117,
+   "width_sum": 1.513121314365129,
+   "share": 0.2,
+   "refused": null,
+   "drop": 2.536682126429925,
+   "delivered_share": 0.2,
+   "energy_consistency": 2.3493457957799815e-05,
+   "area": 33.23618365857232,
+   "murray_cost": 16.67671629866883,
+   "seconds": 15.252457217000028
+  },
+  {
+   "kind": "scan",
+   "scale": 1.0,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 7.371558185051084,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 5.030660161085695e-06,
+   "area": 23.154700538379245,
+   "murray_cost": 19.090624462086474,
+   "seconds": 11.57145545000003
+  },
+  {
+   "kind": "scan",
+   "scale": 1.1,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.1,
+   "w2": 1.1,
+   "width_sum": 1.1,
+   "share": 0.5,
+   "refused": null,
+   "drop": 5.711533074081157,
+   "delivered_share": 0.49999999999999967,
+   "energy_consistency": 4.614200628621251e-06,
+   "area": 24.864397089525283,
+   "murray_cost": 17.561136267918325,
+   "seconds": 12.689837646
+  },
+  {
+   "kind": "scan",
+   "scale": 1.2,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.2,
+   "w2": 1.2,
+   "width_sum": 1.2,
+   "share": 0.5,
+   "refused": null,
+   "drop": 4.560526553170016,
+   "delivered_share": 0.49999999999999983,
+   "energy_consistency": 4.604945172210155e-06,
+   "area": 26.562546635287518,
+   "murray_cost": 16.705720725008362,
+   "seconds": 12.06899024300003
+  },
+  {
+   "kind": "scan",
+   "scale": 1.3,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.3,
+   "w2": 1.3,
+   "width_sum": 1.3,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.7384081874113217,
+   "delivered_share": 0.5,
+   "energy_consistency": 4.0044573061411245e-06,
+   "area": 28.249149175665963,
+   "murray_cost": 16.284203920148148,
+   "seconds": 13.06323175
+  },
+  {
+   "kind": "scan",
+   "scale": 1.414213562373095,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.414213562373095,
+   "w2": 1.414213562373095,
+   "width_sum": 1.414213562373095,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.0642826848931053,
+   "delivered_share": 0.5,
+   "energy_consistency": 4.225691844071251e-06,
+   "area": 30.161352514111535,
+   "murray_cost": 16.15025125216875,
+   "seconds": 13.092718986000023
+  },
+  {
+   "kind": "scan",
+   "scale": 1.5,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.5,
+   "w2": 1.5,
+   "width_sum": 1.5,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.6858375481725623,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 4.299663841649974e-06,
+   "area": 31.587713240271455,
+   "murray_cost": 16.21620202700533,
+   "seconds": 14.859329700999979
+  },
+  {
+   "kind": "scan",
+   "scale": 1.6,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.6,
+   "w2": 1.6,
+   "width_sum": 1.6,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.3425055674063753,
+   "delivered_share": 0.49999999999999967,
+   "energy_consistency": 4.034118707931267e-06,
+   "area": 33.23967476449854,
+   "murray_cost": 16.41921066234125,
+   "seconds": 16.030292583999994
+  },
+  {
+   "kind": "scan",
+   "scale": 1.8,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 1.8,
+   "w2": 1.8,
+   "width_sum": 1.8,
+   "share": 0.5,
+   "refused": null,
+   "drop": 1.8676436005694028,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 4.4941595954013405e-06,
+   "area": 36.508956796801286,
+   "murray_cost": 17.093774186146383,
+   "seconds": 17.419561623999982
+  },
+  {
+   "kind": "scan",
+   "scale": 2.0,
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "w1": 2.0,
+   "w2": 2.0,
+   "width_sum": 2.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 1.5676788327108748,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 4.749048581526442e-06,
+   "area": 39.732050807568875,
+   "murray_cost": 17.983058766642046,
+   "seconds": 19.230088787
+  },
+  {
+   "kind": "scan",
+   "scale": 1.0,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.0,
+   "w2": 1.0,
+   "width_sum": 1.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 6.375501205147356,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 4.52577324449624e-05,
+   "area": 25.732050807568882,
+   "murray_cost": 18.79348859655736,
+   "seconds": 15.877838613999984
+  },
+  {
+   "kind": "scan",
+   "scale": 1.1,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.1,
+   "w2": 1.1,
+   "width_sum": 1.1,
+   "share": 0.5,
+   "refused": null,
+   "drop": 5.033757141394299,
+   "delivered_share": 0.49999999999999994,
+   "energy_consistency": 4.5875285899723706e-05,
+   "area": 27.32937131564457,
+   "murray_cost": 17.64342471478356,
+   "seconds": 17.975318447999996
+  },
+  {
+   "kind": "scan",
+   "scale": 1.2,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.2,
+   "w2": 1.2,
+   "width_sum": 1.2,
+   "share": 0.5,
+   "refused": null,
+   "drop": 4.097661537889993,
+   "delivered_share": 0.5,
+   "energy_consistency": 4.441390130974398e-05,
+   "area": 28.92133283987164,
+   "murray_cost": 17.03208185313531,
+   "seconds": 17.913979726000036
+  },
+  {
+   "kind": "scan",
+   "scale": 1.3,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.3,
+   "w2": 1.3,
+   "width_sum": 1.3,
+   "share": 0.5,
+   "refused": null,
+   "drop": 3.4245075540142214,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 4.439254057047549e-05,
+   "area": 30.507935380250082,
+   "murray_cost": 16.76918422411899,
+   "seconds": 17.839280861999953
+  },
+  {
+   "kind": "scan",
+   "scale": 1.414213562373095,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.414213562373095,
+   "w2": 1.414213562373095,
+   "width_sum": 1.414213562373095,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.868349044595272,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 3.696281605986108e-05,
+   "area": 32.31349499217106,
+   "murray_cost": 16.749863389662117,
+   "seconds": 19.513424660999988
+  },
+  {
+   "kind": "scan",
+   "scale": 1.5,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.5,
+   "w2": 1.5,
+   "width_sum": 1.5,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.553741802436548,
+   "delivered_share": 0.5000000000000002,
+   "energy_consistency": 3.7976546874297715e-05,
+   "area": 33.665063509461106,
+   "murray_cost": 16.871014473699837,
+   "seconds": 20.768706502999976
+  },
+  {
+   "kind": "scan",
+   "scale": 1.6,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.6,
+   "w2": 1.6,
+   "width_sum": 1.6,
+   "share": 0.5,
+   "refused": null,
+   "drop": 2.2663263985637525,
+   "delivered_share": 0.4999999999999999,
+   "energy_consistency": 3.436711971415998e-05,
+   "area": 35.23558909829369,
+   "murray_cost": 17.11600417073581,
+   "seconds": 23.062223768000024
+  },
+  {
+   "kind": "scan",
+   "scale": 1.8,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 1.8,
+   "w2": 1.8,
+   "width_sum": 1.8,
+   "share": 0.5,
+   "refused": null,
+   "drop": 1.8642942439862733,
+   "delivered_share": 0.5,
+   "energy_consistency": 3.710497075545695e-05,
+   "area": 38.360563324412965,
+   "murray_cost": 17.829950988413547,
+   "seconds": 23.18060959600001
+  },
+  {
+   "kind": "scan",
+   "scale": 2.0,
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "w1": 2.0,
+   "w2": 2.0,
+   "width_sum": 2.0,
+   "share": 0.5,
+   "refused": null,
+   "drop": 1.6064352680304448,
+   "delivered_share": 0.5000000000000001,
+   "energy_consistency": 3.4628368869501825e-05,
+   "area": 41.464101615137764,
+   "murray_cost": 18.727554336762363,
+   "seconds": 23.530334308000022
+  }
+ ],
+ "seconds": 283.890495903
+}
