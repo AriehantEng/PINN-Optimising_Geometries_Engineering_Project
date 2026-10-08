@@ -7,6 +7,9 @@ s* - s_M, against daughter 1's share, one panel per bifurcation angle. Layouts
 are coloured by role (symmetric, mildly asymmetric, strongly asymmetric), each
 line is direct-labelled and has its own marker, and the grey band is the
 search tolerance (+-0.001), inside which a departure is not resolved.
+
+Figure 2 (this version): the same departures before and after the length
+correction (bifurcation/sensitivity.py), with the mesh-error location bound.
 """
 
 from __future__ import annotations
@@ -83,6 +86,68 @@ def fig_departure(study_path, out_path):
     plt.close(fig)
 
 
+def fig_lengths(sensitivity_path, out_path):
+    """Figure 2: the departure from the Murray split before (dashed) and after
+    (solid) the length correction, one panel per bifurcation angle, with the
+    largest location bound in the panel as the grey band."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    recs = json.loads(pathlib.Path(sensitivity_path).read_text())["records"]
+    layouts = sorted({tuple(r["angles"]) for r in recs}, key=lambda a: (a[0] + a[1], a[1] - a[0]))
+    angles = sorted({a + b for a, b in layouts})
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
+                         "xtick.color": MUTED, "ytick.color": MUTED, "text.color": INK})
+    fig, axes = plt.subplots(2, 3, figsize=(10, 6.2))
+    for ax, total in zip(axes.ravel(), angles):
+        here = [a for a in layouts if a[0] + a[1] == total]
+        mine = [r for r in recs if r["angles"][0] + r["angles"][1] == total]
+        band = max(r["mesh"]["bound"] for r in mine if r["mesh"])
+        ax.axhspan(-band, band, color=GRID, zorder=0, lw=0)
+        ax.axhline(0.0, color=MUTED, lw=0.8, zorder=1)
+        for a1, a2 in here:
+            rs = sorted((r for r in mine if tuple(r["angles"]) == (a1, a2)),
+                        key=lambda r: r["share"])
+            q = [r["share"] for r in rs]
+            total_gap = [r["departure_murray"] for r in rs]
+            residual = [r["departure_length"] for r in rs]
+            k = role(a1, a2, here)
+            ax.plot(q, total_gap, color=ROLE_COLOUR[k], lw=1.2, ls=(0, (4, 2)), zorder=2)
+            ax.plot(q, residual, color=ROLE_COLOUR[k], lw=2, marker=ROLE_MARKER[k], ms=5,
+                    markeredgecolor="white", markeredgewidth=0.8, zorder=3)
+            end = max(range(len(total_gap)), key=lambda i: abs(total_gap[i]))
+            ax.annotate(f"{a1:g}/{a2:g}", (q[end], total_gap[end]), textcoords="offset points",
+                        xytext=(4, 6 if total_gap[end] >= 0 else -11), fontsize=8, color=INK,
+                        zorder=4)
+        ax.set_title(f"bifurcation angle {total:g}°", fontsize=9.5, loc="left", color=INK)
+        ax.set_xlim(0, 1)
+        ax.grid(color=GRID, lw=0.6)
+        ax.set_axisbelow(True)
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        lim = max(0.003, 1.25 * band, 1.25 * max(max(abs(r["departure_murray"]),
+                                                     abs(r["departure_length"])) for r in mine))
+        ax.set_ylim(-lim, lim)
+    for ax in axes[1]:
+        ax.set_xlabel("daughter 1's share of the flow, q")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("departure of s* (width split)")
+    handles = [plt.Line2D([], [], color=ROLE_COLOUR[k], marker=ROLE_MARKER[k], lw=2, ms=5,
+                          markeredgecolor="white", label=ROLE_NAME[k]) for k in ROLE_COLOUR]
+    handles += [plt.Line2D([], [], color=MUTED, lw=1.2, ls=(0, (4, 2)),
+                           label="s* − s_M (Murray split)"),
+                plt.Line2D([], [], color=MUTED, lw=2, label="s* − s_L (length-corrected)"),
+                plt.Rectangle((0, 0), 1, 1, color=GRID, label="largest location bound in panel")]
+    fig.legend(handles=handles, loc="upper center", ncol=3, frameon=False, fontsize=8.5,
+               bbox_to_anchor=(0.5, 1.0))
+    fig.text(0.01, 0.005, "Each panel has its own vertical scale. Negative: daughter 1 narrower "
+             "(daughter 2, the more-turned one, wider). At 180° the two lengths are equal, so the "
+             "lines coincide.", fontsize=7.5, color=MUTED)
+    fig.tight_layout(rect=(0, 0.02, 1, 0.92))
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
+
 def fig_geometry(out_path):
     """Figure 1: the bifurcation polygon with its named points, angles and widths
     (a tip-septum layout), and the face septum at a1 + a2 = 180 as an inset."""
@@ -154,6 +219,8 @@ def main(argv=None) -> int:
     out = pathlib.Path(args.out)
     fig_departure(ROOT / "docs/bifurcation_re10-shares-all.json", out / "fig5_1_departure.png")
     fig_geometry(out / "fig1_geometry.png")
+    fig_lengths(ROOT / "docs/bifurcation_re10-sensitivity.json",
+                out / "fig2_departure_lengths.png")
     return 0
 
 

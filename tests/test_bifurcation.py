@@ -372,6 +372,17 @@ def test_a_prescribed_share_is_delivered_and_paid_for_in_outlet_pressure():
         prescribed(0.4, 30.0, 70.0, 1.0)
 
 
+def test_the_two_paths_total_pressure_drops_recombine_to_the_objective():
+    """Q0 J = Q1 (Pt_in - Pt_1) + Q2 (Pt_in - Pt_2), with Pt the flux-weighted
+    total pressure of each opening: the per-path drops behind the junction-loss
+    coefficients add up to the objective."""
+    m = prescribed(0.4, 30.0, 70.0, 0.3).measures()
+    paths = ((m["flux_out1"] * (m["total_pressure_in"] - m["total_pressure_out1"])
+              + m["flux_out2"] * (m["total_pressure_in"] - m["total_pressure_out2"]))
+             / m["flux_in"])
+    assert abs(paths - m["total_pressure_drop"]) < 1e-12 * m["total_pressure_drop"]
+
+
 def test_equal_outlet_pressures_drive_the_optimum_to_a_width_bound():
     """Parallel daughters conduct like w^3, and w1^3 + w2^3 is convex under
     w1 + w2 = w0: with a free split the pressure drop falls toward the most

@@ -206,6 +206,9 @@ class BifurcationSolution:
             "resistance": dissipation / q_in**2,
             "energy_consistency": abs(e_in - e1 - e2 - dissipation) / dissipation,
             "static_pressure_in": p_in, "static_pressure_out1": p1, "static_pressure_out2": p2,
+            # flux-weighted mean total pressure: the energy each opening carries per unit flow
+            "total_pressure_in": e_in / q_in, "total_pressure_out1": e1 / q1,
+            "total_pressure_out2": e2 / q2,
             "outlet1_pressure_offset": self.info.get("multiplier", 0.0),
             "seconds": self.info["total_seconds"], "triangles": self.info["triangles"],
             "unknowns": self.info["unknowns"],

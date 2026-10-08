@@ -1,0 +1,12 @@
+# Review checks on the design study (bifurcation/sensitivity.py): Murray
+# regret, the daughters' centreline lengths, a mesh-error bound on each
+# optimum, and the junction-loss model fitted on the symmetric layouts only.
+name: sensitivity_re10
+data: docs/bifurcation_re10-shares-all.json
+workers: 4
+lengths:
+  tolerance: 1.0e-12          # fixed-point tolerance for the length-corrected split
+junction:
+  fit_layouts: [[15.0, 15.0], [45.0, 45.0], [60.0, 60.0], [75.0, 75.0]]   # 90/90 is the face septum
+  k_max: 50.0                 # search range for each layout's K
+  xatol: 1.0e-5               # the model's own argmin tolerance
