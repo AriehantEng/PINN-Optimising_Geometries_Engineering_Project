@@ -106,12 +106,36 @@ def make_geometry(study_config, angles, split):
                                g["daughter_length"], g["min_width"])
 
 
-def length_corrected_split(study_config, angles, share, tolerance):
-    """s_L: s/(1-s) = (L1/L2)^(1/4) sqrt(q/(1-q)), lengths of the geometry at s_L."""
+def inner_wall_lengths(geometry: Geometry):
+    """(L1, L2) along each daughter's inner wall: from the septum tip T (or, for
+    the face septum, the start of the inner wall) to the outlet. With the outer
+    wall's L_d these bracket the centreline, which is their mean (the midline of
+    a trapezoid), and which also equals the strip's area over its width."""
+    q = corner_points(geometry.w1, geometry.w2, math.radians(geometry.angle1),
+                      math.radians(geometry.angle2), geometry.parent_length,
+                      geometry.daughter_length)
+    if geometry.septum == "face":
+        inner1, inner2 = q["start1"], q["start2"]
+    else:
+        inner1 = inner2 = q["T"]
+    return (float(np.linalg.norm(q["E1i"] - inner1)), float(np.linalg.norm(q["E2i"] - inner2)))
+
+
+def closed_lengths(geometry: Geometry):
+    """(L1, L2) over which each daughter has both walls: the shorter of its outer
+    wall (L_d) and its inner wall, since the outlet is square to both. Upstream of
+    that the strip is open to the junction on one side."""
+    inner = inner_wall_lengths(geometry)
+    return (min(geometry.daughter_length, inner[0]), min(geometry.daughter_length, inner[1]))
+
+
+def length_corrected_split(study_config, angles, share, tolerance, lengths=centreline_lengths):
+    """s_L: s/(1-s) = (L1/L2)^(1/4) sqrt(q/(1-q)), lengths of the geometry at s_L
+    (by default each daughter's centreline)."""
     lo, hi = split_bounds(study_config["geometry"]["min_width"])
     s = murray_split(share)
     for _ in range(200):
-        l1, l2 = centreline_lengths(make_geometry(study_config, angles, min(max(s, lo), hi)))
+        l1, l2 = lengths(make_geometry(study_config, angles, min(max(s, lo), hi)))
         ratio = (l1 / l2) ** 0.25 * math.sqrt(share / (1.0 - share))
         new = ratio / (1.0 + ratio)
         if abs(new - s) < tolerance:

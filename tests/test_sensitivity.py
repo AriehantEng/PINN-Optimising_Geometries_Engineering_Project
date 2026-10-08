@@ -119,3 +119,31 @@ def test_the_reversal_table_leaves_out_the_face_septum():
     table = S.reversal_table(records)
     assert list(table) == ["20/40"]
     assert table["20/40"] == {"observed": [0.1, 0.9], "lengths": None, "model": [0.1, 0.9]}
+
+
+def _strip_area(q, outer, inner):
+    """Shoelace area of daughter 1's strip: outer corner, outlet, inner wall start."""
+    pts = [q[outer], q["E1o"], q["E1i"], q[inner]]
+    return 0.5 * abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1])))
+
+
+@pytest.mark.parametrize("angles", [[30.0, 90.0], [0.0, 150.0], [45.0, 45.0]])
+def test_the_centreline_is_the_mean_wall_length_and_the_area_over_the_width(angles):
+    """The midline of a trapezoid: neither identity is an independent length."""
+    g = S.make_geometry(STUDY, angles, 0.45)
+    centre, inner = S.centreline_lengths(g), S.inner_wall_lengths(g)
+    outer = STUDY["geometry"]["daughter_length"]
+    for c, i in zip(centre, inner):
+        assert abs(c - 0.5 * (outer + i)) < 1e-12
+    q = S.corner_points(g.w1, g.w2, math.radians(g.angle1), math.radians(g.angle2),
+                        g.parent_length, g.daughter_length)
+    assert abs(_strip_area(q, "C", "T") / g.w1 - centre[0]) < 1e-12
+
+
+def test_the_closed_length_is_the_shorter_wall():
+    """0/150: the straight daughter is closed only downstream of the septum tip,
+    the turned one over its whole outer wall."""
+    g = S.make_geometry(STUDY, [0.0, 150.0], 0.5)
+    closed, inner = S.closed_lengths(g), S.inner_wall_lengths(g)
+    assert abs(closed[0] - inner[0]) < 1e-12 and inner[0] < 4.5
+    assert closed[1] == STUDY["geometry"]["daughter_length"] < inner[1]

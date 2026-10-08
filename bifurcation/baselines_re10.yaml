@@ -1,0 +1,10 @@
+# Baselines for Network 3 on the angle pairs it never saw, and the length
+# definition behind the length-corrected Murray split (bifurcation/baselines.py).
+name: baselines_re10
+study: docs/bifurcation_re10-shares-all.json
+sensitivity: docs/bifurcation_re10-sensitivity.json
+network3: docs/network3_re10_all_w16.md
+pairs: [[45.0, 75.0], [15.0, 105.0], [75.0, 105.0], [45.0, 135.0], [30.0, 30.0], [0.0, 90.0]]
+shares: [0.2, 0.5, 0.8]
+workers: 4
+tolerance: 1.0e-12
