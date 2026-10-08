@@ -48,3 +48,13 @@ def test_a_closed_baseline_raises_every_coefficient():
     for r in RECORDS[::11]:
         k = B._coefficients(STUDY, r, S.closed_lengths)
         assert all(x >= y - 1e-12 for x, y in zip(k, r["K_measured"]))
+
+
+def test_network3_drops_match_its_splits_and_are_close_to_the_optimum():
+    """Same 18 cases as the split table; predicted and finite-element drops agree
+    to the few per cent Network 3 reports."""
+    path = B.ROOT / "docs/network3_re10_all_w16.md"
+    drops, splits = B.network3_drops(path), B.network3_splits(path)
+    assert drops.keys() == splits.keys()
+    for predicted, fine in drops.values():
+        assert 3.0 < fine < 13.0 and abs(predicted / fine - 1.0) < 0.05

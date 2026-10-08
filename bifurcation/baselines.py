@@ -29,6 +29,13 @@ Murray split depends on how a daughter's length is counted.
 4. Regret of s_L over the map (`map`, finite elements). For every optimum below
    180 degrees, J is solved on the search mesh at s_L with centreline and with
    closed lengths: what a designer pays for using the free rule.
+
+5. One solve at s_L against Network 3's drop (`single`, finite elements). With
+   s_L's regret this small, a designer who wants the optimal drop needs one
+   solve at s_L, not a search. On the held-out cases each such solve is timed on
+   the search and the check mesh, and its drop is compared, like Network 3's
+   prediction, with the fine-mesh optimum; the break-even is Network 3's cost
+   (its data and its fit) over the time of one solve.
 """
 
 from __future__ import annotations
@@ -41,6 +48,7 @@ import multiprocessing
 import pathlib
 import re
 import statistics
+import time
 
 import yaml
 from scipy.optimize import minimize_scalar
@@ -52,7 +60,7 @@ from developing_flow import pinn
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ConfigError = pinn.ConfigError
-PARTS = ("heldout", "lengths", "junction", "map")
+PARTS = ("heldout", "lengths", "junction", "map", "single")
 DEFINITIONS = {"centreline": S.centreline_lengths, "inner wall": S.inner_wall_lengths,
                "closed": S.closed_lengths}
 
@@ -65,6 +73,7 @@ SCHEMA = {
     "shares": list,
     "workers": int,
     "tolerance": float,           # fixed-point tolerance for s_L
+    "network3_fit_core_seconds": float,   # its fit, cross-validation included (13541 s x 4)
 }
 
 
@@ -85,6 +94,20 @@ def network3_splits(path):
         if m:
             a1, a2, share, _best, network = m.groups()
             out[(float(a1), float(a2), float(share))] = float(network)
+    return out
+
+
+def network3_drops(path):
+    """{(a1, a2, share): (predicted drop, fine-mesh optimum)} from the same table."""
+    text = pathlib.Path(path).read_text()
+    table = text[text.index("### New angle pairs"):]
+    out = {}
+    for line in table.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        m = re.match(r"(\d+) / (\d+)$", cells[0])
+        if m and len(cells) == 9:
+            key = (float(m.group(1)), float(m.group(2)), float(cells[1]))
+            out[key] = (float(cells[7]), float(cells[8]))
     return out
 
 
@@ -270,6 +293,46 @@ def regret_map(config, study):
             for r, sp, dr in zip(rows, splits, drops)]
 
 
+def _single_task(task):
+    """Drop and wall time of one solve per split, on the search and the check mesh."""
+    study_config, angles, share, splits = task
+    out = {}
+    for name, s in splits.items():
+        for mesh_name in ("mesh", "check"):
+            mesh = study_config[mesh_name]
+            start = time.perf_counter()
+            drop = design_study.solve(study_config, s, angles, share, mesh["max_area"],
+                                      mesh["corner_levels"])["total_pressure_drop"]
+            out[f"{name}_{mesh_name}"] = {"drop": drop, "seconds": time.perf_counter() - start}
+    return out
+
+
+def single(config, study):
+    """One solve at s_L per held-out case against Network 3's predicted drop, both
+    measured against the fine-mesh optimum."""
+    sc = study["config"]
+    drops = network3_drops(ROOT / config["network3"])
+    cases, tasks = [], []
+    for a1, a2 in config["pairs"]:
+        for share in config["shares"]:
+            key = (float(a1), float(a2), float(share))
+            if key not in drops:
+                raise ConfigError(f"no Network 3 drop for {key} in {config['network3']}")
+            splits = {n: S.length_corrected_split(sc, [key[0], key[1]], key[2],
+                                                  config["tolerance"], lengths=DEFINITIONS[n])[0]
+                      for n in ("centreline", "closed")}
+            cases.append((key, splits))
+            tasks.append((sc, [key[0], key[1]], key[2], splits))
+    with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
+        solved = list(pool.imap(_single_task, tasks))
+    data = sum(r["seconds"] for r in study["rows"])
+    return {"network3_data_core_seconds": data,
+            "network3_fit_core_seconds": config["network3_fit_core_seconds"],
+            "cases": [{"angles": [k[0], k[1]], "share": k[2], "splits": sp,
+                       "network_drop": drops[k][0], "best_drop_fine": drops[k][1], **res}
+                      for (k, sp), res in zip(cases, solved)]}
+
+
 def run(config_path, out, parts=PARTS):
     config = parse_config(yaml.safe_load(pathlib.Path(config_path).read_text()))
     study = json.loads((ROOT / config["study"]).read_text())
@@ -286,6 +349,8 @@ def run(config_path, out, parts=PARTS):
         summary["junction"] = junction(config, study, records)
     if "map" in parts:
         summary["map"] = regret_map(config, study)
+    if "single" in parts:
+        summary["single"] = single(config, study)
     path.write_text(json.dumps(summary, indent=1))
     out.with_suffix(".md").write_text(markdown(summary))
     return summary
@@ -412,6 +477,31 @@ def _name(r):
     return f"{r['angles'][0]:g}/{r['angles'][1]:g}"
 
 
+def _single_markdown(s):
+    cases = s["cases"]
+    cost = s["network3_data_core_seconds"] + s["network3_fit_core_seconds"]
+    lines = ["### One solve at s_L against Network 3's drop", "",
+             "Error: |drop / fine-mesh optimum - 1| over the 18 held-out cases. Seconds: wall "
+             "time of one solve with four running at once, as in the design study. Network 3 "
+             f"cost {cost / 3600:.1f} core-hours ({s['network3_data_core_seconds'] / 3600:.1f} "
+             f"of data, {s['network3_fit_core_seconds'] / 3600:.1f} of fitting).", "",
+             "| drop from | mean error | max error | median seconds per query | break-even "
+             "(queries) |", "|---|---|---|---|---|"]
+    err = [abs(c["network_drop"] / c["best_drop_fine"] - 1.0) for c in cases]
+    lines.append(f"| Network 3 | {100 * statistics.mean(err):.3f}% | {100 * max(err):.3f}% | "
+                 "0.02 | - |")
+    for name in ("centreline", "closed"):
+        for mesh, label in (("mesh", "search mesh"), ("check", "check mesh")):
+            k = f"{name}_{mesh}"
+            err = [abs(c[k]["drop"] / c["best_drop_fine"] - 1.0) for c in cases]
+            sec = statistics.median(c[k]["seconds"] for c in cases)
+            lines.append(f"| one solve at s_L ({name}), {label} | {100 * statistics.mean(err):.3f}% "
+                         f"| {100 * max(err):.3f}% | {sec:.2f} | {cost / sec:,.0f} |")
+    lines += ["", "The fine-mesh optimum is Network 3's own reference (its results file, four "
+              "decimals). A solve on the check mesh at s_L differs from it only by s_L's regret."]
+    return lines
+
+
 def markdown(summary):
     lines = ["## Baselines for Network 3, and the length behind s_L", ""]
     if "heldout" in summary:
@@ -421,7 +511,9 @@ def markdown(summary):
     if "junction" in summary:
         lines += _junction_markdown(summary["junction"]) + [""]
     if "map" in summary:
-        lines += _map_markdown(summary["map"])
+        lines += _map_markdown(summary["map"]) + [""]
+    if "single" in summary:
+        lines += _single_markdown(summary["single"])
     return "\n".join(lines) + "\n"
 
 

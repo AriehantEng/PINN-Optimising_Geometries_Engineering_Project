@@ -36,7 +36,8 @@
    0.8
   ],
   "workers": 4,
-  "tolerance": 1e-12
+  "tolerance": 1e-12,
+  "network3_fit_core_seconds": 54164.0
  },
  "heldout": [
   {
@@ -4608,5 +4609,533 @@
    "centreline_regret": 0.00030845811733914985,
    "closed_regret": 0.0001792009667243022
   }
- ]
+ ],
+ "single": {
+  "network3_data_core_seconds": 14228.547335251991,
+  "network3_fit_core_seconds": 54164.0,
+  "cases": [
+   {
+    "angles": [
+     45.0,
+     75.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.3258336551872515,
+     "closed": 0.3292307480530055
+    },
+    "network_drop": 6.0763,
+    "best_drop_fine": 6.0961,
+    "centreline_mesh": {
+     "drop": 6.095505868057564,
+     "seconds": 2.487525368000007
+    },
+    "centreline_check": {
+     "drop": 6.096127061743327,
+     "seconds": 13.362863097000002
+    },
+    "closed_mesh": {
+     "drop": 6.096702832607881,
+     "seconds": 1.912682206999989
+    },
+    "closed_check": {
+     "drop": 6.097469284098621,
+     "seconds": 13.752088926999988
+    }
+   },
+   {
+    "angles": [
+     45.0,
+     75.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.4959809837332869,
+     "closed": 0.5
+    },
+    "network_drop": 7.3451,
+    "best_drop_fine": 7.3517,
+    "centreline_mesh": {
+     "drop": 7.351955055415916,
+     "seconds": 2.5195709459999875
+    },
+    "centreline_check": {
+     "drop": 7.3524470306703185,
+     "seconds": 12.427705742
+    },
+    "closed_mesh": {
+     "drop": 7.351870874830941,
+     "seconds": 1.8002028459999906
+    },
+    "closed_check": {
+     "drop": 7.352241295896107,
+     "seconds": 11.685401839000008
+    }
+   },
+   {
+    "angles": [
+     45.0,
+     75.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.6670772765051726,
+     "closed": 0.6666666666666666
+    },
+    "network_drop": 6.0994,
+    "best_drop_fine": 6.084,
+    "centreline_mesh": {
+     "drop": 6.0839391690084215,
+     "seconds": 2.0276289070000075
+    },
+    "centreline_check": {
+     "drop": 6.084114929871991,
+     "seconds": 12.037966015999984
+    },
+    "closed_mesh": {
+     "drop": 6.083924465300359,
+     "seconds": 1.6132613169999956
+    },
+    "closed_check": {
+     "drop": 6.084233985400491,
+     "seconds": 11.09310118899998
+    }
+   },
+   {
+    "angles": [
+     15.0,
+     105.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.31945430130848956,
+     "closed": 0.3193176603183234
+    },
+    "network_drop": 5.982,
+    "best_drop_fine": 5.9575,
+    "centreline_mesh": {
+     "drop": 5.957930651646316,
+     "seconds": 2.7004983879999997
+    },
+    "centreline_check": {
+     "drop": 5.959797749910025,
+     "seconds": 14.993342525999992
+    },
+    "closed_mesh": {
+     "drop": 5.958635037596166,
+     "seconds": 1.5904545850000034
+    },
+    "closed_check": {
+     "drop": 5.959665436984173,
+     "seconds": 13.836988703000003
+    }
+   },
+   {
+    "angles": [
+     15.0,
+     105.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.4887870589922935,
+     "closed": 0.4897466312837609
+    },
+    "network_drop": 7.0365,
+    "best_drop_fine": 7.069,
+    "centreline_mesh": {
+     "drop": 7.068375279200756,
+     "seconds": 1.205898105000017
+    },
+    "centreline_check": {
+     "drop": 7.069450540126289,
+     "seconds": 11.841599756000022
+    },
+    "closed_mesh": {
+     "drop": 7.068754960272172,
+     "seconds": 1.5152262919999941
+    },
+    "closed_check": {
+     "drop": 7.07015733162352,
+     "seconds": 11.582889771999987
+    }
+   },
+   {
+    "angles": [
+     15.0,
+     105.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.6607698524563758,
+     "closed": 0.6622223210396436
+    },
+    "network_drop": 5.8615,
+    "best_drop_fine": 5.8817,
+    "centreline_mesh": {
+     "drop": 5.881164187687293,
+     "seconds": 1.6108072129999869
+    },
+    "centreline_check": {
+     "drop": 5.881761615135113,
+     "seconds": 11.858598936999982
+    },
+    "closed_mesh": {
+     "drop": 5.881320815941134,
+     "seconds": 1.5961199020000265
+    },
+    "closed_check": {
+     "drop": 5.881770442148318,
+     "seconds": 11.253574094000015
+    }
+   },
+   {
+    "angles": [
+     75.0,
+     105.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.3333333333333333,
+     "closed": 0.3333333333333333
+    },
+    "network_drop": 6.5466,
+    "best_drop_fine": 6.5739,
+    "centreline_mesh": {
+     "drop": 6.572367496551582,
+     "seconds": 1.8984790979999957
+    },
+    "centreline_check": {
+     "drop": 6.57388906167946,
+     "seconds": 15.239646444999977
+    },
+    "closed_mesh": {
+     "drop": 6.572367496551582,
+     "seconds": 1.9484241859999827
+    },
+    "closed_check": {
+     "drop": 6.57388906167946,
+     "seconds": 15.020676296999994
+    }
+   },
+   {
+    "angles": [
+     75.0,
+     105.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.5,
+     "closed": 0.5
+    },
+    "network_drop": 7.5436,
+    "best_drop_fine": 7.54,
+    "centreline_mesh": {
+     "drop": 7.5383703903602655,
+     "seconds": 1.630290436999985
+    },
+    "centreline_check": {
+     "drop": 7.539903174730473,
+     "seconds": 12.30896435599999
+    },
+    "closed_mesh": {
+     "drop": 7.5383703903602655,
+     "seconds": 1.4800034590000166
+    },
+    "closed_check": {
+     "drop": 7.539903174730473,
+     "seconds": 12.751615573999999
+    }
+   },
+   {
+    "angles": [
+     75.0,
+     105.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.6666666666666666,
+     "closed": 0.6666666666666666
+    },
+    "network_drop": 6.2579,
+    "best_drop_fine": 6.2346,
+    "centreline_mesh": {
+     "drop": 6.2337576262865575,
+     "seconds": 1.954745155000012
+    },
+    "centreline_check": {
+     "drop": 6.234640247956302,
+     "seconds": 15.134576804000005
+    },
+    "closed_mesh": {
+     "drop": 6.2337576262865575,
+     "seconds": 2.2136750900000095
+    },
+    "closed_check": {
+     "drop": 6.234640247956302,
+     "seconds": 14.540061766000008
+    }
+   },
+   {
+    "angles": [
+     45.0,
+     135.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.3333333333333333,
+     "closed": 0.3333333333333333
+    },
+    "network_drop": 8.3066,
+    "best_drop_fine": 8.0621,
+    "centreline_mesh": {
+     "drop": 8.04922767611717,
+     "seconds": 2.07531204
+    },
+    "centreline_check": {
+     "drop": 8.062405977713125,
+     "seconds": 13.425370247000018
+    },
+    "closed_mesh": {
+     "drop": 8.04922767611717,
+     "seconds": 1.9203949010000088
+    },
+    "closed_check": {
+     "drop": 8.062405977713125,
+     "seconds": 13.255744778999997
+    }
+   },
+   {
+    "angles": [
+     45.0,
+     135.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.49999999999999994,
+     "closed": 0.5
+    },
+    "network_drop": 8.0139,
+    "best_drop_fine": 7.9815,
+    "centreline_mesh": {
+     "drop": 7.9769735435993265,
+     "seconds": 1.597664750000007
+    },
+    "centreline_check": {
+     "drop": 7.98146313357899,
+     "seconds": 12.465095390000016
+    },
+    "closed_mesh": {
+     "drop": 7.974582229801382,
+     "seconds": 1.771237281999987
+    },
+    "closed_check": {
+     "drop": 7.981536448201967,
+     "seconds": 11.756251733999989
+    }
+   },
+   {
+    "angles": [
+     45.0,
+     135.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.6666666666666666,
+     "closed": 0.6666666666666666
+    },
+    "network_drop": 6.1101,
+    "best_drop_fine": 6.1593,
+    "centreline_mesh": {
+     "drop": 6.157467557938797,
+     "seconds": 1.5759809209999958
+    },
+    "centreline_check": {
+     "drop": 6.159197075775205,
+     "seconds": 11.350698881
+    },
+    "closed_mesh": {
+     "drop": 6.157467557938797,
+     "seconds": 1.7883505409999998
+    },
+    "closed_check": {
+     "drop": 6.159197075775205,
+     "seconds": 11.734691112999997
+    }
+   },
+   {
+    "angles": [
+     30.0,
+     30.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.332009704572618,
+     "closed": 0.3333333333333333
+    },
+    "network_drop": 5.9905,
+    "best_drop_fine": 5.9949,
+    "centreline_mesh": {
+     "drop": 5.994945906079887,
+     "seconds": 1.561630374999993
+    },
+    "centreline_check": {
+     "drop": 5.994951337582796,
+     "seconds": 10.30593576999999
+    },
+    "closed_mesh": {
+     "drop": 5.995389975610937,
+     "seconds": 1.3171975579999753
+    },
+    "closed_check": {
+     "drop": 5.9954088416533455,
+     "seconds": 10.75542718600002
+    }
+   },
+   {
+    "angles": [
+     30.0,
+     30.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.5,
+     "closed": 0.5
+    },
+    "network_drop": 7.2499,
+    "best_drop_fine": 7.2443,
+    "centreline_mesh": {
+     "drop": 7.244239825655424,
+     "seconds": 1.6900187020000033
+    },
+    "centreline_check": {
+     "drop": 7.244269875803772,
+     "seconds": 10.642844752000002
+    },
+    "closed_mesh": {
+     "drop": 7.244239825655424,
+     "seconds": 1.4485020259999999
+    },
+    "closed_check": {
+     "drop": 7.244269875803772,
+     "seconds": 10.221189577000018
+    }
+   },
+   {
+    "angles": [
+     30.0,
+     30.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.667990295427382,
+     "closed": 0.6666666666666666
+    },
+    "network_drop": 5.9905,
+    "best_drop_fine": 5.9949,
+    "centreline_mesh": {
+     "drop": 5.99491505939737,
+     "seconds": 1.4540096629999937
+    },
+    "centreline_check": {
+     "drop": 5.994954476268847,
+     "seconds": 11.592554547999981
+    },
+    "closed_mesh": {
+     "drop": 5.995376278567548,
+     "seconds": 1.5354935530000091
+    },
+    "closed_check": {
+     "drop": 5.9954111683965605,
+     "seconds": 10.393801819000004
+    }
+   },
+   {
+    "angles": [
+     0.0,
+     90.0
+    ],
+    "share": 0.2,
+    "splits": {
+     "centreline": 0.3239892040842754,
+     "closed": 0.32311454916360793
+    },
+    "network_drop": 6.0176,
+    "best_drop_fine": 5.9843,
+    "centreline_mesh": {
+     "drop": 5.98463849366117,
+     "seconds": 1.8974818979999952
+    },
+    "centreline_check": {
+     "drop": 5.985698409463484,
+     "seconds": 13.858485132999988
+    },
+    "closed_mesh": {
+     "drop": 5.983679593872122,
+     "seconds": 1.9331395179999902
+    },
+    "closed_check": {
+     "drop": 5.985065265969587,
+     "seconds": 12.717634845999982
+    }
+   },
+   {
+    "angles": [
+     0.0,
+     90.0
+    ],
+    "share": 0.5,
+    "splits": {
+     "centreline": 0.49205331102070443,
+     "closed": 0.49150319284303584
+    },
+    "network_drop": 7.1117,
+    "best_drop_fine": 7.0626,
+    "centreline_mesh": {
+     "drop": 7.061853049920325,
+     "seconds": 1.2889973839999982
+    },
+    "centreline_check": {
+     "drop": 7.062826505014063,
+     "seconds": 10.143612595000008
+    },
+    "closed_mesh": {
+     "drop": 7.0614758262121775,
+     "seconds": 1.3207501100000059
+    },
+    "closed_check": {
+     "drop": 7.06264464447745,
+     "seconds": 10.719626327000014
+    }
+   },
+   {
+    "angles": [
+     0.0,
+     90.0
+    ],
+    "share": 0.8,
+    "splits": {
+     "centreline": 0.6619523275765914,
+     "closed": 0.6617400687282311
+    },
+    "network_drop": 5.798,
+    "best_drop_fine": 5.8048,
+    "centreline_mesh": {
+     "drop": 5.804006939570837,
+     "seconds": 1.5547114769999837
+    },
+    "centreline_check": {
+     "drop": 5.804787468229165,
+     "seconds": 10.108650544
+    },
+    "closed_mesh": {
+     "drop": 5.804255071377653,
+     "seconds": 1.3527551889999927
+    },
+    "closed_check": {
+     "drop": 5.8048429624586415,
+     "seconds": 10.309262968999974
+    }
+   }
+  ]
+ }
 }

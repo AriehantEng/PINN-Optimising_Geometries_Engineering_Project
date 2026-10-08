@@ -106,3 +106,17 @@ J at the proposed split over the optimum, minus 1, on the search mesh (noise abo
 | s_L, closed | 0.0065%, 0.055% | 0.0871%, 0.270% | 0.0093%, 0.270% |
 
 Largest regret by layout (Murray, centreline s_L, closed s_L): 60/60: 0.073%, 0.006%, 0.018%; 30/90: 0.412%, 0.023%, 0.037%; 0/120: 1.226%, 0.141%, 0.071%; 15/15: 0.014%, 0.006%, 0.013%; 0/30: 0.043%, 0.011%, 0.011%; 20/40: 0.033%, 0.005%, 0.010%; 0/60: 0.132%, 0.012%, 0.010%; 45/45: 0.025%, 0.002%, 0.012%; 10/80: 0.240%, 0.012%, 0.020%; 75/75: 0.423%, 0.012%, 0.055%; 30/120: 3.799%, 0.587%, 0.158%; 0/150: 8.926%, 2.661%, 0.270%
+
+### One solve at s_L against Network 3's drop
+
+Error: |drop / fine-mesh optimum - 1| over the 18 held-out cases. Seconds: wall time of one solve with four running at once, as in the design study. Network 3 cost 19.0 core-hours (4.0 of data, 15.0 of fitting).
+
+| drop from | mean error | max error | median seconds per query | break-even (queries) |
+|---|---|---|---|---|
+| Network 3 | 0.475% | 3.033% | 0.02 | - |
+| one solve at s_L (centreline), search mesh | 0.021% | 0.160% | 1.66 | 41,196 |
+| one solve at s_L (centreline), check mesh | 0.005% | 0.039% | 12.17 | 5,618 |
+| one solve at s_L (closed), search mesh | 0.024% | 0.160% | 1.60 | 42,620 |
+| one solve at s_L (closed), check mesh | 0.007% | 0.036% | 11.71 | 5,841 |
+
+The fine-mesh optimum is Network 3's own reference (its results file, four decimals). A solve on the check mesh at s_L differs from it only by s_L's regret.

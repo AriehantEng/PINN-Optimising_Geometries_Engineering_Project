@@ -80,7 +80,7 @@ K_1\, s_M^3 > K_2\, (1-s_M)^3 \quad\Longleftrightarrow\quad \frac{K_1}{K_2} > \l
 
 To first order the shift is δs ≈ −J_j′(s_M)/J″(s_M). With K₁ = K₂ the condition reduces to q > ½, so the higher-flow daughter widens; with K₂ > K₁, daughter 2 widens unless daughter 1 carries enough of the flow.
 
-Three quantitative tests use this model (Section 4.1, S5.2). In the first, one K per symmetric layout is fitted to that layout's eleven optima with centreline lengths, K(α) = a + b(1 − cos α) is fitted through those values, and the model then predicts the asymmetric layouts' optima, which were not used. In the second, the coefficients are measured from each optimum's path drops (S1.10) and the model, with closed lengths, is minimised over s. The third compares the shares at which s* − s_M changes sign with those of each model.
+Three quantitative tests use this model (Section 4.1, S5.2). In the first, one K per symmetric layout is fitted to that layout's eleven optima with centreline lengths, K(α) = a + b(1 − cos α) is fitted through those values, and the model then predicts the asymmetric layouts' optima, which were not used. In the second, the coefficients are measured from each optimum's path drops (S1.10), held fixed at their values at s*, and the model, with closed lengths, is minimised over s. The third compares the shares at which s* − s_M changes sign with those of each model.
 
 ### S1.6 The objective, and energy consistency without reference data
 
@@ -136,7 +136,7 @@ With ℓᵢ the centreline length, 75 of the 330 coefficients are negative: 20 o
 K_i^{\,x} - K_i^{\,c} = \frac{12\nu q_i Q_0\,(\ell_i^{\,c} - \ell_i^{\,x})/w_i^3}{\tfrac{1}{2}U_i^2}
 ```
 
-where c and x denote centreline and closed. A coefficient defined this way includes the junction region's own friction and the flow's development in the daughter, so it describes the whole junction and entrance, not a turn alone.
+where c and x denote centreline and closed. A coefficient defined this way includes the junction region's own friction and the flow's development in the daughter, so it describes the whole junction and entrance, not a turn alone. Measured at every split, the coefficients would make the model reproduce J(s) exactly, and with it the optimum; the model therefore holds them at their values at s*, and its error is set by how they change with s. Junction correlations for tees express that change through the width and flow ratios (Idelchik, 2008), which is the natural next model.
 
 ## S2. Geometry rules
 
@@ -221,6 +221,8 @@ The map holds 180 optimisations: 15 layouts × 11 prescribed shares, plus the eq
 | 30/150 | 0.0059 | — | = s_M | 0.0019 | 4/11 / 4/11 / — | 0.0047%, 0.21% | = Murray |
 
 Murray regret over all 165 optima: median 0.016%, maximum 8.9%; up to 90°, median 0.011% and maximum 0.24%; at 120° and 150°, median 0.34% and maximum 8.9%; at 180°, median 0.0025% and maximum 0.21%. Over the 132 optima below 180°, s_L with centreline lengths costs a median of 0.0029% and at most 0.023% where no daughter turns beyond 90° (99 optima), and a median of 0.13% and at most 2.7% where one turns back (33); with closed lengths, 0.0065% and 0.055%, and 0.087% and 0.27%. Equal widths cost a median of 56% over the optimum. In the symmetric layouts the higher-flow daughter is wider than s_M because the septum tip moves toward the narrower daughter, lengthening the wider one; s_L captures this. The 0.01 threshold for H1, set after the first results, is exceeded by the symmetric 75/75 layout (0.013 at q = 0.95).
+
+**How length is counted.** Strip area over width is exactly the centreline length (S1.2d), so it is no independent check; the closed length is one. It was added after the centreline results, as a check, and like the centreline it has no fitted parameter. It removes 96% of the pooled squared departure (centreline 82%), but 5–97% layout by layout: it does worse than the centreline in the symmetric layouts and better where a daughter turns back, where it reduces the residuals to at most 0.013, still beyond the bound in 31 of 33 optima and of the same sign (Table S2). At 180° the face septum gives both daughters a square entrance, so both lengths equal L_d under either definition and s_L = s_M; neither accounts for the departure of up to 0.006 there. The inner-wall length alone over-corrects in all eight asymmetric layouts below 180°. Over the map, closed-length s_L costs at most 0.020% up to a bifurcation angle of 90°, 0.055% wherever no daughter turns back and 0.27% where one does; on the 18 held-out cases, 0.015% on average and 0.087% at worst.
 
 **Table S3.** Loss coefficients and the junction-loss model by layout (S1.5, S1.10). K is measured at each optimum against friction along centreline (c) or closed (x) lengths. The last three columns give the largest |s* − s| over the eleven shares for three models: centreline friction plus K(α) fitted on the symmetric layouts (not applied at 180°); closed-length friction alone; and closed-length friction plus each optimum's own closed coefficients. The last two are minimised over s with the lengths of each geometry, so the closed-lengths column differs slightly from the fixed-point s_L of Table S2.
 
@@ -341,7 +343,9 @@ Both optima were searched to ±0.002 in s. Adopting the network's split costs 0.
 
 ### S5.9 Network 3 and cost
 
-On the 18 held-out cases, Network 3's proposed splits had a regret of 0.016% on average and 0.077% at worst, against 0.109% and 0.70% for the Murray split and 0.015% and 0.087% for the length-corrected split s_L, which costs nothing. On the three 15/105 cases, where a daughter turns back by 105°, the means are 0.37% (Murray), 0.016% (s_L) and 0.016% (Network 3); at the face-septum pairs 75/105 and 45/135, s_L = s_M. Solving at Network 3's splits as reported to four decimals gives 0.016% and 0.075%, within the search noise of about 10⁻⁴. Network 3 predicted the lowest drop to within 0.48% on average and 3.0% at worst; on the same cases the friction law with centreline lengths, at s_L, errs by 5.0% on average and 28% at worst. In leave-one-layout-out cross-validation, held-out split errors were at most 0.009 for layouts inside the sampled range, and below the Murray split's for most. For the layouts at the edge of the angle space (0/120, 0/150, 30/120, 30/150, 60/120), held-out drop errors reached 26–49%. One design query takes 0.02 s, or 13 µs each when 10,000 are batched.
+On the 18 held-out cases, Network 3's proposed splits had a regret of 0.016% on average and 0.077% at worst, against 0.109% and 0.70% for the Murray split and 0.015% and 0.087% for the length-corrected split s_L, which costs nothing (closed lengths give the same). Nine of the cases have a daughter turned back beyond 90°: the three at 15/105, and the six at the face-septum pairs 75/105 and 45/135, where s_L = s_M. On those nine the means are 0.136% (Murray), 0.023% (s_L) and 0.028% (Network 3); on the three 15/105 cases alone, 0.37%, 0.016% and 0.016%. Solving at Network 3's splits as reported to four decimals gives 0.016% and 0.075%, within the search noise of about 10⁻⁴.
+
+For the optimal drop, the fair baseline is one solve at s_L. Against the fine-mesh optimum, Network 3 errs by 0.48% on average and 3.0% at worst. One solve at s_L on the search mesh takes a median 1.7 s (four solves at once, as in the design study) and errs by 0.021% and 0.16%; on the check mesh it takes 12 s and errs by 0.005% and 0.039%. Network 3 cost 19.0 core-hours (4.0 of data, 15.0 of fitting), so it pays back after about 41,000 queries against the search-mesh solve, or 5,600 against the check-mesh one, and stays less accurate than either. The friction law with centreline lengths, at s_L, errs by 5.0% on average and 28% at worst. In leave-one-layout-out cross-validation, held-out split errors were at most 0.009 for layouts inside the sampled range, and below the Murray split's for most. For the layouts at the edge of the angle space (0/120, 0/150, 30/120, 30/150, 60/120), held-out drop errors reached 26–49%. One design query takes 0.02 s, or 13 µs each when 10,000 are batched.
 
 **Table S11.** Cost of each route, on the same four CPU cores.
 
@@ -350,7 +354,7 @@ On the 18 held-out cases, Network 3's proposed splits had a regret of 0.016% on 
 | Channel flow (Network 1) | 283 s (finest of four meshes) | 263 min of training |
 | One bifurcation (Network 2) | 37 s | 90 min of training |
 | One design question, fixed angles and share (parametric Network 2) | 11.4 min (14 solves at the network's mesh) | 215 min of training |
-| A map of design questions (Network 3) | 76 s per question | 3.9 core-hours of data and a 3.8 h fit, then 0.02 s per question |
+| A map of design questions (Network 3) | 76 s per search, or 1.7 s for one solve at s_L (drop error 0.021%) | 3.9 core-hours of data and a 3.8 h fit, then 0.02 s per question |
 
 ## S6. Code and data availability
 
@@ -365,6 +369,8 @@ Bird, R. B., Stewart, W. E., & Lightfoot, E. N. (2002). *Transport phenomena* (2
 Emerson, D. R., Cieślicki, K., Gu, X., & Barber, R. W. (2006). Biomimetic design of microfluidic manifolds based on a generalised Murray's law. *Lab on a Chip, 6*(3), 447–454. https://doi.org/10.1039/b516975e ⚠
 
 Hagmeijer, R., & Venner, C. H. (2018). *Critical review of Murray's theory for optimal branching in fluidic networks* (arXiv:1812.09706). arXiv. https://doi.org/10.48550/arXiv.1812.09706
+
+† Idelchik, I. E. (2008). *Handbook of hydraulic resistance* (4th ed.). Begell House. ⚠
 
 † Kingma, D. P., & Ba, J. (2015). Adam: A method for stochastic optimization. In *Proceedings of the 3rd International Conference on Learning Representations (ICLR 2015)*. https://doi.org/10.48550/arXiv.1412.6980
 
