@@ -1,0 +1,5070 @@
+{
+ "config": {
+  "name": "sensitivity_re10",
+  "data": "docs/bifurcation_re10-shares-all.json",
+  "workers": 4,
+  "lengths": {
+   "tolerance": 1e-12
+  },
+  "junction": {
+   "fit_layouts": [
+    [
+     15.0,
+     15.0
+    ],
+    [
+     45.0,
+     45.0
+    ],
+    [
+     60.0,
+     60.0
+    ],
+    [
+     75.0,
+     75.0
+    ]
+   ],
+   "k_max": 50.0,
+   "xatol": 1e-05
+  }
+ },
+ "study": "docs/bifurcation_re10-shares-all.json",
+ "records": [
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.05,
+   "s_star": 0.1822198800256572,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18160130745140973,
+   "L1": 7.737192422037276,
+   "L2": 8.84015784715235,
+   "departure_murray": -0.004385616837713546,
+   "departure_length": 0.0006185725742474668,
+   "murray_regret": 0.0007279742960866198,
+   "equal_widths_regret": 2.115971439942112,
+   "mesh": {
+    "mesh_error_slope": -7.476521224651671e-05,
+    "curvature": 58.224226932743356,
+    "argmin_shift": 1.2840911109542144e-06,
+    "bound": 0.0010012840911109541
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    8.285840565062372,
+    -0.019262637105385786
+   ],
+   "s_model": 0.18171236149291714,
+   "model_error": 0.0005075185327400589
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24519626138700693,
+   "s_murray": 0.25,
+   "s_length": 0.24503373490442748,
+   "L1": 7.847060609233654,
+   "L2": 8.730289659955972,
+   "departure_murray": -0.004803738612993075,
+   "departure_length": 0.0001625264825794448,
+   "murray_regret": 0.0004981174749887352,
+   "equal_widths_regret": 1.3626458321643966,
+   "mesh": {
+    "mesh_error_slope": -0.00013556886506872488,
+    "curvature": 55.72334752652538,
+    "argmin_shift": 2.4328916170047303e-06,
+    "bound": 0.0010024328916170048
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    8.927150269736256,
+    0.0035704197318070408
+   ],
+   "s_model": 0.2450365847061674,
+   "model_error": 0.00015967668083952113
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3315008254974022,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3293820200028611,
+   "L1": 7.993156124556016,
+   "L2": 8.584194144633608,
+   "departure_murray": -0.0018325078359311409,
+   "departure_length": 0.002118805494541076,
+   "murray_regret": 0.00016114840624403826,
+   "equal_widths_regret": 0.6100887940907276,
+   "mesh": {
+    "mesh_error_slope": -0.0001635659022571583,
+    "curvature": 44.548787620481065,
+    "argmin_shift": 3.6716128764402054e-06,
+    "bound": 0.0010036716128764402
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    4.331619029354948,
+    0.0644903659657078
+   ],
+   "s_model": 0.3292770632964636,
+   "model_error": 0.0022237622009385616
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39447151258609203,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.3929727724169027,
+   "L1": 8.103298538628735,
+   "L2": 8.47405173056089,
+   "departure_murray": -0.0011724111528679249,
+   "departure_length": 0.0014987401691893276,
+   "murray_regret": 6.331338805609654e-05,
+   "equal_widths_regret": 0.23993022336046832,
+   "mesh": {
+    "mesh_error_slope": 4.063480935764274e-05,
+    "curvature": 44.953494283125615,
+    "argmin_shift": -9.039299392771787e-07,
+    "bound": 0.001000903929939277
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    2.1633083328670075,
+    0.16484477374261455
+   ],
+   "s_model": 0.39286099981952416,
+   "model_error": 0.0016105127665678731
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4485590446449093,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4481495085810171,
+   "L1": 8.198867449060394,
+   "L2": 8.37848282012923,
+   "departure_murray": -0.0009306981382687374,
+   "departure_length": 0.000409536063892213,
+   "murray_regret": 7.55402095786728e-06,
+   "equal_widths_regret": 0.05629384908738433,
+   "mesh": {
+    "mesh_error_slope": -0.00011576655689573969,
+    "curvature": 44.383619825385324,
+    "argmin_shift": 2.608317152841299e-06,
+    "bound": 0.0010026083171528414
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.1577237830260927,
+    0.335357779334552
+   ],
+   "s_model": 0.4480812414532827,
+   "model_error": 0.00047780319162660234
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.5,
+   "s_star": 0.500326960874304,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.288675134594813,
+   "L2": 8.288675134594813,
+   "departure_murray": 0.0003269608743039498,
+   "departure_length": 0.0003269608743039498,
+   "murray_regret": 5.72347504657067e-06,
+   "equal_widths_regret": 5.72347504657067e-06,
+   "mesh": {
+    "mesh_error_slope": 0.00023133883735057583,
+    "curvature": 44.084564330968945,
+    "argmin_shift": -5.24761536971939e-06,
+    "bound": 0.0010052476153697195
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.6293060258285327,
+    0.632391689580843
+   ],
+   "s_model": 0.5,
+   "model_error": 0.0003269608743039498
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5517891190551169,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5518504914189828,
+   "L1": 8.37848282012923,
+   "L2": 8.198867449060394,
+   "departure_murray": 0.0012788618382949535,
+   "departure_length": -6.137236386594136e-05,
+   "murray_regret": 1.7462896888087442e-05,
+   "equal_widths_regret": 0.05629395320061037,
+   "mesh": {
+    "mesh_error_slope": -0.00010067227825183919,
+    "curvature": 44.40849354982609,
+    "argmin_shift": 2.266959993562615e-06,
+    "bound": 0.0010022669599935626
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.3337479937902272,
+    1.1595876260913842
+   ],
+   "s_model": 0.551918758546624,
+   "model_error": -0.0001296394915071275
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6058822123558308,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6070272275830971,
+   "L1": 8.47405173056089,
+   "L2": 8.103298538628735,
+   "departure_murray": 0.0015261360947909086,
+   "departure_length": -0.0011450152272662883,
+   "murray_regret": 5.466654859431763e-05,
+   "equal_widths_regret": 0.23992860273402639,
+   "mesh": {
+    "mesh_error_slope": 0.00010707851030000995,
+    "curvature": 44.965879438557785,
+    "argmin_shift": -2.3813280566729275e-06,
+    "bound": 0.0010023813280566729
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.16375348159538558,
+    2.166007966559978
+   ],
+   "s_model": 0.6071389970021037,
+   "model_error": -0.0012567846462728793
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6687906823827037,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6706179799971389,
+   "L1": 8.584194144633608,
+   "L2": 7.993156124556015,
+   "departure_murray": 0.002124015716036931,
+   "departure_length": -0.0018272976144352304,
+   "murray_regret": 0.00015440747989181602,
+   "equal_widths_regret": 0.610078064877712,
+   "mesh": {
+    "mesh_error_slope": 0.00010872298982847219,
+    "curvature": 44.57815936605963,
+    "argmin_shift": -2.438929542507095e-06,
+    "bound": 0.001002438929542507
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.06393050724423179,
+    4.334716279833919
+   ],
+   "s_model": 0.6707229367035066,
+   "model_error": -0.0019322543208029064
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7536339032598163,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7549662650955726,
+   "L1": 8.730289659955972,
+   "L2": 7.847060609233654,
+   "departure_murray": 0.0036339032598161625,
+   "departure_length": -0.0013323618357563571,
+   "murray_regret": 0.0004811318605906223,
+   "equal_widths_regret": 1.3625620115979338,
+   "mesh": {
+    "mesh_error_slope": -0.00011180153616284327,
+    "curvature": 55.438825848468255,
+    "argmin_shift": 2.0166649356613727e-06,
+    "bound": 0.0010020166649356613
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.004619123218164595,
+    9.025886207488014
+   ],
+   "s_model": 0.7549634152938282,
+   "model_error": -0.0013295120340118816
+  },
+  {
+   "angles": [
+    60.0,
+    60.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8181437377868653,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8183986925485901,
+   "L1": 8.84015784715235,
+   "L2": 7.737192422037276,
+   "departure_murray": 0.004749234650236134,
+   "departure_length": -0.0002549547617247683,
+   "murray_regret": 0.0007179150637615095,
+   "equal_widths_regret": 2.1159286819738923,
+   "mesh": {
+    "mesh_error_slope": 0.0002655818440314896,
+    "curvature": 58.35226229750536,
+    "argmin_shift": -4.551354713163256e-06,
+    "bound": 0.0010045513547131634
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    -0.019378186424026896,
+    8.142684980870529
+   ],
+   "s_model": 0.8182876479489204,
+   "model_error": -0.0001439101620550609
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.05,
+   "s_star": 0.17444316303768445,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.17695763996472644,
+   "L1": 7.151799084827376,
+   "L2": 9.270850645983,
+   "departure_murray": -0.012162333825686295,
+   "departure_length": -0.0025144769270419864,
+   "murray_regret": 0.004064457400176247,
+   "equal_widths_regret": 2.12812012885395,
+   "mesh": {
+    "mesh_error_slope": 0.0008245100627206651,
+    "curvature": 53.353556966410856,
+    "argmin_shift": -1.5453703737873405e-05,
+    "bound": 0.0010154537037378735
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -56.09409241534429,
+    0.016711607063465188
+   ],
+   "s_model": 0.17619222329379447,
+   "model_error": -0.0017490602561100188
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.1,
+   "s_star": 0.23737875443081596,
+   "s_murray": 0.25,
+   "s_length": 0.23924547144335545,
+   "L1": 7.259684773642403,
+   "L2": 9.162964957167974,
+   "departure_murray": -0.012621245569184036,
+   "departure_length": -0.0018667170125394872,
+   "murray_regret": 0.004117152840813487,
+   "equal_widths_regret": 1.4036667506096485,
+   "mesh": {
+    "mesh_error_slope": 0.0005849788517707489,
+    "curvature": 51.153474405031254,
+    "argmin_shift": -1.1435759908289097e-05,
+    "bound": 0.001011435759908289
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -13.005425835320366,
+    -0.03403801201920732
+   ],
+   "s_model": 0.23823612457140464,
+   "model_error": -0.0008573701405886758
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.2,
+   "s_star": 0.32104281256841316,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.32246279093441244,
+   "L1": 7.403821399069681,
+   "L2": 9.018828331740695,
+   "departure_murray": -0.012290520764920154,
+   "departure_length": -0.0014199783659992748,
+   "murray_regret": 0.003529585563937454,
+   "equal_widths_regret": 0.6534635278400418,
+   "mesh": {
+    "mesh_error_slope": 0.0006502136535984302,
+    "curvature": 54.03981560986903,
+    "argmin_shift": -1.203212198747186e-05,
+    "bound": 0.001012032121987472
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -1.3939659985260828,
+    -0.10357371023346051
+   ],
+   "s_model": 0.32127559832624647,
+   "model_error": -0.00023278575783330924
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.3,
+   "s_star": 0.3842969737423334,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.3854985654374752,
+   "L1": 7.513002563203482,
+   "L2": 8.909647167606893,
+   "departure_murray": -0.011346949996626554,
+   "departure_length": -0.0012015916951417793,
+   "murray_regret": 0.002549709796128896,
+   "equal_widths_regret": 0.27024940336635916,
+   "mesh": {
+    "mesh_error_slope": 0.00026864717908214126,
+    "curvature": 41.52668089725195,
+    "argmin_shift": -6.469266825028608e-06,
+    "bound": 0.0010064692668250287
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.4706495554787004,
+    -0.15599207982651392
+   ],
+   "s_model": 0.3843074912108086,
+   "model_error": -1.051746847519075e-05
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4403473225725405,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4404021229844717,
+   "L1": 7.60809831439118,
+   "L2": 8.814551416419196,
+   "departure_murray": -0.009142420210637547,
+   "departure_length": -5.480041193117735e-05,
+   "murray_regret": 0.0017125277540415151,
+   "equal_widths_regret": 0.07202806326557631,
+   "mesh": {
+    "mesh_error_slope": 0.00033566780817811216,
+    "curvature": 41.10723392780095,
+    "argmin_shift": -8.16566273390385e-06,
+    "bound": 0.0010081656627339039
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.9011982126859208,
+    -0.19731258665916449
+   ],
+   "s_model": 0.43927732984021817,
+   "model_error": 0.0010699927323223335
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.5,
+   "s_star": 0.49252701187375764,
+   "s_murray": 0.5,
+   "s_length": 0.49217259950070524,
+   "L1": 7.69776741004934,
+   "L2": 8.724882320761036,
+   "departure_murray": -0.007472988126242364,
+   "departure_length": 0.0003544123730523929,
+   "murray_regret": 0.001012084679935965,
+   "equal_widths_regret": 0.001012084679935965,
+   "mesh": {
+    "mesh_error_slope": 0.0002926773935756601,
+    "curvature": 41.25305435433608,
+    "argmin_shift": -7.094684215664554e-06,
+    "bound": 0.0010070946842156646
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.9312866849854047,
+    -0.21216054011566793
+   ],
+   "s_model": 0.49114089152929225,
+   "model_error": 0.0013861203444653913
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5463702216991579,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5441141159485778,
+   "L1": 7.787732755559202,
+   "L2": 8.634916975251175,
+   "departure_murray": -0.004140035517663954,
+   "departure_length": 0.0022561057505801063,
+   "murray_regret": 0.0005230943780956121,
+   "equal_widths_regret": 0.04169949290150976,
+   "mesh": {
+    "mesh_error_slope": 0.00026664096319557723,
+    "curvature": 42.249560444372406,
+    "argmin_shift": -6.3110943733165754e-06,
+    "bound": 0.0010063110943733166
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.8311991117822365,
+    -0.17326146750701896
+   ],
+   "s_model": 0.5431716944495475,
+   "model_error": 0.00319852724961045
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6017512103419718,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.5995749739647639,
+   "L1": 7.883793779474562,
+   "L2": 8.538855951335814,
+   "departure_murray": -0.0026048659190681667,
+   "departure_length": 0.002176236377207874,
+   "murray_regret": 0.000167691169709272,
+   "equal_widths_regret": 0.20724848928720996,
+   "mesh": {
+    "mesh_error_slope": 9.585351042053652e-05,
+    "curvature": 43.736404552116774,
+    "argmin_shift": -2.191618433250873e-06,
+    "bound": 0.001002191618433251
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.6846597455984524,
+    0.003888556094578174
+   ],
+   "s_model": 0.5986941406421986,
+   "model_error": 0.0030570696997731517
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6656231963543149,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.663731253455914,
+   "L1": 7.994915715178617,
+   "L2": 8.427734015631758,
+   "departure_murray": -0.0010434703123518574,
+   "departure_length": 0.001891942898400889,
+   "murray_regret": 5.634131905907225e-06,
+   "equal_widths_regret": 0.5541592951927141,
+   "mesh": {
+    "mesh_error_slope": 6.500773029710278e-05,
+    "curvature": 44.523818259809346,
+    "argmin_shift": -1.460066383295428e-06,
+    "bound": 0.0010014600663832954
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.5201013419978556,
+    0.6100638020168182
+   ],
+   "s_model": 0.6628676775344913,
+   "model_error": 0.0027555188198236102
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7507892399338488,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7492189199524409,
+   "L1": 8.142984696970338,
+   "L2": 8.279665033840038,
+   "departure_murray": 0.0007892399338487177,
+   "departure_length": 0.001570319981407886,
+   "murray_regret": 6.626874296644658e-06,
+   "equal_widths_regret": 1.2715379357152314,
+   "mesh": {
+    "mesh_error_slope": -7.230781226622318e-05,
+    "curvature": 59.05023801295996,
+    "argmin_shift": 1.2245134769880782e-06,
+    "bound": 0.0010012245134769881
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.33029732440432386,
+    3.628972600205669
+   ],
+   "s_model": 0.7483255846184402,
+   "model_error": 0.002463655315408597
+  },
+  {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8151780537683387,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8137963184802501,
+   "L1": 8.254836032240332,
+   "L2": 8.167813698570043,
+   "departure_murray": 0.0017835506317095406,
+   "departure_length": 0.0013817352880886036,
+   "murray_regret": 5.442487972029397e-05,
+   "equal_widths_regret": 2.0002283679560833,
+   "mesh": {
+    "mesh_error_slope": 0.000300362732470743,
+    "curvature": 63.203033744074986,
+    "argmin_shift": -4.752346757388062e-06,
+    "bound": 0.001004752346757388
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.20708643309366048,
+    13.00525397690777
+   ],
+   "s_model": 0.8129078199221674,
+   "model_error": 0.00227023384617131
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.05,
+   "s_star": 0.1671216662513564,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.17326081139706562,
+   "L1": 6.568045720731834,
+   "L2": 9.431954279268165,
+   "departure_murray": -0.019483830612014336,
+   "departure_length": -0.006139145145709207,
+   "murray_regret": 0.010800880612607866,
+   "equal_widths_regret": 2.1489600672658207,
+   "mesh": {
+    "mesh_error_slope": 0.002814371045303392,
+    "curvature": 113.41225785074538,
+    "argmin_shift": -2.4815404424865662e-05,
+    "bound": 0.0010248154044248657
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -124.58231157876877,
+    0.4409449707497549
+   ],
+   "s_model": 0.17170031773450528,
+   "model_error": -0.004578651483148871
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.1,
+   "s_star": 0.22667081498976255,
+   "s_murray": 0.25,
+   "s_length": 0.2346506054694701,
+   "L1": 6.674375963132707,
+   "L2": 9.325624036867293,
+   "departure_murray": -0.023329185010237452,
+   "departure_length": -0.007979790479707566,
+   "murray_regret": 0.012257461977674744,
+   "equal_widths_regret": 1.4559530515186574,
+   "mesh": {
+    "mesh_error_slope": -0.0004948868211382701,
+    "curvature": 46.70666964069932,
+    "argmin_shift": 1.0595634947755619e-05,
+    "bound": 0.0010105956349477556
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -38.35049554794091,
+    0.3742499423669921
+   ],
+   "s_model": 0.2327208888867416,
+   "model_error": -0.0060500738969790635
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3102008845053889,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.31699176701954435,
+   "L1": 6.816995038490136,
+   "L2": 9.183004961509864,
+   "departure_murray": -0.023132448827944407,
+   "departure_length": -0.0067908825141554385,
+   "murray_regret": 0.011602192667383049,
+   "equal_widths_regret": 0.7129624385644147,
+   "mesh": {
+    "mesh_error_slope": 0.0005573745190436062,
+    "curvature": 49.509033442685784,
+    "argmin_shift": -1.1258036771993373e-05,
+    "bound": 0.0010112580367719933
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -10.319734151020207,
+    0.3083175641084843
+   ],
+   "s_model": 0.31483556857019845,
+   "model_error": -0.004634684064809547
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.3,
+   "s_star": 0.37236004055180844,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.379606971252164,
+   "L1": 6.925447753547424,
+   "L2": 9.074552246452575,
+   "departure_murray": -0.02328388318715152,
+   "departure_length": -0.007246930700355592,
+   "murray_regret": 0.010413683614641345,
+   "equal_widths_regret": 0.3176121797628344,
+   "mesh": {
+    "mesh_error_slope": 0.0003283650032599838,
+    "curvature": 46.84348715204955,
+    "argmin_shift": -7.00983259837471e-06,
+    "bound": 0.0010070098325983747
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -4.3100034884779115,
+    0.27678936968120854
+   ],
+   "s_model": 0.37748477816372283,
+   "model_error": -0.005124737611914398
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.4,
+   "s_star": 0.42775459426427365,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4343121179805941,
+   "L1": 7.020199847116628,
+   "L2": 8.97980015288337,
+   "departure_murray": -0.0217351485189044,
+   "departure_length": -0.006557523716320457,
+   "murray_regret": 0.008815637709142399,
+   "equal_widths_regret": 0.10051705557789603,
+   "mesh": {
+    "mesh_error_slope": 2.0815321276544678e-05,
+    "curvature": 39.507692468651236,
+    "argmin_shift": -5.268675535292608e-07,
+    "bound": 0.0010005268675535293
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -2.0353055141799485,
+    0.27425281053985534
+   ],
+   "s_model": 0.43232359490315486,
+   "model_error": -0.0045690006388812154
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4807682923070646,
+   "s_murray": 0.5,
+   "s_length": 0.48603623794884065,
+   "L1": 7.109788650878423,
+   "L2": 8.890211349121577,
+   "departure_murray": -0.019231707692935418,
+   "departure_length": -0.005267945641776073,
+   "murray_regret": 0.007172658633466833,
+   "equal_widths_regret": 0.007172658633466833,
+   "mesh": {
+    "mesh_error_slope": 0.0005558361481265804,
+    "curvature": 39.81151837038894,
+    "argmin_shift": -1.3961691763557577e-05,
+    "bound": 0.0010139616917635575
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.9567684235013841,
+    0.3102633694981196
+   ],
+   "s_model": 0.48421829052589893,
+   "model_error": -0.003449998218834349
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.6,
+   "s_star": 0.533841704891451,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5380659472472638,
+   "L1": 7.199906750886289,
+   "L2": 8.80009324911371,
+   "departure_murray": -0.0166685523253709,
+   "departure_length": -0.004224242355812757,
+   "murray_regret": 0.005417689653786084,
+   "equal_widths_regret": 0.021980678664234032,
+   "mesh": {
+    "mesh_error_slope": 0.0011190874868498813,
+    "curvature": 40.82713933691129,
+    "argmin_shift": -2.741038204060819e-05,
+    "bound": 0.0010274103820406082
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.3831559387556488,
+    0.41713078404462306
+   ],
+   "s_model": 0.536415173160324,
+   "model_error": -0.002573468268873058
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.7,
+   "s_star": 0.5899968239956399,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.5937667264678533,
+   "L1": 7.296383330517453,
+   "L2": 8.703616669482548,
+   "departure_murray": -0.014359252265400024,
+   "departure_length": -0.0037699024722134267,
+   "murray_regret": 0.0038610928746727335,
+   "equal_widths_regret": 0.1557226572131276,
+   "mesh": {
+    "mesh_error_slope": -0.0001381907107412784,
+    "curvature": 42.237708336905634,
+    "argmin_shift": 3.271737889731409e-06,
+    "bound": 0.0010032717378897313
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.057160741197883114,
+    0.6803162452664355
+   ],
+   "s_model": 0.5922516941953244,
+   "model_error": -0.002254870199684511
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6564436869614796,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6583834142938387,
+   "L1": 7.4083027168487945,
+   "L2": 8.591697283151204,
+   "departure_murray": -0.010222979705187152,
+   "departure_length": -0.0019397273323591424,
+   "murray_regret": 0.0023107059074896075,
+   "equal_widths_regret": 0.45828057925484256,
+   "mesh": {
+    "mesh_error_slope": 0.0003124521232979425,
+    "curvature": 42.845195829123206,
+    "argmin_shift": -7.29258245297969e-06,
+    "bound": 0.0010072925824529796
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.13560462849568156,
+    1.3364910489717832
+   ],
+   "s_model": 0.6569555094426547,
+   "model_error": -0.0005118224811750949
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7443118527674512,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7447786001961033,
+   "L1": 7.557943568361486,
+   "L2": 8.442056431638512,
+   "departure_murray": -0.005688147232548957,
+   "departure_length": -0.0004667474286521589,
+   "murray_regret": 0.0008421222010803753,
+   "equal_widths_regret": 1.0981133212724168,
+   "mesh": {
+    "mesh_error_slope": 0.0004475139323256894,
+    "curvature": 57.522104410474874,
+    "argmin_shift": -7.779860227856969e-06,
+    "bound": 0.001007779860227857
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.22880092905821603,
+    3.791408493738625
+   ],
+   "s_model": 0.7433986185932648,
+   "model_error": 0.000913234174186317
+  },
+  {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8104454558816155,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8102549181628851,
+   "L1": 7.671351877771917,
+   "L2": 8.328648122228083,
+   "departure_murray": -0.0029490472550136593,
+   "departure_length": 0.00019053771873045466,
+   "murray_regret": 0.00028233451667691867,
+   "equal_widths_regret": 1.7516252453953016,
+   "mesh": {
+    "mesh_error_slope": 0.00036120644624357544,
+    "curvature": 61.45152991475428,
+    "argmin_shift": -5.8779081130224415e-06,
+    "bound": 0.0010058779081130226
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.2265429536283724,
+    9.486058983434138
+   ],
+   "s_model": 0.8089530891240408,
+   "model_error": 0.0014923667575746924
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18536694357204936,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18660549686337075,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -0.001238553291321387,
+   "departure_length": -0.001238553291321387,
+   "murray_regret": 4.16115362593672e-05,
+   "equal_widths_regret": 1.886594813094968,
+   "mesh": {
+    "mesh_error_slope": -0.0007263308551011285,
+    "curvature": 56.4495094813224,
+    "argmin_shift": 1.2866911719426926e-05,
+    "bound": 0.001012866911719427
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    24.314943786178326,
+    2.217709621115731
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.1,
+   "s_star": 0.25015625477781556,
+   "s_murray": 0.25,
+   "s_length": 0.25,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.00015625477781555652,
+   "departure_length": 0.00015625477781555652,
+   "murray_regret": 0.00012124772700650155,
+   "equal_widths_regret": 1.2511869278615229,
+   "mesh": {
+    "mesh_error_slope": -0.0003669580825065349,
+    "curvature": 54.65210718706431,
+    "argmin_shift": 6.714436119553516e-06,
+    "bound": 0.0010067144361195536
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    11.770586272293832,
+    2.004584059076383
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.2,
+   "s_star": 0.332114996186033,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3333333333333333,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -0.0012183371473002969,
+   "departure_length": -0.0012183371473002969,
+   "murray_regret": 0.00013738147785935517,
+   "equal_widths_regret": 0.5768808564921186,
+   "mesh": {
+    "mesh_error_slope": -0.0006129548906093931,
+    "curvature": 43.89535308251257,
+    "argmin_shift": 1.3964004104425068e-05,
+    "bound": 0.0010139640041044251
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    5.61131387318629,
+    1.8704225748376622
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39421204927202136,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39564392373896,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -0.0014318744669385985,
+   "departure_length": -0.001431874466938654,
+   "murray_regret": 3.4803959385376615e-05,
+   "equal_widths_regret": 0.22988775398584815,
+   "mesh": {
+    "mesh_error_slope": -0.0006313540299094658,
+    "curvature": 44.17706602681915,
+    "argmin_shift": 1.4291443201007996e-05,
+    "bound": 0.001014291443201008
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    3.6751932690779694,
+    1.8876296134600707
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.4,
+   "s_star": 0.449889949618463,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4494897427831781,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.00040020683528496637,
+   "departure_length": 0.00040020683528491086,
+   "murray_regret": -1.3753402340999088e-05,
+   "equal_widths_regret": 0.054273581640120305,
+   "mesh": {
+    "mesh_error_slope": 0.00037719923400135095,
+    "curvature": 43.45997470619304,
+    "argmin_shift": -8.679232708978087e-06,
+    "bound": 0.0010086792327089781
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.77728118991365,
+    2.014906371423993
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4996741504923294,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -0.00032584950767061693,
+   "departure_length": -0.00032584950767061693,
+   "murray_regret": 2.341791079429889e-05,
+   "equal_widths_regret": 2.341791079429889e-05,
+   "mesh": {
+    "mesh_error_slope": -5.8160705766738893e-05,
+    "curvature": 43.21530021527396,
+    "argmin_shift": 1.3458359765410734e-06,
+    "bound": 0.001001345835976541
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.286376850726719,
+    2.2879621304886455
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.6,
+   "s_star": 0.54996602914143,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5505102572168219,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -0.0005442280753918949,
+   "departure_length": -0.0005442280753918949,
+   "murray_regret": 1.481165299677123e-05,
+   "equal_widths_regret": 0.05434796789795726,
+   "mesh": {
+    "mesh_error_slope": 0.00046395180823104014,
+    "curvature": 43.48357760170596,
+    "argmin_shift": -1.0669586860599949e-05,
+    "bound": 0.0010106695868606
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.013920671195741,
+    2.7761958927073547
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6046650227706705,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.60435607626104,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.0003089465096305366,
+   "departure_length": 0.0003089465096304256,
+   "murray_regret": 3.093972335710404e-05,
+   "equal_widths_regret": 0.23006172018171744,
+   "mesh": {
+    "mesh_error_slope": 0.00023239995078130617,
+    "curvature": 44.14200932571344,
+    "argmin_shift": -5.264824921459327e-06,
+    "bound": 0.0010052648249214593
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.883243224484925,
+    3.679643229348324
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6673334256129778,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6666666666666666,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.0006667589463110746,
+   "departure_length": 0.0006667589463111856,
+   "murray_regret": 3.920031101811716e-05,
+   "equal_widths_regret": 0.577065725883988,
+   "mesh": {
+    "mesh_error_slope": 0.00021612012460933512,
+    "curvature": 43.78501481219173,
+    "argmin_shift": -4.935938140853557e-06,
+    "bound": 0.0010049359381408536
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.8685687757214413,
+    5.618654614099223
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.9,
+   "s_star": 0.75,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7500000000000001,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -1.1102230246251565e-16,
+   "departure_length": -1.1102230246251565e-16,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 1.2513431465224607,
+   "mesh": {
+    "mesh_error_slope": -0.0005296634196172439,
+    "curvature": 54.61502615511225,
+    "argmin_shift": 9.698126264975976e-06,
+    "bound": 0.001009698126264976
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.0066834146743195,
+    11.748707190226908
+   ]
+  },
+  {
+   "angles": [
+    90.0,
+    90.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8142505951138185,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8133945031366292,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.0008560919771892772,
+   "departure_length": 0.0008560919771892772,
+   "murray_regret": 1.4601602047914497e-05,
+   "equal_widths_regret": 1.8870249896977653,
+   "mesh": {
+    "mesh_error_slope": 5.563808453984863e-05,
+    "curvature": 56.27225113964545,
+    "argmin_shift": -9.887303851018317e-07,
+    "bound": 0.0010009887303851018
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.216155868579703,
+    24.294851005200353
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18913196786500835,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18660549686337075,
+   "L1": 7.999999999999999,
+   "L2": 8.0,
+   "departure_murray": 0.002526471001637609,
+   "departure_length": 0.002526471001637609,
+   "murray_regret": -6.863277862556583e-05,
+   "equal_widths_regret": 1.5129918227385444,
+   "mesh": {
+    "mesh_error_slope": -0.0011140209959085367,
+    "curvature": 44.37253743157618,
+    "argmin_shift": 2.5106091749348153e-05,
+    "bound": 0.0010251060917493482
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    18.154450080506813,
+    5.894364266203224
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.1,
+   "s_star": 0.25,
+   "s_murray": 0.25,
+   "s_length": 0.25,
+   "L1": 8.0,
+   "L2": 7.999999999999998,
+   "departure_murray": 0.0,
+   "departure_length": 0.0,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 1.0587725615259034,
+   "mesh": {
+    "mesh_error_slope": -0.003723046322652294,
+    "curvature": 46.68852659763681,
+    "argmin_shift": 7.974221064497546e-05,
+    "bound": 0.0010797422106449755
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    8.670224040138436,
+    5.2152553389121525
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3333140571797967,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3333333333333333,
+   "L1": 8.0,
+   "L2": 7.999999999999999,
+   "departure_murray": -1.927615353664036e-05,
+   "departure_length": -1.927615353664036e-05,
+   "murray_regret": -0.00010852022395613226,
+   "equal_widths_regret": 0.5196291487233855,
+   "mesh": {
+    "mesh_error_slope": 0.002072622230207849,
+    "curvature": 39.731180340330944,
+    "argmin_shift": -5.216613784071095e-05,
+    "bound": 0.001052166137840711
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    4.055680738850682,
+    4.546685769406574
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39484422911073086,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39564392373896,
+   "L1": 8.0,
+   "L2": 7.999999999999999,
+   "departure_murray": -0.0007996946282290973,
+   "departure_length": -0.0007996946282291528,
+   "murray_regret": 0.00022977821105962803,
+   "equal_widths_regret": 0.21531756195624752,
+   "mesh": {
+    "mesh_error_slope": 0.000903162085978555,
+    "curvature": 41.41001883743404,
+    "argmin_shift": -2.1810231227475558e-05,
+    "bound": 0.0010218102312274755
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    2.5744309167336756,
+    4.281761047610645
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.4,
+   "s_star": 0.45009412936378806,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4494897427831781,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.0006043865806100168,
+   "departure_length": 0.0006043865806099613,
+   "murray_regret": 1.8407054124924827e-05,
+   "equal_widths_regret": 0.05248969800694758,
+   "mesh": {
+    "mesh_error_slope": 0.000838772045453941,
+    "curvature": 41.95673300804753,
+    "argmin_shift": -1.999135741319659e-05,
+    "bound": 0.0010199913574131965
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.864166664069874,
+    4.2213733590360905
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.5,
+   "s_star": 0.5,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.0,
+   "L2": 7.999999999999998,
+   "departure_murray": 0.0,
+   "departure_length": 0.0,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 0.0,
+   "mesh": {
+    "mesh_error_slope": 0.0007209751262782228,
+    "curvature": 42.39568873519942,
+    "argmin_shift": -1.7005859505700784e-05,
+    "bound": 0.0010170058595057008
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.4655733750807958,
+    4.415153938272164
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5508150706214239,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5505102572168219,
+   "L1": 8.0,
+   "L2": 7.999999999999998,
+   "departure_murray": 0.0003048134046019779,
+   "departure_length": 0.0003048134046019779,
+   "murray_regret": 2.892839161328098e-06,
+   "equal_widths_regret": 0.05350868943547815,
+   "mesh": {
+    "mesh_error_slope": 0.0008763919872220919,
+    "curvature": 43.38047952763197,
+    "argmin_shift": -2.020245042851263e-05,
+    "bound": 0.0010202024504285126
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.2240343340276945,
+    4.895192271433119
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6047220162022049,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6043560762610399,
+   "L1": 7.999999999999998,
+   "L2": 8.0,
+   "departure_murray": 0.0003659399411649611,
+   "departure_length": 0.0003659399411649611,
+   "murray_regret": 5.60040124819583e-05,
+   "equal_widths_regret": 0.2312557275398761,
+   "mesh": {
+    "mesh_error_slope": 0.0006729945141998901,
+    "curvature": 44.579261729918755,
+    "argmin_shift": -1.5096582762567806e-05,
+    "bound": 0.0010150965827625679
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.0756166843528137,
+    5.9329671716938766
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.8,
+   "s_star": 0.667386284362442,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6666666666666666,
+   "L1": 7.999999999999999,
+   "L2": 8.0,
+   "departure_murray": 0.0007196176957752209,
+   "departure_length": 0.000719617695775332,
+   "murray_regret": 4.709804610092405e-06,
+   "equal_widths_regret": 0.592167937267136,
+   "mesh": {
+    "mesh_error_slope": 0.00037513205647676746,
+    "curvature": 45.06550251465784,
+    "argmin_shift": -8.324151192028834e-06,
+    "bound": 0.0010083241511920288
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.9934902128494667,
+    8.263841510483399
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.9,
+   "s_star": 0.75,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7500000000000001,
+   "L1": 7.999999999999999,
+   "L2": 7.999999999999998,
+   "departure_murray": -1.1102230246251565e-16,
+   "departure_length": -1.1102230246251565e-16,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 1.3211589175011738,
+   "mesh": {
+    "mesh_error_slope": 0.00045698351195167045,
+    "curvature": 57.672505523591546,
+    "argmin_shift": -7.923767275287468e-06,
+    "bound": 0.0010079237672752876
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.9775152122505183,
+    15.936288041592768
+   ]
+  },
+  {
+   "angles": [
+    60.0,
+    120.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8141621682665287,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8133945031366292,
+   "L1": 8.0,
+   "L2": 7.999999999999998,
+   "departure_murray": 0.000767665129899453,
+   "departure_length": 0.000767665129899453,
+   "murray_regret": 3.332057260041488e-05,
+   "equal_widths_regret": 2.0413961360894457,
+   "mesh": {
+    "mesh_error_slope": 0.000773831237225304,
+    "curvature": 60.71149352395855,
+    "argmin_shift": -1.2746041849883454e-05,
+    "bound": 0.0010127460418498835
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.0193662076982475,
+    32.05402124731347
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.05,
+   "s_star": 0.1925200106316322,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18660549686337075,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.005914513768261465,
+   "departure_length": 0.005914513768261465,
+   "murray_regret": 0.0020495649046614606,
+   "equal_widths_regret": 0.665432360564485,
+   "mesh": {
+    "mesh_error_slope": 0.007457367345417048,
+    "curvature": 21.536467233885116,
+    "argmin_shift": -0.00034626697426417977,
+    "bound": 0.0013462669742641798
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    13.774409553335278,
+    28.191676073606374
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.1,
+   "s_star": 0.2536046449786225,
+   "s_murray": 0.25,
+   "s_length": 0.25,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": 0.0036046449786225065,
+   "departure_length": 0.0036046449786225065,
+   "murray_regret": 0.001403318334193271,
+   "equal_widths_regret": 0.5319024639278007,
+   "mesh": {
+    "mesh_error_slope": 0.023252064572922476,
+    "curvature": 25.256163816542635,
+    "argmin_shift": -0.000920649103396,
+    "bound": 0.001920649103396
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    6.494532121051174,
+    24.60044157693275
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.2,
+   "s_star": 0.33819660112501054,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3333333333333333,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.004863267791677228,
+   "departure_length": 0.004863267791677228,
+   "murray_regret": -5.809984155336068e-06,
+   "equal_widths_regret": 0.31335300751620965,
+   "mesh": {
+    "mesh_error_slope": -0.0015739977451174109,
+    "curvature": 23.9876804421851,
+    "argmin_shift": 6.561692152399007e-05,
+    "bound": 0.00106561692152399
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    2.9077251225889205,
+    20.683199096589515
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39673179288977506,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39564392373896,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.0010878691508151017,
+   "departure_length": 0.0010878691508150462,
+   "murray_regret": 6.881310316897427e-05,
+   "equal_widths_regret": 0.1491205778004654,
+   "mesh": {
+    "mesh_error_slope": 0.00018192747599929637,
+    "curvature": 29.446906919334406,
+    "argmin_shift": -6.178152309770962e-06,
+    "bound": 0.001006178152309771
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    1.7817333259073451,
+    18.82254613471095
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.4,
+   "s_star": 0.45020438794477885,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4494897427831781,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.000714645161600802,
+   "departure_length": 0.0007146451616007465,
+   "murray_regret": 0.00012882114071510742,
+   "equal_widths_regret": 0.040943625020627206,
+   "mesh": {
+    "mesh_error_slope": -0.01185634936494674,
+    "curvature": 34.05064829570891,
+    "argmin_shift": 0.00034819746343686756,
+    "bound": 0.0013481974634368676
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.2338490196293024,
+    17.67109899429715
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.5,
+   "s_star": 0.5006419849323029,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.0006419849323029414,
+   "departure_length": 0.0006419849323029414,
+   "murray_regret": 2.4692033178119743e-05,
+   "equal_widths_regret": 2.4692033178119743e-05,
+   "mesh": {
+    "mesh_error_slope": 0.00015963776153107617,
+    "curvature": 35.221938695702896,
+    "argmin_shift": -4.532338861590038e-06,
+    "bound": 0.00100453233886159
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.9202662325258781,
+    17.302117993734004
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.6,
+   "s_star": 0.55,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5505102572168219,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": -0.0005102572168218522,
+   "departure_length": -0.0005102572168218522,
+   "murray_regret": 0.00012660924984086996,
+   "equal_widths_regret": 0.050210226238527556,
+   "mesh": {
+    "mesh_error_slope": 0.011773038467628468,
+    "curvature": 39.313206660115235,
+    "argmin_shift": -0.00029946777349945024,
+    "bound": 0.0012994677734994502
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.7308242544886829,
+    17.45560605440618
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6048067750490524,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.60435607626104,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.00045069878801251573,
+   "departure_length": 0.0004506987880124047,
+   "murray_regret": 1.3464364812421081e-05,
+   "equal_widths_regret": 0.22204085228391834,
+   "mesh": {
+    "mesh_error_slope": 0.0006441957594603597,
+    "curvature": 42.67976588682566,
+    "argmin_shift": -1.50937041493756e-05,
+    "bound": 0.0010150937041493756
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.6044136999510458,
+    18.400164002567344
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.8,
+   "s_star": 0.666664963611598,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6666666666666666,
+   "L1": 8.0,
+   "L2": 8.0,
+   "departure_murray": -1.703055068746906e-06,
+   "departure_length": -1.7030550686358836e-06,
+   "murray_regret": 3.866058983392762e-06,
+   "equal_widths_regret": 0.5867884886292059,
+   "mesh": {
+    "mesh_error_slope": -0.0011322811925653677,
+    "curvature": 44.283454631072395,
+    "argmin_shift": 2.556894447369694e-05,
+    "bound": 0.0010255689444736969
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.5239844534221874,
+    21.46492676627173
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7504372501731392,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7500000000000001,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.0004372501731391143,
+   "departure_length": 0.0004372501731391143,
+   "murray_regret": 4.7211091190213494e-05,
+   "equal_widths_regret": 1.3520101762257397,
+   "mesh": {
+    "mesh_error_slope": 0.0018391722959333453,
+    "curvature": 59.121150630490206,
+    "argmin_shift": -3.110853351668091e-05,
+    "bound": 0.001031108533516681
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.47239194940670537,
+    30.953396537456396
+   ]
+  },
+  {
+   "angles": [
+    30.0,
+    150.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8137320404788849,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8133945031366292,
+   "L1": 8.000000000000002,
+   "L2": 8.0,
+   "departure_murray": 0.00033753734225572263,
+   "departure_length": 0.00033753734225572263,
+   "murray_regret": 3.116385722812254e-05,
+   "equal_widths_regret": 2.125235121291923,
+   "mesh": {
+    "mesh_error_slope": 0.001226823297966392,
+    "curvature": 62.88759045179799,
+    "argmin_shift": -1.950819373349542e-05,
+    "bound": 0.0010195081937334955
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.45713722338573015,
+    51.26464367651327
+   ]
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18471564181971256,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18581465393097535,
+   "L1": 7.981640539040818,
+   "L2": 8.150011958546578,
+   "departure_murray": -0.001889855043658184,
+   "departure_length": -0.001099012111262787,
+   "murray_regret": 0.00013929096209119862,
+   "equal_widths_regret": 2.2079347590540888,
+   "mesh": {
+    "mesh_error_slope": 0.00010281009049051093,
+    "curvature": 64.49910371401438,
+    "argmin_shift": -1.5939770410820815e-06,
+    "bound": 0.001001593977041082
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    13.993358712682678,
+    0.13825935706913894
+   ],
+   "s_model": 0.18542640813739017,
+   "model_error": -0.000710766317677608
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24765217101415424,
+   "s_murray": 0.25,
+   "s_length": 0.24921976477374613,
+   "L1": 7.998629887287155,
+   "L2": 8.133022610300237,
+   "departure_murray": -0.0023478289858457624,
+   "departure_length": -0.0015675937595918954,
+   "murray_regret": 0.00013688437352210592,
+   "equal_widths_regret": 1.414797341093296,
+   "mesh": {
+    "mesh_error_slope": -4.520011536020329e-05,
+    "curvature": 60.99428745931588,
+    "argmin_shift": 7.410548961712596e-07,
+    "bound": 0.0010007410548961712
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    6.183690260769053,
+    0.17958094030704685
+   ],
+   "s_model": 0.2487913981318866,
+   "model_error": -0.001139227117732372
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.2,
+   "s_star": 0.33123345265578685,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.33271614426654456,
+   "L1": 8.021002674743183,
+   "L2": 8.110649822844211,
+   "departure_murray": -0.002099880677546462,
+   "departure_length": -0.0014826916107577026,
+   "murray_regret": 8.009035220912786e-05,
+   "equal_widths_regret": 0.6312948518508208,
+   "mesh": {
+    "mesh_error_slope": -2.9162412303845372e-05,
+    "curvature": 47.20003450731743,
+    "argmin_shift": 6.178472666015597e-07,
+    "bound": 0.0010006178472666016
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    2.5169291619867944,
+    0.24905014716821888
+   ],
+   "s_model": 0.33233559498281046,
+   "model_error": -0.001102142327023603
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39426042584585796,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39522787951154087,
+   "L1": 8.037752643719546,
+   "L2": 8.09389985386785,
+   "departure_murray": -0.0013834978931019926,
+   "departure_length": -0.0009674536656829047,
+   "murray_regret": 3.998599560373073e-05,
+   "equal_widths_regret": 0.24772119779639823,
+   "mesh": {
+    "mesh_error_slope": 9.571691687363042e-05,
+    "curvature": 46.811151924586774,
+    "argmin_shift": -2.0447460260715505e-06,
+    "bound": 0.0010020447460260715
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    1.4077129159927124,
+    0.32977031256411343
+   ],
+   "s_model": 0.3949551126844542,
+   "model_error": -0.0006946868385962479
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4488972880220677,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4492812894207408,
+   "L1": 8.052236211252852,
+   "L2": 8.07941628633454,
+   "departure_murray": -0.0005924547611103614,
+   "departure_length": -0.0003840013986731172,
+   "murray_regret": 2.369413012393018e-05,
+   "equal_widths_regret": 0.05805170116121783,
+   "mesh": {
+    "mesh_error_slope": 0.00015636745115689025,
+    "curvature": 45.853189313546636,
+    "argmin_shift": -3.4101761185605e-06,
+    "bound": 0.0010034101761185604
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.8948874044007378,
+    0.443593538343682
+   ],
+   "s_model": 0.44913901660712374,
+   "model_error": -0.00024172858505605577
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.5,
+   "s_star": 0.49999879593144314,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.065826248793696,
+   "L2": 8.065826248793696,
+   "departure_murray": -1.2040685568592835e-06,
+   "departure_length": -1.2040685568592835e-06,
+   "murray_regret": 1.0378500516106115e-05,
+   "equal_widths_regret": 1.0378500516106115e-05,
+   "mesh": {
+    "mesh_error_slope": -0.00025102286861341025,
+    "curvature": 45.429813768459105,
+    "argmin_shift": 5.5255095231688965e-06,
+    "bound": 0.0010055255095231688
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.6144634084269107,
+    0.6146718138227765
+   ],
+   "s_model": 0.5,
+   "model_error": -1.2040685568592835e-06
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5510888287510475,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5507187105792593,
+   "L1": 8.07941628633454,
+   "L2": 8.052236211252852,
+   "departure_murray": 0.0005785715342255804,
+   "departure_length": 0.00037011817178822515,
+   "murray_regret": 3.933422131474629e-05,
+   "equal_widths_regret": 0.05804281813089185,
+   "mesh": {
+    "mesh_error_slope": -6.242062613592784e-05,
+    "curvature": 45.84200829522105,
+    "argmin_shift": 1.3616468487580438e-06,
+    "bound": 0.001001361646848758
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.44329025659854016,
+    0.8945596746378799
+   ],
+   "s_model": 0.5508609833932054,
+   "model_error": 0.00022784535784203808
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6050816788502347,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6047721204884592,
+   "L1": 8.09389985386785,
+   "L2": 8.037752643719546,
+   "departure_murray": 0.0007256025891947404,
+   "departure_length": 0.000309558361775486,
+   "murray_regret": 1.7267688929845093e-05,
+   "equal_widths_regret": 0.24766281285988812,
+   "mesh": {
+    "mesh_error_slope": -0.00013223297552991288,
+    "curvature": 46.771295630865076,
+    "argmin_shift": 2.8272249837494424e-06,
+    "bound": 0.0010028272249837495
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.33248653290311275,
+    1.3997478664320342
+   ],
+   "s_model": 0.605044884199234,
+   "model_error": 3.679465100070445e-05
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6684229753330116,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6672838557334554,
+   "L1": 8.110649822844211,
+   "L2": 8.021002674743183,
+   "departure_murray": 0.001756308666344908,
+   "departure_length": 0.0011391195995562597,
+   "murray_regret": 6.718762278623558e-05,
+   "equal_widths_regret": 0.6311847994851854,
+   "mesh": {
+    "mesh_error_slope": 6.578559514422882e-05,
+    "curvature": 47.15702988704591,
+    "argmin_shift": -1.3950326240181678e-06,
+    "bound": 0.0010013950326240183
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.2503333694183094,
+    2.5139269836346196
+   ],
+   "s_model": 0.6676644050171592,
+   "model_error": 0.0007585703158524693
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7516736687669262,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7507802352262539,
+   "L1": 8.133022610300237,
+   "L2": 7.998629887287155,
+   "departure_murray": 0.0016736687669260952,
+   "departure_length": 0.0008934335406722838,
+   "murray_regret": 0.00012511612436694186,
+   "equal_widths_regret": 1.414623168534725,
+   "mesh": {
+    "mesh_error_slope": 2.6771746405226446e-05,
+    "curvature": 60.79941839386436,
+    "argmin_shift": -4.403289885405902e-07,
+    "bound": 0.0010004403289885406
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.1810268952984531,
+    6.168745735784507
+   ],
+   "s_model": 0.7512086018681255,
+   "model_error": 0.000465066898800659
+  },
+  {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8155956002796894,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8141853460690246,
+   "L1": 8.150011958546576,
+   "L2": 7.981640539040817,
+   "departure_murray": 0.00220109714306016,
+   "departure_length": 0.001410254210664763,
+   "murray_regret": 0.00014075030682803025,
+   "equal_widths_regret": 2.2077271440457436,
+   "mesh": {
+    "mesh_error_slope": -0.0001832292311578823,
+    "curvature": 64.63073873534668,
+    "argmin_shift": 2.835016816196066e-06,
+    "bound": 0.001002835016816196
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.13782709894918396,
+    13.989879519133803
+   ],
+   "s_model": 0.814573591862623,
+   "model_error": 0.0010220084170663446
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18296242784958922,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18454103744323275,
+   "L1": 7.781498429522215,
+   "L2": 8.218501570477786,
+   "departure_murray": -0.0036430690137815303,
+   "departure_length": -0.0015786095936435318,
+   "murray_regret": 0.00039075221712425723,
+   "equal_widths_regret": 2.192699511238871,
+   "mesh": {
+    "mesh_error_slope": -0.0003458518981254625,
+    "curvature": 62.28353840592209,
+    "argmin_shift": 5.552862072020269e-06,
+    "bound": 0.0010055528620720204
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.009774873262603682,
+    0.22999258659058433
+   ],
+   "s_model": 0.18397225073263665,
+   "model_error": -0.0010098228830474343
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24598584828640618,
+   "s_murray": 0.25,
+   "s_length": 0.2476445335416967,
+   "L1": 7.798406960341417,
+   "L2": 8.201593039658585,
+   "departure_murray": -0.0040141517135938165,
+   "departure_length": -0.001658685255290504,
+   "murray_regret": 0.0004271434565126242,
+   "equal_widths_regret": 1.416018423108401,
+   "mesh": {
+    "mesh_error_slope": -0.00038739724680751116,
+    "curvature": 59.12127931439362,
+    "argmin_shift": 6.552585656129328e-06,
+    "bound": 0.0010065525856561292
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    1.8322793432701165,
+    0.24149795309089425
+   ],
+   "s_model": 0.2470161267488315,
+   "model_error": -0.0010302784624253158
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.2,
+   "s_star": 0.32985723503412223,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3308473233903359,
+   "L1": 7.820701080689442,
+   "L2": 8.17929891931056,
+   "departure_murray": -0.0034760982992110834,
+   "departure_length": -0.0009900883562136698,
+   "murray_regret": 0.0003830320406557064,
+   "equal_widths_regret": 0.6396632682338446,
+   "mesh": {
+    "mesh_error_slope": -0.00026072765129586336,
+    "curvature": 46.25359057111565,
+    "argmin_shift": 5.636917006367113e-06,
+    "bound": 0.0010056369170063672
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    1.2846705074265479,
+    0.27683366489093847
+   ],
+   "s_model": 0.3302675577693233,
+   "model_error": -0.0004103227352010852
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.3,
+   "s_star": 0.3922373409716914,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39321642288834674,
+   "L1": 7.83741283053263,
+   "L2": 8.162587169467372,
+   "departure_murray": -0.0034065827672685733,
+   "departure_length": -0.0009790819166553555,
+   "murray_regret": 0.00026296715467633014,
+   "equal_widths_regret": 0.25509156854249726,
+   "mesh": {
+    "mesh_error_slope": -0.0006648543729633167,
+    "curvature": 46.08199068443728,
+    "argmin_shift": 1.4427640019202774e-05,
+    "bound": 0.0010144276400192028
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.8799382706431668,
+    0.3324530325020206
+   ],
+   "s_model": 0.39276389360214803,
+   "model_error": -0.0005265526304566448
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.4,
+   "s_star": 0.44657808580758346,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.44719977505786834,
+   "L1": 7.851877626151193,
+   "L2": 8.148122373848809,
+   "departure_murray": -0.00291165697559459,
+   "departure_length": -0.0006216892502848848,
+   "murray_regret": 0.00012891536148229576,
+   "equal_widths_regret": 0.062212909301878394,
+   "mesh": {
+    "mesh_error_slope": -0.0005494111072807323,
+    "curvature": 45.26970350706055,
+    "argmin_shift": 1.2136397297036477e-05,
+    "bound": 0.0010121363972970365
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.6400656357710116,
+    0.42355372082669357
+   ],
+   "s_model": 0.44689990388061984,
+   "model_error": -0.000321818073036384
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4976862802644104,
+   "s_murray": 0.5,
+   "s_length": 0.4978976592301381,
+   "L1": 7.865462083273112,
+   "L2": 8.13453791672689,
+   "departure_murray": -0.002313719735589581,
+   "departure_length": -0.00021137896572770432,
+   "murray_regret": 9.095595138441936e-05,
+   "equal_widths_regret": 9.095595138441936e-05,
+   "mesh": {
+    "mesh_error_slope": -0.0006458160361829413,
+    "curvature": 45.0301154708096,
+    "argmin_shift": 1.4341869422955095e-05,
+    "bound": 0.001014341869422955
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.48548557496196504,
+    0.5727109120858904
+   ],
+   "s_model": 0.4977601987263899,
+   "model_error": -7.391846197946084e-05
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5486376494745059,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5486389779719048,
+   "L1": 7.8790581786528335,
+   "L2": 8.120941821347166,
+   "departure_murray": -0.0018726077423160126,
+   "departure_length": -1.328497398866979e-06,
+   "murray_regret": 3.983914265681676e-05,
+   "equal_widths_regret": 0.053371591437210375,
+   "mesh": {
+    "mesh_error_slope": -0.0005044079190154776,
+    "curvature": 45.58293524454946,
+    "argmin_shift": 1.1065718262971925e-05,
+    "bound": 0.001011065718262972
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.38342495823385603,
+    0.8265092528545103
+   ],
+   "s_model": 0.5486645952169372,
+   "model_error": -2.694574243133907e-05
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.7,
+   "s_star": 0.603699805947764,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6027642199363474,
+   "L1": 7.8935609935273074,
+   "L2": 8.106439006472694,
+   "departure_murray": -0.0006562703132759751,
+   "departure_length": 0.0009355860114165226,
+   "murray_regret": 5.474936285887466e-06,
+   "equal_widths_regret": 0.2374309869504494,
+   "mesh": {
+    "mesh_error_slope": -0.0005042915941272337,
+    "curvature": 46.67928250591862,
+    "argmin_shift": 1.080332788027093e-05,
+    "bound": 0.001010803327880271
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.310161716255778,
+    1.3030087741157084
+   ],
+   "s_model": 0.6029377664975353,
+   "model_error": 0.0007620394502286798
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6672051068922618,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6654203099753223,
+   "L1": 7.910349642254096,
+   "L2": 8.089650357745905,
+   "departure_murray": 0.000538440225595016,
+   "departure_length": 0.0017847969169394462,
+   "murray_regret": 4.299239678706712e-06,
+   "equal_widths_regret": 0.6141221608048715,
+   "mesh": {
+    "mesh_error_slope": -0.0009357386639255563,
+    "curvature": 47.17600283633451,
+    "argmin_shift": 1.9835056123170726e-05,
+    "bound": 0.0010198350561231707
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.25133486713865016,
+    2.3549841219392182
+   ],
+   "s_model": 0.6657166011831512,
+   "model_error": 0.0014885057091105214
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7506704794044508,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7492116721190616,
+   "L1": 7.932801470073172,
+   "L2": 8.06719852992683,
+   "departure_murray": 0.0006704794044506412,
+   "departure_length": 0.0014588072853891632,
+   "murray_regret": 8.137258752083376e-05,
+   "equal_widths_regret": 1.3888195507079777,
+   "mesh": {
+    "mesh_error_slope": -0.0006197193821257788,
+    "curvature": 61.32202675568009,
+    "argmin_shift": 1.0105983362142804e-05,
+    "bound": 0.0010101059833621429
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.19029914280756735,
+    5.83867420520203
+   ],
+   "s_model": 0.7495708499738586,
+   "model_error": 0.001099629430592164
+  },
+  {
+   "angles": [
+    0.0,
+    30.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8144594792780225,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8129184877704554,
+   "L1": 7.949871659879306,
+   "L2": 8.050128340120697,
+   "departure_murray": 0.0010649761413933367,
+   "departure_length": 0.0015409915075671465,
+   "murray_regret": 5.060467990136708e-05,
+   "equal_widths_regret": 2.1771307834627294,
+   "mesh": {
+    "mesh_error_slope": 5.6913723256549854e-05,
+    "curvature": 65.26883807430154,
+    "argmin_shift": -8.71989220824794e-07,
+    "bound": 0.0010008719892208248
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.14195384903689345,
+    13.454646208184268
+   ],
+   "s_model": 0.8132489889404628,
+   "model_error": 0.001210490337559711
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18314673358144584,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18397613768692897,
+   "L1": 7.83607006513069,
+   "L2": 8.401494633324848,
+   "departure_murray": -0.0034587632819249037,
+   "departure_length": -0.000829404105483128,
+   "murray_regret": 0.00033076571444423664,
+   "equal_widths_regret": 2.1610752646804468,
+   "mesh": {
+    "mesh_error_slope": -0.0007421817915396156,
+    "curvature": 61.70270859401558,
+    "argmin_shift": 1.2028350269401273e-05,
+    "bound": 0.0010120283502694013
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    9.537499695646364,
+    0.17064344916113353
+   ],
+   "s_model": 0.1835202395668864,
+   "model_error": -0.0003735059854405587
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24666384164227168,
+   "s_murray": 0.25,
+   "s_length": 0.247166644459184,
+   "L1": 7.872553121225893,
+   "L2": 8.365011577229645,
+   "departure_murray": -0.003336158357728325,
+   "departure_length": -0.0005028028169123122,
+   "murray_regret": 0.00030252518821738406,
+   "equal_widths_regret": 1.3934881682539344,
+   "mesh": {
+    "mesh_error_slope": -0.0008554107886274653,
+    "curvature": 58.571207666659845,
+    "argmin_shift": 1.460462952199611e-05,
+    "bound": 0.001014604629521996
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    5.801330558544652,
+    0.17717672827962022
+   ],
+   "s_model": 0.2466351810563332,
+   "model_error": 2.866058593847809e-05
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3304907840899052,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3306279777876466,
+   "L1": 7.920739544490032,
+   "L2": 8.316825153965503,
+   "departure_murray": -0.0028425492434281385,
+   "departure_length": -0.0001371936977414001,
+   "murray_regret": 0.00019941594055716827,
+   "equal_widths_regret": 0.6266902539613537,
+   "mesh": {
+    "mesh_error_slope": -0.00042460821159955443,
+    "curvature": 45.9466006986776,
+    "argmin_shift": 9.241341146958347e-06,
+    "bound": 0.0010092413411469585
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    2.7293615998947454,
+    0.20541959437860907
+   ],
+   "s_model": 0.3301028852838097,
+   "model_error": 0.0003878988060954658
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.3,
+   "s_star": 0.3933245462155375,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39326229353517406,
+   "L1": 7.95690148354739,
+   "L2": 8.280663214908149,
+   "departure_murray": -0.0023193775234224834,
+   "departure_length": 6.225268036341713e-05,
+   "murray_regret": 0.00011267004583825901,
+   "equal_widths_regret": 0.2479020688196072,
+   "mesh": {
+    "mesh_error_slope": -0.0006405829803763752,
+    "curvature": 45.79139287929055,
+    "argmin_shift": 1.3989156915689346e-05,
+    "bound": 0.0010139891569156893
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    1.6007604278365961,
+    0.25706240383546486
+   ],
+   "s_model": 0.3928275407517538,
+   "model_error": 0.0004970054637836729
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4480292686603625,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.44750065361564306,
+   "L1": 7.988216015340253,
+   "L2": 8.249348683115288,
+   "departure_murray": -0.001460474122815525,
+   "departure_length": 0.0005286150447194604,
+   "murray_regret": 5.2231220607046325e-05,
+   "equal_widths_regret": 0.05913790502445693,
+   "mesh": {
+    "mesh_error_slope": -0.00047425244727627335,
+    "curvature": 45.009423226364554,
+    "argmin_shift": 1.0536736827111283e-05,
+    "bound": 0.0010105367368271113
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    1.0434018277889556,
+    0.34552320063458886
+   ],
+   "s_model": 0.4471858997671078,
+   "model_error": 0.0008433688932547034
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4988418703484803,
+   "s_murray": 0.5,
+   "s_length": 0.49844250116977096,
+   "L1": 8.017627304738633,
+   "L2": 8.219937393716904,
+   "departure_murray": -0.0011581296515196793,
+   "departure_length": 0.0003993691787093634,
+   "murray_regret": 9.965425360913827e-06,
+   "equal_widths_regret": 9.965425360913827e-06,
+   "mesh": {
+    "mesh_error_slope": -0.0005574747534343807,
+    "curvature": 44.73806301629995,
+    "argmin_shift": 1.2460860302138458e-05,
+    "bound": 0.0010124608603021385
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.7255789949582044,
+    0.49357967271592235
+   ],
+   "s_model": 0.49825879678587837,
+   "model_error": 0.0005830735626019545
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5503374473936465,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5494169506483505,
+   "L1": 8.047057416866867,
+   "L2": 8.19050728158867,
+   "departure_murray": -0.0001728098231753572,
+   "departure_length": 0.00092049674529604,
+   "murray_regret": 1.1552528671465723e-06,
+   "equal_widths_regret": 0.05545858400214709,
+   "mesh": {
+    "mesh_error_slope": -0.00037496614303531993,
+    "curvature": 45.26161385072263,
+    "argmin_shift": 8.284418321273211e-06,
+    "bound": 0.0010082844183212732
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.5223775253761541,
+    0.7551388980904092
+   ],
+   "s_model": 0.5493652816852937,
+   "model_error": 0.0009721657083527901
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6053594892754756,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6037617503045547,
+   "L1": 8.078433401577417,
+   "L2": 8.15913129687812,
+   "departure_murray": 0.001003413014435628,
+   "departure_length": 0.001597738970920859,
+   "murray_regret": 1.685844419108129e-05,
+   "equal_widths_regret": 0.2407633443675936,
+   "mesh": {
+    "mesh_error_slope": -3.0967199506910656e-05,
+    "curvature": 46.351569159082146,
+    "argmin_shift": 6.680938761885029e-07,
+    "bound": 0.0010006680938761884
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.38461314866138663,
+    1.2542731025805185
+   ],
+   "s_model": 0.6038238834361114,
+   "model_error": 0.0015356058393641847
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6677783151997021,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6666110610246414,
+   "L1": 8.11471946804015,
+   "L2": 8.122845230415388,
+   "departure_murray": 0.0011116485330353587,
+   "departure_length": 0.0011672541750606946,
+   "murray_regret": 3.619136577803772e-05,
+   "equal_widths_regret": 0.6171758740717401,
+   "mesh": {
+    "mesh_error_slope": -0.00038717006722569603,
+    "curvature": 46.7129759775817,
+    "argmin_shift": 8.288276632418049e-06,
+    "bound": 0.0010082882766324181
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.28569328845319014,
+    2.3816565122847133
+   ],
+   "s_model": 0.6667579685731915,
+   "model_error": 0.0010203466265106265
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7512680297470011,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7505120939908076,
+   "L1": 8.16315975200775,
+   "L2": 8.074404946447785,
+   "departure_murray": 0.0012680297470010204,
+   "departure_length": 0.0007559357561934821,
+   "murray_regret": 8.292626475170373e-05,
+   "equal_widths_regret": 1.3870881419800716,
+   "mesh": {
+    "mesh_error_slope": 4.0679694416540656e-05,
+    "curvature": 60.41109628274794,
+    "argmin_shift": -6.733811653763659e-07,
+    "bound": 0.0010006733811653765
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.19780406297050773,
+    6.3644631912019864
+   ],
+   "s_model": 0.7506833667365868,
+   "model_error": 0.0005846630104143768
+  },
+  {
+   "angles": [
+    20.0,
+    40.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8149542656277148,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8141516240185097,
+   "L1": 8.199902051800558,
+   "L2": 8.037662646654978,
+   "departure_murray": 0.0015597624910855812,
+   "departure_length": 0.0008026416092050681,
+   "murray_regret": 9.735364897900389e-05,
+   "equal_widths_regret": 2.166507599775441,
+   "mesh": {
+    "mesh_error_slope": -8.88819103211e-05,
+    "curvature": 64.09723458293927,
+    "argmin_shift": 1.3866730897116996e-06,
+    "bound": 0.0010013866730897117
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.14429385238789205,
+    15.750062586060453
+   ],
+   "s_model": 0.8142862855345135,
+   "model_error": 0.000667980093201237
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18078593448116598,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.1821624276282279,
+   "L1": 7.527821257437779,
+   "L2": 8.472178742562221,
+   "departure_murray": -0.005819562382204768,
+   "departure_length": -0.0013764931470619246,
+   "murray_regret": 0.001258044311673867,
+   "equal_widths_regret": 2.1447469232566534,
+   "mesh": {
+    "mesh_error_slope": -0.000746681684055263,
+    "curvature": 58.00967831289685,
+    "argmin_shift": 1.2871674275243463e-05,
+    "bound": 0.0010128716742752435
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -20.102906655234612,
+    0.40584523420749946
+   ],
+   "s_model": 0.181237143474864,
+   "model_error": -0.00045120899369802125
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.1,
+   "s_star": 0.2427786380986156,
+   "s_murray": 0.25,
+   "s_length": 0.2449211484009258,
+   "L1": 7.56405502176992,
+   "L2": 8.435944978230081,
+   "departure_murray": -0.007221361901384393,
+   "departure_length": -0.002142510302310191,
+   "murray_regret": 0.0013153135019243756,
+   "equal_widths_regret": 1.40071409363436,
+   "mesh": {
+    "mesh_error_slope": -0.0006736715769357252,
+    "curvature": 55.77310617609924,
+    "argmin_shift": 1.20787889203922e-05,
+    "bound": 0.0010120787889203921
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -4.324581385703128,
+    0.38879986969883584
+   ],
+   "s_model": 0.24386744243426126,
+   "model_error": -0.001088804335645649
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3260007689647758,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3279621853733151,
+   "L1": 7.611998786819775,
+   "L2": 8.388001213180226,
+   "departure_murray": -0.007332564368557504,
+   "departure_length": -0.001961416408539307,
+   "murray_regret": 0.0011565717867911829,
+   "equal_widths_regret": 0.6438558058703168,
+   "mesh": {
+    "mesh_error_slope": -0.0009896413491958175,
+    "curvature": 44.3207960768417,
+    "argmin_shift": 2.2329051749883173e-05,
+    "bound": 0.0010223290517498832
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.3605924860009026,
+    0.39146200376960394
+   ],
+   "s_model": 0.3269222400100585,
+   "model_error": -0.0009214710452826735
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.3,
+   "s_star": 0.38939349259213674,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.3903930303781767,
+   "L1": 7.64804325198911,
+   "L2": 8.35195674801089,
+   "departure_murray": -0.006250431146823221,
+   "departure_length": -0.0009995377860399501,
+   "murray_regret": 0.0009297207243448291,
+   "equal_widths_regret": 0.2625285793239389,
+   "mesh": {
+    "mesh_error_slope": -0.0008442979204459076,
+    "curvature": 44.373609976323266,
+    "argmin_shift": 1.9027028021754495e-05,
+    "bound": 0.0010190270280217544
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.1885589886385414,
+    0.4278713663857177
+   ],
+   "s_model": 0.38949206240561696,
+   "model_error": -9.856981348022043e-05
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.4,
+   "s_star": 0.44306188449383027,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4445324813865415,
+   "L1": 7.679300678602587,
+   "L2": 8.320699321397413,
+   "departure_murray": -0.0064278582893477765,
+   "departure_length": -0.001470596892711229,
+   "murray_regret": 0.0006939098410088107,
+   "equal_widths_regret": 0.06750397405995257,
+   "mesh": {
+    "mesh_error_slope": -0.000579169770150847,
+    "curvature": 43.84930910427628,
+    "argmin_shift": 1.3208184620960541e-05,
+    "bound": 0.0010132081846209605
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.2976759536973285,
+    0.5046436054545272
+   ],
+   "s_model": 0.44381231898355933,
+   "model_error": -0.0007504344897290571
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.5,
+   "s_star": 0.49483736716691534,
+   "s_murray": 0.5,
+   "s_length": 0.4954464859375999,
+   "L1": 7.708695892835658,
+   "L2": 8.291304107164342,
+   "departure_murray": -0.005162632833084657,
+   "departure_length": -0.0006091187706845358,
+   "murray_regret": 0.00047571372175059246,
+   "equal_widths_regret": 0.00047571372175059246,
+   "mesh": {
+    "mesh_error_slope": -0.00036738017854581956,
+    "curvature": 43.79470400764382,
+    "argmin_shift": 8.388689611458451e-06,
+    "bound": 0.0010083886896114585
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.3070770716803746,
+    0.645816278696504
+   ],
+   "s_model": 0.4949201832632436,
+   "model_error": -8.281609632826425e-05
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.6,
+   "s_star": 0.54664302345562,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5464558355122152,
+   "L1": 7.738146154543727,
+   "L2": 8.261853845456272,
+   "departure_murray": -0.0038672337612019048,
+   "departure_length": 0.0001871879434047763,
+   "murray_regret": 0.00031525779635344087,
+   "equal_widths_regret": 0.046606767612044075,
+   "mesh": {
+    "mesh_error_slope": -0.0006437649645923172,
+    "curvature": 44.495420395459426,
+    "argmin_shift": 1.446811736737767e-05,
+    "bound": 0.0010144681173673777
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.29149322507893793,
+    0.8960405051473933
+   ],
+   "s_model": 0.5461173272210624,
+   "model_error": 0.00052569623455756
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6015573737003164,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6009065669349254,
+   "L1": 7.769583298988163,
+   "L2": 8.230416701011837,
+   "departure_murray": -0.002798702560723565,
+   "departure_length": 0.0006508067653909766,
+   "murray_regret": 0.00017275912190584108,
+   "equal_widths_regret": 0.22060807841835706,
+   "mesh": {
+    "mesh_error_slope": -0.0007335644467271364,
+    "curvature": 45.704665341042094,
+    "argmin_shift": 1.6050099946107838e-05,
+    "bound": 0.001016050099946108
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.26946204808337193,
+    1.3761397198295238
+   ],
+   "s_model": 0.6007334923478986,
+   "model_error": 0.0008238813524177324
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6652617749587477,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6639661399219922,
+   "L1": 7.805990760427186,
+   "L2": 8.194009239572814,
+   "departure_murray": -0.0014048917079190204,
+   "departure_length": 0.0012956350367555602,
+   "murray_regret": 6.561088576217955e-05,
+   "equal_widths_regret": 0.5820565563120477,
+   "mesh": {
+    "mesh_error_slope": -0.0008866332862134652,
+    "curvature": 46.26909495184698,
+    "argmin_shift": 1.9162537912967594e-05,
+    "bound": 0.0010191625379129675
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.2432307917960894,
+    2.4424266142633644
+   ],
+   "s_model": 0.6639222822643983,
+   "model_error": 0.001339492694349409
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7498124703204139,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7482929422645942,
+   "L1": 7.854676862459549,
+   "L2": 8.145323137540451,
+   "departure_murray": -0.00018752967958624023,
+   "departure_length": 0.0015195280558196744,
+   "murray_regret": 2.6617214143875856e-07,
+   "equal_widths_regret": 1.3286429705775884,
+   "mesh": {
+    "mesh_error_slope": -0.0003928993796727031,
+    "curvature": 60.59821290977375,
+    "argmin_shift": 6.483679316710233e-06,
+    "bound": 0.0010064836793167102
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.20277381013561685,
+    6.003673558192912
+   ],
+   "s_model": 0.748314372147487,
+   "model_error": 0.0014980981729268983
+  },
+  {
+   "angles": [
+    0.0,
+    60.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8140086155770517,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8123645739995623,
+   "L1": 7.891668636289679,
+   "L2": 8.108331363710322,
+   "departure_murray": 0.0006141124404225318,
+   "departure_length": 0.0016440415774894301,
+   "murray_regret": 9.931318407652157e-06,
+   "equal_widths_regret": 2.088768345057131,
+   "mesh": {
+    "mesh_error_slope": -0.000504495281844567,
+    "curvature": 64.58455708572522,
+    "argmin_shift": 7.811391834350333e-06,
+    "bound": 0.0010078113918343503
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.16082897955641448,
+    13.669487340642348
+   ],
+   "s_model": 0.8123734973836786,
+   "model_error": 0.0016351181933731418
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.05,
+   "s_star": 0.18402460779366897,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.18369682477950935,
+   "L1": 7.890803605966241,
+   "L2": 8.523409956406853,
+   "departure_murray": -0.002580889069701775,
+   "departure_length": 0.0003277830141596161,
+   "murray_regret": 0.00024959541662661344,
+   "equal_widths_regret": 2.135829592160199,
+   "mesh": {
+    "mesh_error_slope": -0.0003303742789853201,
+    "curvature": 61.041136943185,
+    "argmin_shift": 5.41232184604984e-06,
+    "bound": 0.0010054123218460498
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    17.85640796943042,
+    0.10772257809029595
+   ],
+   "s_model": 0.18352890551895806,
+   "model_error": 0.0004957022747109074
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24767570339596087,
+   "s_murray": 0.25,
+   "s_length": 0.24712159526048397,
+   "L1": 7.954228376447565,
+   "L2": 8.459985185925527,
+   "departure_murray": -0.0023242966040391277,
+   "departure_length": 0.0005541081354769051,
+   "murray_regret": 0.00016268360051729935,
+   "equal_widths_regret": 1.3744749382360224,
+   "mesh": {
+    "mesh_error_slope": -0.000616067500596536,
+    "curvature": 58.23866749523067,
+    "argmin_shift": 1.057832411167353e-05,
+    "bound": 0.0010105783241116735
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    8.787772517263367,
+    0.12769103922375868
+   ],
+   "s_model": 0.24687707417056948,
+   "model_error": 0.0007986292253913951
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3315416720725972,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3310496305082813,
+   "L1": 8.03815641169484,
+   "L2": 8.376057150678252,
+   "departure_murray": -0.0017916612607360993,
+   "departure_length": 0.0004920415643159259,
+   "murray_regret": 0.0001002762086608211,
+   "equal_widths_regret": 0.6158482949354487,
+   "mesh": {
+    "mesh_error_slope": -0.0002641462615144646,
+    "curvature": 45.8583623437816,
+    "argmin_shift": 5.760045671371055e-06,
+    "bound": 0.001005760045671371
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    3.393895779195752,
+    0.1829863371164168
+   ],
+   "s_model": 0.3307797520422015,
+   "model_error": 0.000761920030395713
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.3,
+   "s_star": 0.3942847447682931,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.39410224330685983,
+   "L1": 8.101209024494397,
+   "L2": 8.313004537878696,
+   "departure_murray": -0.0013591789706668411,
+   "departure_length": 0.00018250146143328205,
+   "murray_regret": 3.6711395596800145e-05,
+   "equal_widths_regret": 0.24213300547539474,
+   "mesh": {
+    "mesh_error_slope": -0.00012635987377796043,
+    "curvature": 45.72673217357982,
+    "argmin_shift": 2.763369866411953e-06,
+    "bound": 0.001002763369866412
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    1.745950572111124,
+    0.26852966988305116
+   ],
+   "s_model": 0.39388970975713816,
+   "model_error": 0.0003950350111549539
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4489161046743788,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4487167464040361,
+   "L1": 8.155823527591174,
+   "L2": 8.258390034781918,
+   "departure_murray": -0.0005736381087992348,
+   "departure_length": 0.00019935827034273101,
+   "murray_regret": 1.188524866768681e-05,
+   "equal_widths_regret": 0.056797638078790014,
+   "mesh": {
+    "mesh_error_slope": -0.0001291720392285988,
+    "curvature": 44.869131413429514,
+    "argmin_shift": 2.878862040773472e-06,
+    "bound": 0.0010028788620407734
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    1.013528799444754,
+    0.40550555470591637
+   ],
+   "s_model": 0.4486010819091072,
+   "model_error": 0.000315022765271622
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.5,
+   "s_star": 0.5,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.207106781186546,
+   "L2": 8.207106781186546,
+   "departure_murray": 0.0,
+   "departure_length": 0.0,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 0.0,
+   "mesh": {
+    "mesh_error_slope": 6.470642022859953e-05,
+    "curvature": 44.494373504799285,
+    "argmin_shift": -1.4542607330254942e-06,
+    "bound": 0.0010014542607330256
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.6288128786419795,
+    0.6289840477020974
+   ],
+   "s_model": 0.5,
+   "model_error": 0.0
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5514053210852939,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5512832535959639,
+   "L1": 8.258390034781918,
+   "L2": 8.155823527591174,
+   "departure_murray": 0.0008950638684720458,
+   "departure_length": 0.00012206748933007994,
+   "murray_regret": 1.742869480070297e-05,
+   "equal_widths_regret": 0.05679462967303128,
+   "mesh": {
+    "mesh_error_slope": 0.00012821940566237002,
+    "curvature": 44.877746490944524,
+    "argmin_shift": -2.8570820882960833e-06,
+    "bound": 0.001002857082088296
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.40446361754545684,
+    1.0152411847452663
+   ],
+   "s_model": 0.5513989180912147,
+   "model_error": 6.4029940792798e-06
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6057172496874155,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6058977566931402,
+   "L1": 8.313004537878696,
+   "L2": 8.101209024494397,
+   "departure_murray": 0.0013611734263755393,
+   "departure_length": -0.0001805070057246949,
+   "murray_regret": 4.016765528969124e-05,
+   "equal_widths_regret": 0.24213316939762253,
+   "mesh": {
+    "mesh_error_slope": 7.929480705734918e-05,
+    "curvature": 45.72723794741308,
+    "argmin_shift": -1.7340825865874347e-06,
+    "bound": 0.0010017340825865875
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.2684484194782367,
+    1.7456408442320424
+   ],
+   "s_model": 0.6061102870948989,
+   "model_error": -0.00039303740748342086
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.8,
+   "s_star": 0.668486687495284,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6689503694917187,
+   "L1": 8.376057150678252,
+   "L2": 8.03815641169484,
+   "departure_murray": 0.0018200208286172082,
+   "departure_length": -0.0004636819964347616,
+   "murray_regret": 9.07091361479484e-05,
+   "equal_widths_regret": 0.6158374370581174,
+   "mesh": {
+    "mesh_error_slope": 0.00018006082107980927,
+    "curvature": 45.86220931765986,
+    "argmin_shift": -3.926126188833088e-06,
+    "bound": 0.001003926126188833
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.18288653447936679,
+    3.3954478622432087
+   ],
+   "s_model": 0.6692202479578109,
+   "model_error": -0.0007335604625269276
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7523261256775629,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7528784047395161,
+   "L1": 8.459985185925527,
+   "L2": 7.954228376447565,
+   "departure_murray": 0.0023261256775627404,
+   "departure_length": -0.0005522790619532092,
+   "murray_regret": 0.00018795510840829976,
+   "equal_widths_regret": 1.3745031328484028,
+   "mesh": {
+    "mesh_error_slope": 0.00039983846405518584,
+    "curvature": 58.26612898217286,
+    "argmin_shift": -6.862279527399541e-06,
+    "bound": 0.0010068622795273996
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.12780363819248625,
+    8.75357385629458
+   ],
+   "s_model": 0.7531229258294853,
+   "model_error": -0.0007968001519224055
+  },
+  {
+   "angles": [
+    45.0,
+    45.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8160133248632994,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8163031752204906,
+   "L1": 8.523409956406852,
+   "L2": 7.890803605966241,
+   "departure_murray": 0.002618821726670162,
+   "departure_length": -0.00028985035719120145,
+   "murray_regret": 0.0002477066065080802,
+   "equal_widths_regret": 2.1358051892700605,
+   "mesh": {
+    "mesh_error_slope": 0.0005685116430392277,
+    "curvature": 61.045766199357914,
+    "argmin_shift": -9.312875870582608e-06,
+    "bound": 0.0010093128758705827
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.10774317599005684,
+    17.841430019564235
+   ],
+   "s_model": 0.8164711038689934,
+   "model_error": -0.0004577790056939923
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.05,
+   "s_star": 0.17797368624951176,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.17986636039973128,
+   "L1": 7.3535145380671025,
+   "L2": 8.804941392612037,
+   "departure_murray": -0.008631810613858981,
+   "departure_length": -0.0018926741502195144,
+   "murray_regret": 0.0023135805349812077,
+   "equal_widths_regret": 2.1215330669282895,
+   "mesh": {
+    "mesh_error_slope": 0.00024901828916596493,
+    "curvature": 55.425362343050345,
+    "argmin_shift": -4.492858118359036e-06,
+    "bound": 0.001004492858118359
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -36.252085107856225,
+    0.37485162712987774
+   ],
+   "s_model": 0.17877237237037918,
+   "model_error": -0.0007986861208674201
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.1,
+   "s_star": 0.24047080807774648,
+   "s_murray": 0.25,
+   "s_length": 0.24236640931521863,
+   "L1": 7.416014586982167,
+   "L2": 8.742441343696974,
+   "departure_murray": -0.009529191922253516,
+   "departure_length": -0.0018956012374721498,
+   "murray_regret": 0.0024007942924844095,
+   "equal_widths_regret": 1.3940739494329901,
+   "mesh": {
+    "mesh_error_slope": 0.0001672335667968211,
+    "curvature": 53.245962755799574,
+    "argmin_shift": -3.1407745891233027e-06,
+    "bound": 0.0010031407745891233
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -8.29947054738826,
+    0.3381859894661163
+   ],
+   "s_model": 0.24107554809236453,
+   "model_error": -0.0006047400146180493
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.2,
+   "s_star": 0.32349517179143333,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3253888702073056,
+   "L1": 7.499037047874288,
+   "L2": 8.659418882804852,
+   "departure_murray": -0.009838161541899981,
+   "departure_length": -0.0018936984158722803,
+   "murray_regret": 0.0020986750839884216,
+   "equal_widths_regret": 0.6464872385473854,
+   "mesh": {
+    "mesh_error_slope": -0.00016175908144684968,
+    "curvature": 56.40642325694351,
+    "argmin_shift": 2.867742219888716e-06,
+    "bound": 0.0010028677422198888
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.9570193493447896,
+    0.30607491544176696
+   ],
+   "s_model": 0.32404395820632864,
+   "model_error": -0.0005487864148953081
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.3,
+   "s_star": 0.387080002287209,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.3880006198412674,
+   "L1": 7.561648797508277,
+   "L2": 8.596807133170865,
+   "departure_murray": -0.008563921451750944,
+   "departure_length": -0.0009206175540583672,
+   "murray_regret": 0.0016350412461139108,
+   "equal_widths_regret": 0.26639119692346314,
+   "mesh": {
+    "mesh_error_slope": -5.287144859397494e-05,
+    "curvature": 42.96451405912423,
+    "argmin_shift": 1.2305841169579529e-06,
+    "bound": 0.001001230584116958
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.19256832326284729,
+    0.3030837297360342
+   ],
+   "s_model": 0.3867657558606874,
+   "model_error": 0.00031424642652161383
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4430500257176064,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.44239963284503836,
+   "L1": 7.61604781051206,
+   "L2": 8.542408120167082,
+   "departure_murray": -0.006439717065571671,
+   "departure_length": 0.0006503928725680175,
+   "murray_regret": 0.0012212665285284974,
+   "equal_widths_regret": 0.07027951441419011,
+   "mesh": {
+    "mesh_error_slope": 9.254409529741762e-05,
+    "curvature": 42.56403203843846,
+    "argmin_shift": -2.174232347486335e-06,
+    "bound": 0.0010021742323474863
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.4528545683306041,
+    0.3305750212289013
+   ],
+   "s_model": 0.44133183088751116,
+   "model_error": 0.001718194830095221
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4930186795733766,
+   "s_murray": 0.5,
+   "s_length": 0.49362108109696434,
+   "L1": 7.667269258763983,
+   "L2": 8.491186671915157,
+   "departure_murray": -0.006981320426623416,
+   "departure_length": -0.0006024015235877589,
+   "murray_regret": 0.0008545244293389764,
+   "equal_widths_regret": 0.0008545244293389764,
+   "mesh": {
+    "mesh_error_slope": -0.000487882782491567,
+    "curvature": 42.65713034188139,
+    "argmin_shift": 1.1437309040279172e-05,
+    "bound": 0.0010114373090402793
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.4885498829711359,
+    0.4092979522969126
+   ],
+   "s_model": 0.49273830357899384,
+   "model_error": 0.0002803759943827422
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5458330651024809,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.544978367789566,
+   "L1": 7.71862654545657,
+   "L2": 8.439829385222572,
+   "departure_murray": -0.004677192114341033,
+   "departure_length": 0.000854697312914876,
+   "murray_regret": 0.0005297294364086103,
+   "equal_widths_regret": 0.043169618279470745,
+   "mesh": {
+    "mesh_error_slope": -0.0002994889024503658,
+    "curvature": 43.46298875228079,
+    "argmin_shift": 6.890665162428564e-06,
+    "bound": 0.0010068906651624285
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.46462235579169686,
+    0.5736733340963299
+   ],
+   "s_model": 0.544272824463889,
+   "model_error": 0.0015602406385918366
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6007998719001723,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.5998205207342023,
+   "L1": 7.7734686984011825,
+   "L2": 8.38498723227796,
+   "departure_murray": -0.0035562043608676763,
+   "departure_length": 0.0009793511659699217,
+   "murray_regret": 0.00025571429207582597,
+   "equal_widths_regret": 0.21127290275832022,
+   "mesh": {
+    "mesh_error_slope": -0.0003488381888914293,
+    "curvature": 44.74344172847612,
+    "argmin_shift": 7.796409382370285e-06,
+    "bound": 0.0010077964093823703
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.4186551392226479,
+    0.9162227856076326
+   ],
+   "s_model": 0.599264181382632,
+   "model_error": 0.0015356905175402114
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.8,
+   "s_star": 0.664869075140925,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6633257349696515,
+   "L1": 7.836973912636605,
+   "L2": 8.321482018042536,
+   "departure_murray": -0.0017975915257417707,
+   "departure_length": 0.001543340171273444,
+   "murray_regret": 8.826083815827168e-05,
+   "equal_widths_regret": 0.5628126865559224,
+   "mesh": {
+    "mesh_error_slope": -0.00048357856724115425,
+    "curvature": 45.316759301349734,
+    "argmin_shift": 1.0671075661554446e-05,
+    "bound": 0.0010106710756615544
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.36068726476366414,
+    1.7329671790963272
+   ],
+   "s_model": 0.6628751385549664,
+   "model_error": 0.001993936585958589
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7497745766456051,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7481687517326018,
+   "L1": 7.921816929399923,
+   "L2": 8.236639001279215,
+   "departure_murray": -0.0002254233543950157,
+   "departure_length": 0.0016058249130033175,
+   "murray_regret": 3.677488084719016e-05,
+   "equal_widths_regret": 1.2900576975696016,
+   "mesh": {
+    "mesh_error_slope": -0.0004285486137031179,
+    "curvature": 59.69181296383661,
+    "argmin_shift": 7.179353288578245e-06,
+    "bound": 0.0010071793532885783
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.2811966039137472,
+    4.620399076169226
+   ],
+   "s_model": 0.7477638588689981,
+   "model_error": 0.002010717776606996
+  },
+  {
+   "angles": [
+    10.0,
+    80.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8141152162299667,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8125187202482794,
+   "L1": 7.986166897915275,
+   "L2": 8.172289032763864,
+   "departure_murray": 0.0007207130933375439,
+   "departure_length": 0.001596495981687318,
+   "murray_regret": 1.265933655547613e-05,
+   "equal_widths_regret": 2.030129081495192,
+   "mesh": {
+    "mesh_error_slope": -4.594782769807628e-06,
+    "curvature": 63.674602942464624,
+    "argmin_shift": 7.216036783078807e-08,
+    "bound": 0.0010000721603678308
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.21492322955376067,
+    11.281880934879789
+   ],
+   "s_model": 0.8121188231660637,
+   "model_error": 0.0019963930639030902
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.05,
+   "s_star": 0.1745059555503808,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.175826875862024,
+   "L1": 7.173832924259857,
+   "L2": 9.593494063719103,
+   "departure_murray": -0.012099541312989959,
+   "departure_length": -0.0013209203116432144,
+   "murray_regret": 0.004232550732777396,
+   "equal_widths_regret": 2.1481427461383262,
+   "mesh": {
+    "mesh_error_slope": 0.0002653504446365886,
+    "curvature": 52.43739306322039,
+    "argmin_shift": -5.060328691715712e-06,
+    "bound": 0.0010050603286917157
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -39.921579678826,
+    -0.6232224872944853
+   ],
+   "s_model": 0.17707711409623203,
+   "model_error": -0.002571158545851243
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.1,
+   "s_star": 0.23934860219018256,
+   "s_murray": 0.25,
+   "s_length": 0.23922784648316678,
+   "L1": 7.410448567865819,
+   "L2": 9.35687842011314,
+   "departure_murray": -0.010651397809817442,
+   "departure_length": 0.00012075570701577942,
+   "murray_regret": 0.003364855820630286,
+   "equal_widths_regret": 1.3905375250511143,
+   "mesh": {
+    "mesh_error_slope": 0.00013800582975550968,
+    "curvature": 50.213178524610925,
+    "argmin_shift": -2.7483986039216586e-06,
+    "bound": 0.0010027483986039217
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    -1.0822490668572826,
+    -0.5577361356854382
+   ],
+   "s_model": 0.2403364358839147,
+   "model_error": -0.0009878336937321486
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.2,
+   "s_star": 0.3240907535247984,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.32470245078489723,
+   "L1": 7.729444133877445,
+   "L2": 9.037882854101515,
+   "departure_murray": -0.009242579808534934,
+   "departure_length": -0.0006116972600988535,
+   "murray_regret": 0.0015454878888483403,
+   "equal_widths_regret": 0.6187542138292494,
+   "mesh": {
+    "mesh_error_slope": 4.725278567502282e-05,
+    "curvature": 40.63928624603458,
+    "argmin_shift": -1.162736603909562e-06,
+    "bound": 0.0010011627366039095
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    4.588306094308191,
+    -0.42766464120956593
+   ],
+   "s_model": 0.32544400731738127,
+   "model_error": -0.001353253792582887
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.3,
+   "s_star": 0.39226096254168136,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.38978899096144665,
+   "L1": 7.972350408705468,
+   "L2": 8.794976579273492,
+   "departure_murray": -0.0033829611972786,
+   "departure_length": 0.002471971580234711,
+   "murray_regret": 0.00027786433760157436,
+   "equal_widths_regret": 0.24003573982937643,
+   "mesh": {
+    "mesh_error_slope": 0.00013028505288769968,
+    "curvature": 41.445198143595285,
+    "argmin_shift": -3.1435500063553976e-06,
+    "bound": 0.0010031435500063555
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    3.1860054298966123,
+    -0.23447336645479924
+   ],
+   "s_model": 0.39023394078116347,
+   "model_error": 0.0020270217605178886
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.4,
+   "s_star": 0.44864658119404593,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.44654696699920665,
+   "L1": 8.184174059012738,
+   "L2": 8.583152928966221,
+   "departure_murray": -0.0008431615891321131,
+   "departure_length": 0.0020996141948392832,
+   "murray_regret": 5.395539173780328e-05,
+   "equal_widths_regret": 0.0559393659465901,
+   "mesh": {
+    "mesh_error_slope": 0.0005030848588955063,
+    "curvature": 43.04099999347546,
+    "argmin_shift": -1.1688503031336827e-05,
+    "bound": 0.0010116885030313368
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    1.5533843999352714,
+    0.06904534664466315
+   ],
+   "s_model": 0.44675408069193273,
+   "model_error": 0.0018925005021132035
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.5,
+   "s_star": 0.5,
+   "s_murray": 0.5,
+   "s_length": 0.5,
+   "L1": 8.38366349398948,
+   "L2": 8.38366349398948,
+   "departure_murray": 0.0,
+   "departure_length": 0.0,
+   "murray_regret": 0.0,
+   "equal_widths_regret": 0.0,
+   "mesh": {
+    "mesh_error_slope": -0.00035349937544948363,
+    "curvature": 43.57219636518097,
+    "argmin_shift": 8.112957457705045e-06,
+    "bound": 0.0010081129574577052
+   },
+   "resolved_murray": false,
+   "resolved_length": false,
+   "K_measured": [
+    0.5961816217784683,
+    0.5957317794563481
+   ],
+   "s_model": 0.5,
+   "model_error": 0.0
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5513857507755606,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5534530330007934,
+   "L1": 8.583152928966221,
+   "L2": 8.184174059012737,
+   "departure_murray": 0.0008754935587387269,
+   "departure_length": -0.0020672822252327805,
+   "murray_regret": 3.040421819888728e-05,
+   "equal_widths_regret": 0.055950311763235394,
+   "mesh": {
+    "mesh_error_slope": -0.00031919680268150237,
+    "curvature": 43.04207791263334,
+    "argmin_shift": 7.415924559437092e-06,
+    "bound": 0.001007415924559437
+   },
+   "resolved_murray": false,
+   "resolved_length": true,
+   "K_measured": [
+    0.0691629509865206,
+    1.5525285074026582
+   ],
+   "s_model": 0.5532459193080433,
+   "model_error": -0.00186016853248272
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.7,
+   "s_star": 0.6080987700260541,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.6102110090385534,
+   "L1": 8.794976579273492,
+   "L2": 7.972350408705467,
+   "departure_murray": 0.0037426937650141268,
+   "departure_length": -0.0021122390124993506,
+   "murray_regret": 0.00025628287104284553,
+   "equal_widths_regret": 0.24003796283111467,
+   "mesh": {
+    "mesh_error_slope": 3.0218088966478432e-05,
+    "curvature": 41.47861318418311,
+    "argmin_shift": -7.285221623080057e-07,
+    "bound": 0.001000728522162308
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.23623405124552208,
+    3.1907920649057426
+   ],
+   "s_model": 0.6097660592188364,
+   "model_error": -0.0016672891927823619
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6754471493715702,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6752975492151028,
+   "L1": 9.037882854101513,
+   "L2": 7.729444133877445,
+   "departure_murray": 0.008780482704903503,
+   "departure_length": 0.0001496001564674776,
+   "murray_regret": 0.0015226930925760218,
+   "equal_widths_regret": 0.6187814997069239,
+   "mesh": {
+    "mesh_error_slope": -0.00022470211514722573,
+    "curvature": 40.570430798165205,
+    "argmin_shift": 5.538568625635296e-06,
+    "bound": 0.0010055385686256353
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    -0.4260900848197113,
+    4.606361979798242
+   ],
+   "s_model": 0.6745559926826028,
+   "model_error": 0.0008911566889674427
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7609201828747829,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7607721535168332,
+   "L1": 9.356878420113143,
+   "L2": 7.410448567865818,
+   "departure_murray": 0.010920182874782802,
+   "departure_length": 0.00014802935794966388,
+   "murray_regret": 0.003381176513847617,
+   "equal_widths_regret": 1.3906230337676289,
+   "mesh": {
+    "mesh_error_slope": -0.0001500207467140481,
+    "curvature": 50.24782162025547,
+    "argmin_shift": 2.9856169258006805e-06,
+    "bound": 0.0010029856169258007
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    -0.5584299967656697,
+    -1.1448212303323277
+   ],
+   "s_model": 0.7596635564131065,
+   "model_error": 0.0012566264616764578
+  },
+  {
+   "angles": [
+    75.0,
+    75.0
+   ],
+   "share": 0.95,
+   "s_star": 0.826750533238798,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8241731241379759,
+   "L1": 9.593494063719103,
+   "L2": 7.173832924259858,
+   "departure_murray": 0.013356030102168792,
+   "departure_length": 0.002577409100822048,
+   "murray_regret": 0.004164180345890056,
+   "equal_widths_regret": 2.147991764918164,
+   "mesh": {
+    "mesh_error_slope": -0.00019419420157485546,
+    "curvature": 52.85722569789144,
+    "argmin_shift": 3.673938596111415e-06,
+    "bound": 0.0010036739385961115
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.6248233354670246,
+    -41.11816415650367
+   ],
+   "s_model": 0.8229228859037426,
+   "model_error": 0.003827647335055362
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.05,
+   "s_star": 0.1492061019438279,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.16282247590128898,
+   "L1": 5.6076617526779415,
+   "L2": 10.856439862459814,
+   "departure_murray": -0.03739939491954283,
+   "departure_length": -0.01361637395746107,
+   "murray_regret": 0.036243808377216524,
+   "equal_widths_regret": 2.3346179439733254,
+   "mesh": {
+    "mesh_error_slope": 0.0004348104612686607,
+    "curvature": 81.56128952017049,
+    "argmin_shift": -5.331088606208586e-06,
+    "bound": 0.0010053310886062087
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -251.8752820226857,
+    -1.1736762218228434
+   ],
+   "s_model": 0.16248492628506095,
+   "model_error": -0.013278824341233036
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.1,
+   "s_star": 0.20892034984798044,
+   "s_murray": 0.25,
+   "s_length": 0.2229173180100242,
+   "L1": 5.831938756701512,
+   "L2": 10.632162858436242,
+   "departure_murray": -0.04107965015201956,
+   "departure_length": -0.013996968162043766,
+   "murray_regret": 0.03799040871112003,
+   "equal_widths_regret": 1.6139217997751052,
+   "mesh": {
+    "mesh_error_slope": 0.0006217643900431395,
+    "curvature": 62.964572695298834,
+    "argmin_shift": -9.874829025712783e-06,
+    "bound": 0.001009874829025713
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -74.62127528753643,
+    -1.3038192085273288
+   ],
+   "s_model": 0.2220725017172978,
+   "model_error": -0.013152151869317369
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.2,
+   "s_star": 0.29065688134644874,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.3050953817348947,
+   "L1": 6.1386314657895005,
+   "L2": 10.325470149348256,
+   "departure_murray": -0.04267645198688458,
+   "departure_length": -0.014438500388445963,
+   "murray_regret": 0.034467921304099036,
+   "equal_widths_regret": 0.8155142303672809,
+   "mesh": {
+    "mesh_error_slope": 0.0005467761465061303,
+    "curvature": 41.18979179489702,
+    "argmin_shift": -1.3274554754459091e-05,
+    "bound": 0.0010132745547544592
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -19.533662460807957,
+    -1.5410777702103504
+   ],
+   "s_model": 0.30354218941159195,
+   "model_error": -0.012885308065143208
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.3,
+   "s_star": 0.35549468955318425,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.36856334230479254,
+   "L1": 6.3754971192893715,
+   "L2": 10.088604495848385,
+   "departure_murray": -0.040149234185775706,
+   "departure_length": -0.01306865275160829,
+   "murray_regret": 0.028728676651917917,
+   "equal_widths_regret": 0.37979702384628355,
+   "mesh": {
+    "mesh_error_slope": 0.0006358473172801398,
+    "curvature": 39.413106804899506,
+    "argmin_shift": -1.613289001619879e-05,
+    "bound": 0.0010161328900161989
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -7.642681975427013,
+    -1.8034811887709727
+   ],
+   "s_model": 0.3665402127428395,
+   "model_error": -0.011045523189655237
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.4,
+   "s_star": 0.4130815121088517,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4245364922010532,
+   "L1": 6.584391758562022,
+   "L2": 9.879709856575735,
+   "departure_murray": -0.03640823067432636,
+   "departure_length": -0.011454980092201528,
+   "murray_regret": 0.022887273064978952,
+   "equal_widths_regret": 0.13379505444653716,
+   "mesh": {
+    "mesh_error_slope": 0.0009300195588637264,
+    "curvature": 37.21956019425029,
+    "argmin_shift": -2.4987387116073355e-05,
+    "bound": 0.0010249873871160733
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -3.3019096629926814,
+    -2.1158382049190108
+   ],
+   "s_model": 0.4221732148136852,
+   "model_error": -0.009091702704833504
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4683452146563713,
+   "s_murray": 0.5,
+   "s_length": 0.47778152241579447,
+   "L1": 6.783104916573969,
+   "L2": 9.680996698563787,
+   "departure_murray": -0.0316547853436287,
+   "departure_length": -0.009436307759423168,
+   "murray_regret": 0.017360903842822628,
+   "equal_widths_regret": 0.017360903842822628,
+   "mesh": {
+    "mesh_error_slope": 0.0015296680353724635,
+    "curvature": 35.46871072387282,
+    "argmin_shift": -4.3127252278242366e-05,
+    "bound": 0.0010431272522782424
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -1.2928604944886093,
+    -2.5075828228039603
+   ],
+   "s_model": 0.47514882348843634,
+   "model_error": -0.0068036088320650445
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5241832395220697,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5315386777579157,
+   "L1": 6.983729351581002,
+   "L2": 9.480372263556752,
+   "departure_murray": -0.02632701769475221,
+   "departure_length": -0.007355438235846057,
+   "murray_regret": 0.012352681435644053,
+   "equal_widths_regret": 0.009726238283148891,
+   "mesh": {
+    "mesh_error_slope": 0.0010174645543870602,
+    "curvature": 34.32344375316785,
+    "argmin_shift": -2.9643428605358233e-05,
+    "bound": 0.0010296434286053582
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.24226491865146196,
+    -3.026631786284628
+   ],
+   "s_model": 0.5286663632460089,
+   "model_error": -0.00448312372393922
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.7,
+   "s_star": 0.583742731173221,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.5891761299710229,
+   "L1": 7.198835251658942,
+   "L2": 9.265266363478814,
+   "departure_murray": -0.02061334508781898,
+   "departure_length": -0.005433398797801914,
+   "murray_regret": 0.007697046450885425,
+   "equal_widths_regret": 0.11566016155290915,
+   "mesh": {
+    "mesh_error_slope": -4.0016689444864824e-05,
+    "curvature": 38.42334305896971,
+    "argmin_shift": 1.0414681872800539e-06,
+    "bound": 0.00100104146818728
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.33394686732735923,
+    -3.7722223075830152
+   ],
+   "s_model": 0.5860694989603824,
+   "model_error": -0.0023267677871614545
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6534506482764875,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6559703115442678,
+   "L1": 7.448114530941901,
+   "L2": 9.015987084195853,
+   "departure_murray": -0.013216018390179274,
+   "departure_length": -0.0025196632677803033,
+   "murray_regret": 0.0034607000093458407,
+   "equal_widths_regret": 0.3760045752485366,
+   "mesh": {
+    "mesh_error_slope": 0.0005421244026297276,
+    "curvature": 38.771062963495446,
+    "argmin_shift": -1.3982706719703818e-05,
+    "bound": 0.0010139827067197039
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.6189024473080649,
+    -4.989952721998368
+   ],
+   "s_model": 0.652637362500211,
+   "model_error": 0.0008132857762764845
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7457125924361148,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7448074013398247,
+   "L1": 7.779659063653796,
+   "L2": 8.68444255148396,
+   "departure_murray": -0.004287407563885348,
+   "departure_length": 0.0009051910962900589,
+   "murray_regret": 0.0004807068954855165,
+   "equal_widths_regret": 0.9426520916007399,
+   "mesh": {
+    "mesh_error_slope": 0.000556030417847821,
+    "curvature": 54.13785583675688,
+    "argmin_shift": -1.0270639818548269e-05,
+    "bound": 0.0010102706398185484
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.6064703059434755,
+    -7.117362122310185
+   ],
+   "s_model": 0.7413635383171224,
+   "model_error": 0.004349054118992335
+  },
+  {
+   "angles": [
+    30.0,
+    120.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8118033988749895,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8115112314320742,
+   "L1": 8.028601146617698,
+   "L2": 8.435500468520058,
+   "departure_murray": -0.0015911042616396642,
+   "departure_length": 0.0002921674429153809,
+   "murray_regret": -3.469792253996129e-05,
+   "equal_widths_regret": 1.5351809105176208,
+   "mesh": {
+    "mesh_error_slope": 0.00020906136495825337,
+    "curvature": 58.937372574027705,
+    "argmin_shift": -3.5471782305134812e-06,
+    "bound": 0.0010035471782305135
+   },
+   "resolved_murray": true,
+   "resolved_length": false,
+   "K_measured": [
+    0.4302251312538579,
+    -6.421005996491086
+   ],
+   "s_model": 0.8082783977318659,
+   "model_error": 0.003525001143123596
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.05,
+   "s_star": 0.12394013291669741,
+   "s_murray": 0.18660549686337075,
+   "s_length": 0.15709253753029614,
+   "L1": 4.854226523984444,
+   "L2": 11.145773476015556,
+   "departure_murray": -0.06266536394667334,
+   "departure_length": -0.03315240461359874,
+   "murray_regret": 0.08260271741326486,
+   "equal_widths_regret": 2.5147933318293165,
+   "mesh": {
+    "mesh_error_slope": 0.0011047915133614965,
+    "curvature": 53.835804202023866,
+    "argmin_shift": -2.0521501066755936e-05,
+    "bound": 0.001020521501066756
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -433.1647113996539,
+    -0.8602530554480532
+   ],
+   "s_model": 0.15612015919600766,
+   "model_error": -0.032180026279310256
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.1,
+   "s_star": 0.1810567593133418,
+   "s_murray": 0.25,
+   "s_length": 0.21578176352421571,
+   "L1": 5.073257697252565,
+   "L2": 10.926742302747433,
+   "departure_murray": -0.06894324068665819,
+   "departure_length": -0.034725004210873905,
+   "murray_regret": 0.0892592602673099,
+   "equal_widths_regret": 1.8090386297701166,
+   "mesh": {
+    "mesh_error_slope": 0.001702708528929128,
+    "curvature": 44.92205540237751,
+    "argmin_shift": -3.790362025240305e-05,
+    "bound": 0.001037903620252403
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -131.20264413679269,
+    -1.0066087258339909
+   ],
+   "s_model": 0.2141246383679073,
+   "model_error": -0.033067879054565485
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.2,
+   "s_star": 0.2612780758897254,
+   "s_murray": 0.3333333333333333,
+   "s_length": 0.29660498738138436,
+   "L1": 5.374894075117325,
+   "L2": 10.625105924882675,
+   "departure_murray": -0.07205525744360791,
+   "departure_length": -0.03532691149165895,
+   "murray_regret": 0.08449291163607775,
+   "equal_widths_regret": 0.9797333896007225,
+   "mesh": {
+    "mesh_error_slope": 0.0012731555870585125,
+    "curvature": 45.01213986476286,
+    "argmin_shift": -2.8284715876287078e-05,
+    "bound": 0.001028284715876287
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -37.31575273769729,
+    -1.2491827354237255
+   ],
+   "s_model": 0.29405223706088646,
+   "model_error": -0.032774161171161054
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.3,
+   "s_star": 0.32830052627880435,
+   "s_murray": 0.39564392373895996,
+   "s_length": 0.3594478251880931,
+   "L1": 5.609426738704313,
+   "L2": 10.390573261295687,
+   "departure_murray": -0.06734339746015561,
+   "departure_length": -0.031147298909288745,
+   "murray_regret": 0.07399064443149062,
+   "equal_widths_regret": 0.49985681140341276,
+   "mesh": {
+    "mesh_error_slope": 0.00039425149406506656,
+    "curvature": 33.082429642594434,
+    "argmin_shift": -1.1917247261593453e-05,
+    "bound": 0.0010119172472615936
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -16.275356977839298,
+    -1.5096026215289182
+   ],
+   "s_model": 0.35632888830558823,
+   "model_error": -0.028028362026783882
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.4,
+   "s_star": 0.3872634499211573,
+   "s_murray": 0.44948974278317805,
+   "s_length": 0.4151552084749212,
+   "L1": 5.8173295234878175,
+   "L2": 10.182670476512182,
+   "departure_murray": -0.06222629286202075,
+   "departure_length": -0.027891758553763912,
+   "murray_regret": 0.06240514090124516,
+   "equal_widths_regret": 0.20987839548934728,
+   "mesh": {
+    "mesh_error_slope": 0.001517375003517723,
+    "curvature": 32.23394724903195,
+    "argmin_shift": -4.707381915701599e-05,
+    "bound": 0.001047073819157016
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -8.437374962146276,
+    -1.807507085156346
+   ],
+   "s_model": 0.4116429503872764,
+   "model_error": -0.024379500466119086
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.5,
+   "s_star": 0.4437450541717571,
+   "s_murray": 0.5,
+   "s_length": 0.4683817311638859,
+   "L1": 6.01597361047328,
+   "L2": 9.98402638952672,
+   "departure_murray": -0.05625494582824292,
+   "departure_length": -0.024636676992128792,
+   "murray_regret": 0.05068754670727782,
+   "equal_widths_regret": 0.05068754670727782,
+   "mesh": {
+    "mesh_error_slope": 0.0010117087460510582,
+    "curvature": 31.5961311204423,
+    "argmin_shift": -3.202001986238421e-05,
+    "bound": 0.0010320200198623841
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -4.653606714550368,
+    -2.169610818759046
+   ],
+   "s_model": 0.4645693389492119,
+   "model_error": -0.020824284777454793
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.6,
+   "s_star": 0.5,
+   "s_murray": 0.5505102572168219,
+   "s_length": 0.5223390083399074,
+   "L1": 6.217344910331991,
+   "L2": 9.782655089668008,
+   "departure_murray": -0.0505102572168219,
+   "departure_length": -0.02233900833990743,
+   "murray_regret": 0.03928803395104907,
+   "equal_widths_regret": 0.0,
+   "mesh": {
+    "mesh_error_slope": 0.0003544261253085594,
+    "curvature": 31.143009666433446,
+    "argmin_shift": -1.1380599662805451e-05,
+    "bound": 0.0010113805996628054
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -2.564110127226521,
+    -2.632685674687741
+   ],
+   "s_model": 0.5182810530379378,
+   "model_error": -0.01828105303793781
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.7,
+   "s_star": 0.5633192173799176,
+   "s_murray": 0.6043560762610399,
+   "s_length": 0.5804208746864231,
+   "L1": 6.434109386535155,
+   "L2": 9.565890613464845,
+   "departure_murray": -0.041036858881122296,
+   "departure_length": -0.01710165730650548,
+   "murray_regret": 0.02825763457128594,
+   "equal_widths_regret": 0.058904384791715225,
+   "mesh": {
+    "mesh_error_slope": -3.3001512577053764e-05,
+    "curvature": 30.875537983224934,
+    "argmin_shift": 1.0688562769330172e-06,
+    "bound": 0.001001068856276933
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -1.240008733740018,
+    -3.3602076169186033
+   ],
+   "s_model": 0.5761367550164599,
+   "model_error": -0.012817537636542253
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.8,
+   "s_star": 0.6351417506727175,
+   "s_murray": 0.6666666666666667,
+   "s_length": 0.6480078126697508,
+   "L1": 6.686347273016494,
+   "L2": 9.313652726983504,
+   "departure_murray": -0.03152491599394924,
+   "departure_length": -0.012866061997033329,
+   "murray_regret": 0.017643035681742303,
+   "equal_widths_regret": 0.2587448075059571,
+   "mesh": {
+    "mesh_error_slope": 0.0017197608326741801,
+    "curvature": 37.43922357090801,
+    "argmin_shift": -4.5934735516537606e-05,
+    "bound": 0.0010459347355165375
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    -0.39845398147311034,
+    -4.630693921282459
+   ],
+   "s_model": 0.6435348839015331,
+   "model_error": -0.00839313322881563
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.9,
+   "s_star": 0.7316695074337164,
+   "s_murray": 0.7500000000000001,
+   "s_length": 0.7383227743881512,
+   "L1": 7.023407298833713,
+   "L2": 8.976592701166288,
+   "departure_murray": -0.018330492566283718,
+   "departure_length": -0.0066532669544348,
+   "murray_regret": 0.00750810583755146,
+   "equal_widths_regret": 0.7181925076499767,
+   "mesh": {
+    "mesh_error_slope": 0.0010243581410022636,
+    "curvature": 52.28365795476649,
+    "argmin_shift": -1.9592319685980905e-05,
+    "bound": 0.001019592319685981
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.14525589867336616,
+    -8.101244900146101
+   ],
+   "s_model": 0.7338488259902889,
+   "model_error": -0.002179318556572496
+  },
+  {
+   "angles": [
+    0.0,
+    150.0
+   ],
+   "share": 0.95,
+   "s_star": 0.8035589704146133,
+   "s_murray": 0.8133945031366292,
+   "s_length": 0.8064247248852063,
+   "L1": 7.277567238184717,
+   "L2": 8.722432761815284,
+   "departure_murray": -0.009835532722015872,
+   "departure_length": -0.002865754470593007,
+   "murray_regret": 0.003006867063764851,
+   "equal_widths_regret": 1.1953099345265588,
+   "mesh": {
+    "mesh_error_slope": 0.0007848776621266461,
+    "curvature": 56.29640657037889,
+    "argmin_shift": -1.3941878530833618e-05,
+    "bound": 0.0010139418785308336
+   },
+   "resolved_murray": true,
+   "resolved_length": true,
+   "K_measured": [
+    0.2925350994917697,
+    -14.517284179547858
+   ],
+   "s_model": 0.8023065805259386,
+   "model_error": 0.0012523898886747098
+  }
+ ],
+ "junction": {
+  "per_layout": {
+   "15.0": {
+    "K": 0.5678161860134344,
+    "rms": 0.00024964209350194084,
+    "rms_lengths_only": 0.0011972353381158052
+   },
+   "45.0": {
+    "K": 0.16953976723026584,
+    "rms": 0.00013141796550091323,
+    "rms_lengths_only": 0.0003722981832551321
+   },
+   "60.0": {
+    "K": 0.11572827945374854,
+    "rms": 0.0007268153175857798,
+    "rms_lengths_only": 0.0007640526462539962
+   },
+   "75.0": {
+    "K": 1.143223812485834,
+    "rms": 0.0017515998100568256,
+    "rms_lengths_only": 0.0028738270054581
+   }
+  },
+  "a": 0.2224695387417399,
+  "b": 0.7055645545495524,
+  "form": "K(alpha) = a + b (1 - cos alpha)"
+ },
+ "reversals": {
+  "0/30": {
+   "observed": [
+    0.7,
+    0.8
+   ],
+   "lengths": null,
+   "model": null
+  },
+  "0/60": {
+   "observed": [
+    0.9,
+    0.95
+   ],
+   "lengths": null,
+   "model": null
+  },
+  "0/120": {
+   "observed": null,
+   "lengths": null,
+   "model": null
+  },
+  "0/150": {
+   "observed": null,
+   "lengths": null,
+   "model": null
+  },
+  "10/80": {
+   "observed": [
+    0.9,
+    0.95
+   ],
+   "lengths": null,
+   "model": null
+  },
+  "15/15": {
+   "observed": [
+    0.5,
+    0.6
+   ],
+   "lengths": [
+    0.4,
+    0.5
+   ],
+   "model": [
+    0.4,
+    0.5
+   ]
+  },
+  "20/40": {
+   "observed": [
+    0.6,
+    0.7
+   ],
+   "lengths": [
+    0.8,
+    0.9
+   ],
+   "model": [
+    0.7,
+    0.8
+   ]
+  },
+  "30/90": {
+   "observed": [
+    0.8,
+    0.9
+   ],
+   "lengths": [
+    0.9,
+    0.95
+   ],
+   "model": null
+  },
+  "30/120": {
+   "observed": null,
+   "lengths": null,
+   "model": null
+  },
+  "45/45": {
+   "observed": [
+    0.4,
+    0.5
+   ],
+   "lengths": [
+    0.4,
+    0.5
+   ],
+   "model": [
+    0.4,
+    0.5
+   ]
+  },
+  "60/60": {
+   "observed": [
+    0.4,
+    0.5
+   ],
+   "lengths": [
+    0.4,
+    0.5
+   ],
+   "model": [
+    0.4,
+    0.5
+   ]
+  },
+  "75/75": {
+   "observed": [
+    0.4,
+    0.5
+   ],
+   "lengths": [
+    0.4,
+    0.5
+   ],
+   "model": [
+    0.4,
+    0.5
+   ]
+  }
+ },
+ "search_tolerance": 0.001,
+ "seconds": 1139.97451047
+}

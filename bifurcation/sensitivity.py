@@ -242,6 +242,35 @@ def reversal_share(shares, departures):
     return None
 
 
+def reversal_table(records):
+    """Per layout below 180 degrees, the shares between which s - s_M turns from
+    negative to positive: observed, for s_L, and for the junction model. At 180
+    degrees the lengths are equal by construction (s_L = s_M to round-off) and
+    the model is not applied, so those layouts are left out."""
+    table = {}
+    for angles in sorted({tuple(r["angles"]) for r in records}):
+        if sum(angles) >= 180.0:
+            continue
+        rs = sorted((r for r in records if tuple(r["angles"]) == angles),
+                    key=lambda r: r["share"])
+        shares = [r["share"] for r in rs]
+        table[f"{angles[0]:g}/{angles[1]:g}"] = {
+            "observed": reversal_share(shares, [r["departure_murray"] for r in rs]),
+            "lengths": reversal_share(shares, [r["s_length"] - r["s_murray"] for r in rs]),
+            "model": reversal_share(shares, [r["s_model"] - r["s_murray"] for r in rs])}
+    return table
+
+
+def report(out):
+    """Re-derive the reversal table and the markdown from a stored run."""
+    out = pathlib.Path(out)
+    summary = json.loads(out.with_suffix(".json").read_text())
+    summary["reversals"] = reversal_table(summary["records"])
+    out.with_suffix(".json").write_text(json.dumps(summary, indent=1))
+    out.with_suffix(".md").write_text(markdown(summary))
+    return summary
+
+
 def run(config_path, out):
     config = parse_config(yaml.safe_load(pathlib.Path(config_path).read_text()))
     study = json.loads((ROOT / config["data"]).read_text())
@@ -311,17 +340,7 @@ def run(config_path, out):
                                      k_of_angle(a2, ka, kb), xatol)
         rec["model_error"] = rec["s_star"] - rec["s_model"]
 
-    # reversal shares: where s - s_M turns from negative to positive
-    reversals = {}
-    for angles in {tuple(r["angles"]) for r in records}:
-        rs = sorted((r for r in records if tuple(r["angles"]) == angles),
-                    key=lambda r: r["share"])
-        shares = [r["share"] for r in rs]
-        entry = {"observed": reversal_share(shares, [r["departure_murray"] for r in rs]),
-                 "lengths": reversal_share(shares, [r["s_length"] - r["s_murray"] for r in rs])}
-        if "s_model" in rs[0]:
-            entry["model"] = reversal_share(shares, [r["s_model"] - r["s_murray"] for r in rs])
-        reversals[f"{angles[0]:g}/{angles[1]:g}"] = entry
+    reversals = reversal_table(records)
     summary = {"config": config, "study": config["data"], "records": records,
                "junction": {"per_layout": fits, "a": float(ka), "b": float(kb),
                             "form": "K(alpha) = a + b (1 - cos alpha)"},
@@ -383,19 +402,20 @@ def markdown(summary):
     j = summary["junction"]
     lines += ["", f"Junction-loss fit on the symmetric layouts: {j['form']}, a = {j['a']:.3f}, "
               f"b = {j['b']:.3f}. Per layout: " + "; ".join(
-                  f"{k:g}/{k:g}: K = {v['K']:.3f} (rms {v['rms']:.4f}, lengths only "
+                  f"{float(k):g}/{float(k):g}: K = {v['K']:.3f} (rms {v['rms']:.4f}, lengths only "
                   f"{v['rms_lengths_only']:.4f})" for k, v in j["per_layout"].items()), "",
               "Measured loss coefficients at q = 0.5 (path drop less centreline friction, per "
               "1/2 U_i^2): " + "; ".join(
                   f"{r['angles'][0]:g}/{r['angles'][1]:g}: {r['K_measured'][0]:.2f}, "
                   f"{r['K_measured'][1]:.2f}" for a in lay for r in recs
                   if r["angles"] == a and r["share"] == 0.5), "",
-              "Reversal shares (s - s_M turns from negative to positive between):", ""]
+              "Reversal shares below 180 degrees (s - s_M turns from negative to positive "
+              "between):", ""]
     for name, entry in sorted(summary["reversals"].items()):
-        if entry["observed"] is None and entry["lengths"] is None and not entry.get("model"):
+        if entry["observed"] is None and entry["lengths"] is None and entry["model"] is None:
             continue
         lines.append(f"- {name}: observed {entry['observed']}, lengths {entry['lengths']}, "
-                     f"lengths + junction model {entry.get('model', '-')}")
+                     f"lengths + junction model {entry['model']}")
     lines += ["", f"{summary['seconds'] / 60:.1f} min."]
     return "\n".join(lines) + "\n"
 
@@ -404,8 +424,13 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--report", action="store_true",
+                        help="re-derive the tables from the stored run at --out, no solves")
     args = parser.parse_args(argv)
-    run(args.config, args.out)
+    if args.report:
+        report(args.out)
+    else:
+        run(args.config, args.out)
     return 0
 
 

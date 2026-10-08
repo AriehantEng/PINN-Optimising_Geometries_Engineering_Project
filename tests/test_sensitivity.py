@@ -107,3 +107,15 @@ def test_the_reversal_share_is_bracketed_by_the_sampled_shares():
     assert S.reversal_share([0.1, 0.5, 0.9], [-0.01, -0.001, 0.002]) == [0.5, 0.9]
     assert S.reversal_share([0.1, 0.5, 0.9], [-0.01, -0.001, -0.002]) is None
     assert S.reversal_share([0.1, 0.5, 0.9], [0.01, -0.001, -0.002]) is None
+
+
+def test_the_reversal_table_leaves_out_the_face_septum():
+    """At 180 degrees s_L = s_M up to round-off, whose sign is noise."""
+    def rec(angles, share, dm, dl, dk):
+        return {"angles": angles, "share": share, "departure_murray": dm,
+                "s_murray": 0.5, "s_length": 0.5 + dl, "s_model": 0.5 + dk}
+    records = [rec([90.0, 90.0], 0.1, -1e-3, -1e-17, 0.0), rec([90.0, 90.0], 0.9, 1e-3, 1e-17, 0.0),
+               rec([20.0, 40.0], 0.1, -2e-3, -2e-3, -2e-3), rec([20.0, 40.0], 0.9, 1e-3, -1e-4, 1e-4)]
+    table = S.reversal_table(records)
+    assert list(table) == ["20/40"]
+    assert table["20/40"] == {"observed": [0.1, 0.9], "lengths": None, "model": [0.1, 0.9]}
