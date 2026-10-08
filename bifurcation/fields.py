@@ -313,6 +313,120 @@ def fig_pinn(config, quantity, out_path):
     plt.close(fig)
 
 
+def ideal_drops(pconfig, splits):
+    """The friction law ('ideal') for the parametric network's geometry, with
+    the daughters' outer-wall length (Murray, equal lengths) and with their own
+    centreline lengths; the parent's fixed friction included."""
+    from bifurcation import sensitivity
+    study = {"geometry": {"parent_length": pconfig.parent_length,
+                          "daughter_length": pconfig.daughter_length,
+                          "min_width": pconfig.min_width},
+             "physics": {"reynolds": pconfig.reynolds,
+                         "pressure_scaling": pconfig.pressure_scaling}}
+    _, nu = pinn.scaling_coefficients(pconfig.reynolds, pconfig.pressure_scaling)
+    q0, w0, q = 4.0 / 3.0, 2.0, pconfig.outlet1_share
+    parent = 12.0 * nu * q0 * pconfig.parent_length / w0**3
+    angles = [pconfig.angle1, pconfig.angle2]
+    equal = [parent + 12.0 * nu * q0 / w0**3 * pconfig.daughter_length
+             * (q**2 / s**3 + (1 - q) ** 2 / (1 - s) ** 3) for s in splits]
+    lengths = [parent + sensitivity.model_drop(study, angles, q, s, 0.0, 0.0) for s in splits]
+    return np.array(equal), np.array(lengths)
+
+
+def fig_comparison(config, out_path):
+    """The parametric PINN against finite elements and the ideal friction law:
+    pressure drop against split, the PINN's errors by split, and the optimum
+    each route finds."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from scipy.optimize import minimize_scalar
+    from bifurcation import parametric
+    _style(plt)
+    run = ROOT / config["pinn"]["run"]
+    pconfig = parametric.load_config(run / "config.yaml")
+    m = json.loads((run / "metrics.json").read_text())
+    rows, o = m["splits"], m["optimum"]
+    s_fe = np.array([r["split"] for r in rows])
+    j_fe = np.array([r["reference_drop"] for r in rows])
+    fine = np.linspace(pconfig.split_min, pconfig.split_max, 121)
+    equal, lengths = ideal_drops(pconfig, fine)
+    s_len = float(minimize_scalar(lambda s: ideal_drops(pconfig, [s])[1][0],
+                                  bounds=(pconfig.split_min, pconfig.split_max), method="bounded",
+                                  options={"xatol": 1e-6}).x)
+    blue = "#2a78d6"
+    fig, (a1, a2, a3) = plt.subplots(1, 3, figsize=(15, 4.9),
+                                     gridspec_kw={"width_ratios": [1.25, 1.1, 0.9]})
+    # 1. pressure drop against split
+    a1.plot(fine, equal, color=MUTED, ls=(0, (5, 3)), lw=1.6,
+            label="ideal: Murray, equal daughter lengths")
+    a1.plot(fine, lengths, color=MUTED, ls=(0, (1, 2)), lw=1.8,
+            label="ideal: friction law, centreline lengths")
+    a1.plot(o["curve"]["split"], o["curve"]["pinn_drop"], color=blue, lw=2.2,
+            label="parametric PINN")
+    a1.plot(s_fe, j_fe, "o", ms=7, mfc="none", mec=INK, mew=1.6,
+            label="finite elements (reference)")
+    k = int(np.argmin(np.abs(s_fe - 0.5)))
+    gap = 100 * (equal[np.argmin(np.abs(fine - 0.5))] / j_fe[k] - 1)
+    a1.annotate(f"ideal {gap:.1f}% below\nfinite elements", (0.5, equal.min()),
+                xytext=(0.535, 3.72), fontsize=8.5, color=INK,
+                arrowprops={"arrowstyle": "-", "color": MUTED, "lw": 0.8})
+    a1.set_xlabel("width split s = w₁/w₀")
+    a1.set_ylabel("total-pressure drop J (ρU_c²)")
+    a1.set_title("Pressure drop against width split", loc="left", fontsize=10)
+    a1.legend(fontsize=8, frameon=False, loc="upper center")
+    a1.set_ylim(3.5, 7.3)
+    # 2. errors by split
+    width = 0.012
+    drop = np.array([100 * r["drop_error"] for r in rows])
+    a2.axvspan(0.45 - 0.025, 0.50 + 0.025, color=GRID, lw=0, zorder=0)
+    a2.text(0.43, 2.75, "the optimum lies here", fontsize=8, color=MUTED)
+    a2.bar(s_fe, drop, width=width, color=blue, label="pressure-drop error (signed)", zorder=2)
+    for s, d in zip(s_fe, drop):
+        a2.text(s, d + (0.12 if d >= 0 else -0.3), f"{d:+.2f}%", ha="center", fontsize=7.5,
+                color=INK)
+    a2.plot(s_fe + 0.016, [100 * r["relative_l2"]["u"] for r in rows], "o", ms=6, color=MUTED,
+            label="velocity u error (relative L2)", zorder=3)
+    a2.plot(s_fe + 0.016, [100 * r["relative_l2"]["p"] for r in rows], "o", ms=6, mfc="none",
+            mec=INK, mew=1.4, label="pressure p error (relative L2)", zorder=3)
+    a2.axhline(0, color=MUTED, lw=0.8)
+    a2.set_xticks(s_fe)
+    a2.set_xlabel("width split s = w₁/w₀")
+    a2.set_ylabel("PINN against finite elements (%)")
+    a2.set_title("The PINN's error at each split", loc="left", fontsize=10)
+    a2.legend(fontsize=8, frameon=False, loc="lower left")
+    a2.set_ylim(-2.6, 3.2)
+    # 3. optimum by route
+    routes = [("Ideal: Murray, equal lengths", o["murray_split"], 0.0, MUTED, "none"),
+              ("Ideal: centreline lengths", s_len, 0.0, MUTED, "none"),
+              ("Finite elements", o["reference_split"], pconfig.search_xatol, INK, INK),
+              ("Parametric PINN", o["pinn_split"], pconfig.search_xatol, blue, blue)]
+    for i, (name, s, tol, edge, face) in enumerate(routes):
+        y = len(routes) - 1 - i
+        if tol:
+            a3.plot([s - tol, s + tol], [y, y], color=edge, lw=2)
+        a3.plot(s, y, "o", ms=10, mfc=face, mec=edge, mew=2)
+        a3.text(s, y + 0.22, f"{s:.4f}", ha="center", fontsize=8.5, color=INK)
+    a3.set_yticks(range(len(routes)))
+    a3.set_yticklabels([r[0] for r in routes][::-1], fontsize=8.5)
+    a3.set_xlim(0.475, 0.505)
+    a3.set_ylim(-0.6, len(routes) - 0.3)
+    a3.set_xlabel("optimal width split s*  (bars: ±0.002 search tolerance)")
+    a3.set_title("The optimum each route finds", loc="left", fontsize=10)
+    for ax in (a1, a2, a3):
+        ax.grid(color=GRID, lw=0.6)
+        ax.set_axisbelow(True)
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+    fig.suptitle(f"Parametric PINN against finite elements and the ideal friction law: "
+                 f"{pconfig.angle1:g}°/{pconfig.angle2:g}°, q = {pconfig.outlet1_share:g}, "
+                 f"daughters {pconfig.daughter_length:g} long, Re_h = {pconfig.reynolds:g}",
+                 x=0.01, ha="left", fontsize=11)
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.savefig(out_path, dpi=170)
+    plt.close(fig)
+
+
 def fig_variables(out_path):
     """The bifurcation with every design variable drawn and named."""
     import matplotlib
@@ -411,6 +525,7 @@ def figures(config, out):
     if all(pinn_name(ROOT / config["cache"], "pinn", s).exists() for s in config["pinn"]["splits"]):
         fig_pinn(config, "speed", out / "pinn_speed.png")
         fig_pinn(config, "pressure", out / "pinn_pressure.png")
+        fig_comparison(config, out / "pinn_fe_ideal.png")
 
 
 def main(argv=None) -> int:
