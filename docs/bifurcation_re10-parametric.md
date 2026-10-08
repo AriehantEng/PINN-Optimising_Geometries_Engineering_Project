@@ -4,6 +4,8 @@ Run `parametric_re10_3090_equal` (`bifurcation/p_re10_3090_equal.yaml`, seed 21)
 
 Training: Adam for 3,000 steps, 4 L-BFGS cycles, then 150 Levenberg–Marquardt steps with fresh points every step. Each draw has 16 splits × 1,024 interior points. The network with the lowest held-out loss (32 splits × 1,024 points) was kept: LM step 62, held-out loss 0.0148. Training took 215 min on 4 CPU cores. A container restart at LM step 12 was resumed from the checkpoint, and the time it was stopped is not counted.
 
+**Reproduced.** The trained weights were lost when the container was rebuilt, so the network was retrained from this config and seed (2026-10-08, bifurcation/runs/parametric_re10_3090_equal). The retrain reproduced every number below to the digits printed: the errors and drops at all seven splits, the optimum 0.4845 (drop 4.03852) against the finite-element 0.4848 (4.03583), and the regret +0.0004%. Its flow fields against finite elements are in docs/fields/pinn_speed.png and docs/fields/pinn_pressure.png (bifurcation/fields.py).
+
 ### Fields and pressure drop at seven splits
 
 The finite-element reference uses P2/P1 elements, maximum element area 0.002 and 6 corner refinements, with errors integrated on its own mesh. Both pressure drops are measured by the same 256-point line quadrature.

@@ -10,6 +10,6 @@ gallery:
   grid: 360                       # samples along the longer side of each layout
 pinn:
   config: bifurcation/p_re10_3090_equal.yaml
-  run: runs/parametric_re10_3090_equal
+  run: bifurcation/runs/parametric_re10_3090_equal   # parametric.run writes beside its module
   splits: [0.35, 0.4848, 0.65]    # narrow daughter 1, the finite-element optimum, wide
   grid: 400

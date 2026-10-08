@@ -264,7 +264,9 @@ def fig_gallery(config, share, out_path):
 
 def fig_pinn(config, quantity, out_path):
     """The parametric PINN against finite elements at the configured splits:
-    one row per split, columns FE, PINN, and their difference."""
+    one row per split, columns FE, PINN, and their difference, each row on its
+    own colour scales (outlet 1's pressure offset moves the whole pressure field
+    from split to split)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -277,41 +279,36 @@ def fig_pinn(config, quantity, out_path):
     def value(f):
         return np.hypot(f["u"], f["v"]) if quantity == "speed" else f["p"]
 
-    vals = [value(f) for pair in pairs for f in pair]
-    lo, hi = min(np.nanmin(x) for x in vals), max(np.nanmax(x) for x in vals)
-    if quantity == "pressure":
-        lo, hi = np.nanpercentile(np.concatenate([x[~np.isnan(x)] for x in vals]), [0.5, 99.5])
-    norm = Normalize(lo, hi)
     cmap = plt.get_cmap("viridis" if quantity == "speed" else "cividis")
-    diffs = [value(b) - value(a) for a, b in pairs]
-    dmax = max(np.nanpercentile(np.abs(d), 99.5) for d in diffs)
-    dnorm = TwoSlopeNorm(0.0, -dmax, dmax)
-    fig, axes = plt.subplots(len(splits), 3, figsize=(10, 3.1 * len(splits)))
-    for row, (fe, net), d, s in zip(axes, pairs, diffs, splits):
-        _draw_field(row[0], fe, value(fe), norm, cmap, streamlines=quantity == "speed")
-        _draw_field(row[1], net, value(net), norm, cmap, streamlines=quantity == "speed")
-        _draw_field(row[2], fe, d, dnorm, plt.get_cmap("RdBu_r"), streamlines=False)
-        drop_fe, drop_net = fe["meta"]["total_pressure_drop"], net["meta"]["total_pressure_drop"]
-        row[0].set_title(f"finite elements, s = {s:.4f}\nJ = {drop_fe:.4f}", fontsize=8.5,
-                         loc="left")
-        row[1].set_title(f"parametric PINN, s = {s:.4f}\nJ = {drop_net:.4f} "
-                         f"({100 * (drop_net / drop_fe - 1):+.2f}%)", fontsize=8.5, loc="left")
-        rel = np.sqrt(np.nansum(d**2) / np.nansum(value(fe) ** 2)) if quantity == "speed" else \
-            np.sqrt(np.nansum(d**2) / np.nansum((value(fe) - np.nanmean(value(fe))) ** 2))
-        row[2].set_title(f"PINN − finite elements\nrelative L2 on this grid {rel:.1e}",
-                         fontsize=8.5, loc="left")
     label = ("speed |u| / U_c" if quantity == "speed"
-             else "pressure p / (ρ U_c²), outlet 2 at 0")
+             else "p / (ρ U_c²), outlet 2 at 0")
+    fig = plt.figure(figsize=(10.5, 3.2 * len(splits) + 0.5))
+    grid = fig.add_gridspec(len(splits), 5, width_ratios=[1, 1, 0.04, 1, 0.04], wspace=0.25,
+                            left=0.02, right=0.93, top=0.91, bottom=0.02, hspace=0.32)
+    for i, ((fe, net), s) in enumerate(zip(pairs, splits)):
+        a, b = value(fe), value(net)
+        lo = min(np.nanpercentile(a, 0.5), np.nanpercentile(b, 0.5))
+        hi = max(np.nanpercentile(a, 99.5), np.nanpercentile(b, 99.5))
+        norm = Normalize(lo, hi)
+        d = b - a
+        dmax = np.nanpercentile(np.abs(d), 99.5)
+        dnorm = TwoSlopeNorm(0.0, -dmax, dmax)
+        axes = [fig.add_subplot(grid[i, k]) for k in (0, 1, 3)]
+        _draw_field(axes[0], fe, a, norm, cmap, streamlines=quantity == "speed")
+        _draw_field(axes[1], net, b, norm, cmap, streamlines=quantity == "speed")
+        _draw_field(axes[2], fe, d, dnorm, plt.get_cmap("RdBu_r"), streamlines=False)
+        drop_fe, drop_net = fe["meta"]["total_pressure_drop"], net["meta"]["total_pressure_drop"]
+        axes[0].set_title(f"finite elements, s = {s:.4f}\nJ = {drop_fe:.4f}", fontsize=8.5,
+                          loc="left")
+        axes[1].set_title(f"parametric PINN, s = {s:.4f}\nJ = {drop_net:.4f} "
+                          f"({100 * (drop_net / drop_fe - 1):+.2f}%)", fontsize=8.5, loc="left")
+        axes[2].set_title("PINN − finite elements", fontsize=8.5, loc="left")
+        fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
+                     cax=fig.add_subplot(grid[i, 2])).set_label(label, fontsize=8)
+        fig.colorbar(plt.cm.ScalarMappable(norm=dnorm, cmap=plt.get_cmap("RdBu_r")),
+                     cax=fig.add_subplot(grid[i, 4])).set_label("difference", fontsize=8)
     fig.suptitle(f"Parametric PINN against finite elements: {quantity}, 30°/90°, q = 0.5, "
-                 "daughters 4 long", x=0.01, ha="left", fontsize=10)
-    fig.tight_layout(rect=(0, 0.07, 1, 0.985))
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    cax = fig.add_axes([0.06, 0.045, 0.55, 0.008])
-    fig.colorbar(sm, cax=cax, orientation="horizontal").set_label(label, fontsize=9)
-    sm2 = plt.cm.ScalarMappable(norm=dnorm, cmap=plt.get_cmap("RdBu_r"))
-    cax2 = fig.add_axes([0.70, 0.045, 0.26, 0.008])
-    fig.colorbar(sm2, cax=cax2, orientation="horizontal").set_label("PINN − finite elements",
-                                                                    fontsize=9)
+                 "daughters 4 long (each row on its own scale)", x=0.01, ha="left", fontsize=10)
     fig.savefig(out_path, dpi=170)
     plt.close(fig)
 
