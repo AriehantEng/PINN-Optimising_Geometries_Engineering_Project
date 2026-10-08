@@ -1,0 +1,15 @@
+# Flow fields for the results report (bifurcation/fields.py). The gallery
+# solves each layout at the design study's optimum on the study's own check
+# mesh; the PINN comparison uses the parametric network's evaluation mesh.
+name: fields_re10
+study: docs/bifurcation_re10-shares-all.json
+cache: runs/fields_re10           # sampled fields, never committed
+workers: 4
+gallery:
+  shares: [0.5, 0.2]              # daughter 1's share of the flow
+  grid: 360                       # samples along the longer side of each layout
+pinn:
+  config: bifurcation/p_re10_3090_equal.yaml
+  run: runs/parametric_re10_3090_equal
+  splits: [0.35, 0.4848, 0.65]    # narrow daughter 1, the finite-element optimum, wide
+  grid: 400
