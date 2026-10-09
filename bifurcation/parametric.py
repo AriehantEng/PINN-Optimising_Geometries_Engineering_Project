@@ -25,6 +25,15 @@ made a function of s:
     outlet 1's extra pressure   lam(s), a Chebyshev series in s whose
                    coefficients are trained (the fixed-geometry network's
                    single scalar)
+    corner modes   (model.corner_modes = stokes) at each singular corner,
+                   every Stokes mode with exponent z < 1 (bifurcation/corners.py),
+                   psi += c(s) chi(r) r^(1+z) f(theta) and its pressure partner
+                   p += c(s) chi(r) nu P(r, theta), with c(s) a trained
+                   Chebyshev series in s of degree model.corner_degree and chi
+                   a cutoff of radius model.corner_cutoff. psi = G + D^2 N
+                   alone would need N ~ r^(z-1) at the corner, which no network
+                   can give; the modes leave N a bounded remainder. Mass, the
+                   share and no-slip stay exact. `none` is the original network
 
 Collocation: each draw takes `designs` splits, stratified over the range, and
 `points_per_design` interior points in each one's own polygon, with its inlet
@@ -62,6 +71,7 @@ import optax  # noqa: E402
 import yaml  # noqa: E402
 from scipy.optimize import minimize_scalar  # noqa: E402
 
+from bifurcation import corners  # noqa: E402
 from bifurcation import flow  # noqa: E402
 from bifurcation import geometry as geo  # noqa: E402
 from bifurcation.geometry import EDGE_KINDS, Geometry, split_bounds  # noqa: E402
@@ -75,6 +85,7 @@ CHOICES = {
     "inlet.profile": ("parabola", "network1"),
     "model.activation": ("tanh", "silu"),
     "model.distance_order": (1, 2),
+    "model.corner_modes": ("none", "stokes"),
 }
 
 SCHEMA = {
@@ -87,7 +98,7 @@ SCHEMA = {
     "inlet": {"profile": str},
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
               "input_scale": float, "distance_order": int, "wall_extension": float,
-              "blend_exponent": float, "offset_degree": int},
+              "blend_exponent": float, "offset_degree": int, "corner_modes": str},
     "sampling": {"designs": int, "points_per_design": int, "corner_fraction": float,
                  "corner_radius": float, "corner_exclusion": float, "inlet_per_design": int,
                  "outlet_per_design": int, "validation_designs": int, "n_flux": int},
@@ -106,6 +117,9 @@ SCHEMA = {
 
 #: inlet.profile = network1 only
 CONDITIONAL = {("inlet", "run"): str, ("inlet", "station"): float}
+
+#: model.corner_modes = stokes only
+CORNER_KEYS = {("model", "corner_degree"): int, ("model", "corner_cutoff"): float}
 
 #: Splits at which the range is checked: every geometry must be valid and of
 #: the same shape, so one differentiable construction serves the whole range.
@@ -138,6 +152,9 @@ class Config:
     wall_extension: float
     blend_exponent: float
     offset_degree: int
+    corner_modes: str
+    corner_degree: int | None
+    corner_cutoff: float | None
     designs: int
     points_per_design: int
     corner_fraction: float
@@ -186,7 +203,7 @@ class Config:
 def parse_config(document) -> Config:
     document = copy.deepcopy(document)
     conditional = {}
-    for (section, key) in CONDITIONAL:
+    for (section, key) in (*CONDITIONAL, *CORNER_KEYS):
         node = document.get(section)
         if isinstance(node, dict) and key in node:
             conditional[(section, key)] = node.pop(key)
@@ -205,6 +222,18 @@ def parse_config(document) -> Config:
             raise ConfigError(f"{where} has no effect under this config and is refused")
         if network1:
             pinn._check_value(where, conditional[(section, key)], expected)
+    stokes = document["model"]["corner_modes"] == "stokes"
+    for (section, key), expected in CORNER_KEYS.items():
+        where = f"{section}.{key}"
+        if stokes and (section, key) not in conditional:
+            raise ConfigError(f"missing required key {where!r}")
+        if not stokes and (section, key) in conditional:
+            raise ConfigError(f"{where} has no effect under this config and is refused")
+        if stokes:
+            pinn._check_value(where, conditional[(section, key)], expected)
+    if stokes and (conditional[("model", "corner_degree")] < 0
+                   or conditional[("model", "corner_cutoff")] <= 0.0):
+        raise ConfigError("model.corner_degree must be >= 0 and model.corner_cutoff > 0")
     g, d, m, s, t, e = (document[k] for k in ("geometry", "design", "model", "sampling",
                                                  "training", "evaluation"))
     lo, hi = split_bounds(g["min_width"])
@@ -249,6 +278,9 @@ def parse_config(document) -> Config:
         init_gain=float(m["init_gain"]), input_scale=float(m["input_scale"]),
         distance_order=m["distance_order"], wall_extension=float(m["wall_extension"]),
         blend_exponent=float(m["blend_exponent"]), offset_degree=m["offset_degree"],
+        corner_modes=m["corner_modes"],
+        corner_degree=conditional.get(("model", "corner_degree")),
+        corner_cutoff=(float(conditional[("model", "corner_cutoff")]) if stokes else None),
         designs=s["designs"], points_per_design=s["points_per_design"],
         corner_fraction=float(s["corner_fraction"]), corner_radius=float(s["corner_radius"]),
         corner_exclusion=float(s["corner_exclusion"]), inlet_per_design=s["inlet_per_design"],
@@ -269,7 +301,8 @@ def parse_config(document) -> Config:
         eval_splits=tuple(float(v) for v in e["splits"]), search_xatol=float(e["search_xatol"]),
         curve_points=e["curve_points"],
     )
-    structure(config)               # refuses a range one construction cannot serve
+    st = structure(config)          # refuses a range one construction cannot serve
+    singular_modes(config, st)      # and a corner cutoff that reaches another edge
     return config
 
 
@@ -360,6 +393,43 @@ def structure(config: Config) -> Structure:
     return Structure(segments, extend, chains, singular, tuple(0.5 * (lo + hi)))
 
 
+def singular_modes(config: Config, st: Structure):
+    """The corners.Corner of every singular corner, () under corner_modes = none.
+    Each corner's sector (bisector, angle) is the same at every split, since the
+    angles fix it, and the cutoff must leave only the corner's own two edges
+    within reach at every split (corners.check_cutoff)."""
+    if config.corner_modes == "none":
+        return ()
+    out = None
+    for split in np.linspace(config.split_min, config.split_max, RANGE_CHECKS):
+        v = config.geometry(split).vertices()
+        found = tuple(corners.corner(v, i) for i in st.singular)
+        for c in found:
+            try:
+                corners.check_cutoff(v, c.vertex, config.corner_cutoff)
+            except ValueError as error:
+                raise ConfigError(f"model.corner_cutoff at split {split:.4f}: {error}") from error
+        if out is None:
+            out = found
+        for a, b in zip(out, found):
+            if (abs(a.angle - b.angle) > 1e-12
+                    or max(abs(x - y) for x, y in zip(a.bisector, b.bisector)) > 1e-12):
+                raise ConfigError("a corner's sector changes across the split range")
+    return out
+
+
+def corner_amplitudes(config: Config, params, s):
+    """c_k(s) = sum_j C[k, j] T_j(xi), xi = (s - mid) / half: one per corner mode, in
+    the order of singular_modes' corners and their modes."""
+    xi = (s - config.split_mid) / config.split_half
+    c = params["corners"]
+    total, previous, current = c[:, 0], 1.0, xi
+    for k in range(1, c.shape[1]):
+        total = total + c[:, k] * current
+        previous, current = current, 2.0 * xi * current - previous
+    return total
+
+
 def make_geometry(config: Config, st: Structure):
     """(vertices_of, segments_of, corners_of): differentiable functions of s."""
     a1, a2 = math.radians(config.angle1), math.radians(config.angle2)
@@ -400,8 +470,12 @@ def outlet_normals(config: Config):
 
 
 def init_params(config: Config, key):
-    return {"net": pinn.init_network(key, 3, config.width, config.depth, 2, config.init_gain),
-            "offset": jnp.zeros(config.offset_degree + 1, dtype=jnp.float64)}
+    params = {"net": pinn.init_network(key, 3, config.width, config.depth, 2, config.init_gain),
+              "offset": jnp.zeros(config.offset_degree + 1, dtype=jnp.float64)}
+    if config.corner_modes == "stokes":
+        count = sum(len(c.modes) for c in singular_modes(config, structure(config)))
+        params["corners"] = jnp.zeros((count, config.corner_degree + 1), dtype=jnp.float64)
+    return params
 
 
 def offset(config: Config, params, s):
@@ -417,7 +491,9 @@ def offset(config: Config, params, s):
 
 def make_field(config: Config, st: Structure, q_in):
     """field(params, xy, s) -> (u, v, p) at one point of the design with split s."""
-    _, segments_of, _ = make_geometry(config, st)
+    vertices_of, segments_of, _ = make_geometry(config, st)
+    found = singular_modes(config, st)
+    _, viscous = pinn.scaling_coefficients(config.reynolds, config.pressure_scaling)
     centre = jnp.asarray(st.centre)
     scale, activation = config.input_scale, config.activation
     order, mu = config.distance_order, config.blend_exponent
@@ -432,11 +508,32 @@ def make_field(config: Config, st: Structure, q_in):
         d = [flow.wall_distance(point, segments[idx], order) ** mu for idx in chains]
         w = (d[1] * d[2], d[0] * d[2], d[0] * d[1])
         blend = (values[1] * w[1] + values[2] * w[2]) / (w[0] + w[1] + w[2])
-        return blend + flow.wall_distance(point, segments, order) ** 2 * raw[0], raw
+        value = blend + flow.wall_distance(point, segments, order) ** 2 * raw[0]
+        if not found:               # the original network's graph, operation for operation
+            return value, (raw, None)
+        singular_psi, singular_p = singular(params, point, s)
+        return value + singular_psi, (raw, singular_p)
+
+    def singular(params, point, s):
+        """(psi, p) of the corner modes at one point."""
+        amplitude = corner_amplitudes(config, params, s)
+        v = vertices_of(s)
+        total_psi, total_p, k = 0.0, 0.0, 0
+        for c in found:
+            r, theta = corners.local_polar(point, v[c.vertex], c.bisector)
+            chi = corners.cutoff(r, config.corner_cutoff)
+            for mode in c.modes:
+                a = jnp.asarray(mode.coefficients)
+                total_psi = total_psi + amplitude[k] * chi * corners.stream(r, theta, mode.z, a)
+                total_p = total_p + amplitude[k] * chi * viscous * corners.pressure(
+                    r, theta, mode.z, a)
+                k += 1
+        return total_psi, total_p
 
     def field(params, xy, s):
-        gradient, raw = jax.grad(lambda q: psi(params, q, s), has_aux=True)(xy)
-        return jnp.stack([gradient[1], -gradient[0], raw[1]])
+        gradient, (raw, singular_p) = jax.grad(lambda q: psi(params, q, s), has_aux=True)(xy)
+        p = raw[1] if singular_p is None else raw[1] + singular_p
+        return jnp.stack([gradient[1], -gradient[0], p])
 
     return field
 
@@ -545,7 +642,7 @@ def _fingerprint(config: Config) -> dict:
     text = json.dumps(dataclasses.asdict(config), sort_keys=True, default=repr)
     code = hashlib.sha256()
     for path in (pathlib.Path(__file__), HERE / "flow.py", HERE / "geometry.py",
-                 pathlib.Path(pinn.__file__)):
+                 HERE / "corners.py", pathlib.Path(pinn.__file__)):
         code.update(path.read_bytes())
     import scipy
     code.update(f"jax {jax.__version__} optax {optax.__version__} scipy {scipy.__version__} "
@@ -573,8 +670,13 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
     heldout = sample_batch(heldout_rng, config, inlet, config.validation_designs)
 
     def describe(p):
-        return {f"offset({s:.2f})": float(offset(config, p, s))
-                for s in (config.split_min, config.split_mid, config.split_max)}
+        out = {f"offset({s:.2f})": float(offset(config, p, s))
+               for s in (config.split_min, config.split_mid, config.split_max)}
+        if "corners" in p:
+            amplitude = corner_amplitudes(config, p, config.split_mid)
+            out.update({f"corner{k}({config.split_mid:.2f})": float(a)
+                        for k, a in enumerate(amplitude)})
+        return out
 
     best, history, info = flow.optimise(config, params, groups, batched_loss, draws, draw,
                                         heldout, _fingerprint(config), describe, verbose,

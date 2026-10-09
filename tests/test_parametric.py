@@ -2,6 +2,7 @@
 (bifurcation/parametric.py)."""
 
 import copy
+import math
 
 import jax
 import jax.numpy as jnp
@@ -23,7 +24,7 @@ BASE = {
     "inlet": {"profile": "parabola"},
     "model": {"width": 8, "depth": 2, "activation": "tanh", "init_gain": 1.0,
               "input_scale": 2.0, "distance_order": 1, "wall_extension": 0.5,
-              "blend_exponent": 2.0, "offset_degree": 3},
+              "blend_exponent": 2.0, "offset_degree": 3, "corner_modes": "none"},
     "sampling": {"designs": 3, "points_per_design": 32, "corner_fraction": 0.25,
                  "corner_radius": 0.5, "corner_exclusion": 0.05, "inlet_per_design": 8,
                  "outlet_per_design": 8, "validation_designs": 4, "n_flux": 32},
@@ -39,6 +40,10 @@ BASE = {
     "evaluation": {"max_area": 0.05, "corner_levels": 2, "corner_radius": 0.4, "n_line": 64,
                    "splits": [0.35, 0.45, 0.6], "search_xatol": 0.01, "curve_points": 5},
 }
+
+#: the corner-mode network: four modes on BASE's 30/70 layout (B 210, C 250,
+#: T 260 degrees: T beyond 257.45 has an odd mode too), cutoff 0.4 < 0.7
+CORNERS = {"model.corner_modes": "stokes", "model.corner_degree": 2, "model.corner_cutoff": 0.4}
 
 Q_IN = 4.0 / 3.0                     # the parabola's flux
 SPLITS = (0.35, 0.4123, 0.5, 0.6)    # both ends of the range and two inside it
@@ -58,10 +63,17 @@ def config(**changes):
     return P.parse_config(document)
 
 
-def setup(c=None):
-    c = c or config()
+def setup(c=None, modes=False):
+    """(config, structure, field, params); with `modes`, the corner-mode network
+    with non-zero amplitudes, so that every exact constraint is tested with the
+    modes switched on."""
+    c = c or (config(**CORNERS) if modes else config())
     st = P.structure(c)
-    return c, st, P.make_field(c, st, Q_IN), P.init_params(c, jax.random.PRNGKey(1))
+    params = P.init_params(c, jax.random.PRNGKey(1))
+    if "corners" in params:
+        params["corners"] = 0.3 * jax.random.normal(jax.random.PRNGKey(2),
+                                                    params["corners"].shape)
+    return c, st, P.make_field(c, st, Q_IN), params
 
 
 # -- configuration ---------------------------------------------------------- #
@@ -125,11 +137,12 @@ def test_the_offset_is_a_chebyshev_series_in_the_scaled_split():
 
 # -- the field: exact constraints at every s --------------------------------- #
 
+@pytest.mark.parametrize("modes", [False, True])
 @pytest.mark.parametrize("s", SPLITS)
-def test_mass_and_the_share_are_exact_at_any_split(s):
+def test_mass_and_the_share_are_exact_at_any_split(s, modes):
     """Continuity holds identically; outlet 2 carries (1 - share) Q_in, outlet 1
     the rest, whatever the network's parameters, at any split."""
-    c, _, field, params = setup()
+    c, _, field, params = setup(modes=modes)
     g = c.geometry(s)
     inside = g.sample_interior(np.random.default_rng(0), 200)
     rows = jnp.asarray(np.column_stack([inside, np.full(len(inside), s)]))
@@ -144,10 +157,11 @@ def test_mass_and_the_share_are_exact_at_any_split(s):
         assert abs(weights @ (values[:, :2] @ normal) - expected) < 1e-8
 
 
+@pytest.mark.parametrize("modes", [False, True])
 @pytest.mark.parametrize("s", SPLITS)
-def test_no_slip_holds_at_any_split(s):
+def test_no_slip_holds_at_any_split(s, modes):
     """u, v ~ distance to the wall of THAT split's polygon."""
-    c, _, field, params = setup()
+    c, _, field, params = setup(modes=modes)
     g = c.geometry(s)
     points, normals = g.sample_boundary(np.random.default_rng(1), "wall", 300)
     corners = g.vertices()
@@ -201,7 +215,7 @@ def test_at_a_fixed_split_it_is_the_fixed_geometry_network():
     fixed["outlets"] = {"split": "prescribed", "outlet1_share": 0.5}
     del fixed["design"]
     fixed["model"].update(formulation="stream_pressure")
-    del fixed["model"]["offset_degree"]
+    del fixed["model"]["offset_degree"], fixed["model"]["corner_modes"]
     fixed["sampling"] = {"n_interior": 64, "corner_fraction": 0.25, "corner_radius": 0.5,
                          "corner_exclusion": 0.05, "n_inlet": 16, "n_outlet": 16,
                          "n_validation": 64, "n_flux": 32}
@@ -230,10 +244,132 @@ def test_at_a_fixed_split_it_is_the_fixed_geometry_network():
         assert np.max(np.abs(x - y)) < 1e-13
 
 
+# -- the corner modes --------------------------------------------------------- #
+
+def test_the_corner_keys_are_required_with_the_modes_and_refused_without():
+    config(**CORNERS)
+    for key in ("model.corner_degree", "model.corner_cutoff"):
+        with pytest.raises(pinn.ConfigError, match=key.split(".")[-1]):
+            config(**{k: v for k, v in CORNERS.items() if k != key})
+        with pytest.raises(pinn.ConfigError, match="no effect"):
+            config(**{key: CORNERS[key]})
+    with pytest.raises(pinn.ConfigError, match="corner_modes"):
+        config(**{"model.corner_modes": "williams"})
+    with pytest.raises(pinn.ConfigError, match="corner_modes"):
+        config(**{"model.corner_modes": None})
+
+
+def test_a_corner_cutoff_reaching_another_edge_is_refused():
+    """T lies 0.7 from daughter 1's outer wall at split 0.35."""
+    with pytest.raises(pinn.ConfigError, match="corner_cutoff at split 0.3500"):
+        config(**{**CORNERS, "model.corner_cutoff": 0.75})
+
+
+def test_every_singular_corner_gets_its_modes_with_z_below_one():
+    c = config(**CORNERS)
+    st = P.structure(c)
+    found = P.singular_modes(c, st)
+    assert [k.vertex for k in found] == list(st.singular)
+    angles = sorted(round(math.degrees(k.angle), 9) for k in found)
+    assert angles == [210.0, 250.0, 260.0]                       # B, C, T at 30/70
+    assert [len(k.modes) for k in sorted(found, key=lambda k: k.angle)] == [1, 1, 2]
+    assert P.init_params(c, jax.random.PRNGKey(0))["corners"].shape == (4, 3)
+    assert P.singular_modes(config(), st) == ()
+    assert "corners" not in P.init_params(config(), jax.random.PRNGKey(0))
+
+
+def test_the_corner_amplitudes_are_chebyshev_series_in_the_scaled_split():
+    c, _, _, params = setup(modes=True)
+    for s in SPLITS:
+        xi = (s - c.split_mid) / c.split_half
+        expected = [np.polynomial.chebyshev.chebval(xi, row) for row in np.asarray(params["corners"])]
+        assert np.allclose(np.asarray(P.corner_amplitudes(c, params, s)), expected,
+                           rtol=0, atol=1e-15)
+
+
+def test_with_zero_amplitudes_the_modes_change_nothing():
+    """The original network is the corner-mode network with c = 0, exactly:
+    stored runs keep their meaning and a run with modes starts where one
+    without them would."""
+    plain, with_modes = config(), config(**CORNERS)
+    p0 = P.init_params(plain, jax.random.PRNGKey(3))
+    p1 = dict(p0, corners=jnp.zeros_like(P.init_params(with_modes, jax.random.PRNGKey(3))
+                                         ["corners"]))
+    f0 = P.make_field(plain, P.structure(plain), Q_IN)
+    f1 = P.make_field(with_modes, P.structure(with_modes), Q_IN)
+    for s in (0.35, 0.5):
+        points = jnp.asarray(plain.geometry(s).sample_interior(np.random.default_rng(0), 64))
+        a = np.asarray(jax.vmap(lambda q: f0(p0, q, s))(points))
+        b = np.asarray(jax.vmap(lambda q: f1(p1, q, s))(points))
+        assert np.array_equal(a, b)
+
+
+def test_the_modes_add_their_stream_function_and_pressure_partner():
+    """field(with modes) - field(without) is, at a point within a corner's
+    cutoff, the curl of c(s) chi S and c(s) chi nu P of that corner's modes,
+    computed here from bifurcation/corners.py directly."""
+    from bifurcation import corners as K
+    c, st, field, params = setup(modes=True)
+    plain = config()
+    base = P.make_field(plain, P.structure(plain), Q_IN)
+    base_params = {k: v for k, v in params.items() if k != "corners"}
+    _, viscous = pinn.scaling_coefficients(c.reynolds, c.pressure_scaling)
+    found = P.singular_modes(c, st)
+    for s in (0.37, 0.55):
+        v = c.geometry(s).vertices()
+        amplitude = np.asarray(P.corner_amplitudes(c, params, s))
+        first = 0
+        for k in found:
+            count = len(k.modes)
+
+            def singular(q, k=k, first=first):
+                r, theta = K.local_polar(q, jnp.asarray(v[k.vertex]), k.bisector)
+                chi = K.cutoff(r, c.corner_cutoff)
+                psi = sum(amplitude[first + j] * chi * K.stream(r, theta, m.z, jnp.asarray(
+                    m.coefficients)) for j, m in enumerate(k.modes))
+                p = sum(amplitude[first + j] * chi * viscous * K.pressure(
+                    r, theta, m.z, jnp.asarray(m.coefficients)) for j, m in enumerate(k.modes))
+                return psi, p
+
+            for radius, along in ((0.05, 0.1), (0.2, -0.3)):
+                b = np.asarray(k.bisector)
+                direction = np.array([b[0] * math.cos(along) - b[1] * math.sin(along),
+                                      b[0] * math.sin(along) + b[1] * math.cos(along)])
+                q = jnp.asarray(v[k.vertex] + radius * direction)
+                difference = np.asarray(field(params, q, s)) - np.asarray(base(base_params, q, s))
+                g = np.asarray(jax.grad(lambda x: singular(x)[0])(q))
+                expected = np.array([g[1], -g[0], float(singular(q)[1])])
+                assert np.max(np.abs(difference - expected)) < 1e-12 * (1 + np.max(np.abs(expected)))
+                assert np.max(np.abs(expected)) > 1e-3
+            first += count
+
+
+def test_the_migration_gives_old_parametric_runs_no_corner_modes(tmp_path):
+    """A parametric run stored before model.corner_modes existed is migrated to
+    'none', which is what it computed, and loads."""
+    import yaml
+    from bifurcation import migrate
+    document = copy.deepcopy(BASE)
+    del document["model"]["corner_modes"]
+    run = tmp_path / "old"
+    run.mkdir()
+    (run / "config.yaml").write_text(yaml.safe_dump(document, sort_keys=False))
+    with pytest.raises(pinn.ConfigError, match="corner_modes"):
+        P.load_config(run / "config.yaml")
+    c = config()
+    flat, _ = ravel_pytree(P.init_params(c, flow._streams(c.seed)[0]))
+    pinn.save_params(run / "params.npz", P.init_params(c, flow._streams(c.seed)[0]))
+    migrate.main(["--runs-root", str(tmp_path), "--write"])
+    assert P.load_config(run / "config.yaml").corner_modes == "none"
+    _, loaded, params = P.load_run(run)
+    assert np.array_equal(np.asarray(ravel_pytree(params)[0]), np.asarray(flat))
+
+
 # -- residuals ------------------------------------------------------------- #
 
-def test_batched_derivatives_are_the_point_derivatives_in_x_and_y():
-    c, _, field, params = setup()
+@pytest.mark.parametrize("modes", [False, True])
+def test_batched_derivatives_are_the_point_derivatives_in_x_and_y(modes):
+    c, _, field, params = setup(modes=modes)
     rows = []
     for s in (0.38, 0.52):
         p = c.geometry(s).sample_interior(np.random.default_rng(2), 5)
@@ -247,8 +383,9 @@ def test_batched_derivatives_are_the_point_derivatives_in_x_and_y():
                 < 1e-12 * (1.0 + abs(float(getattr(point, name))))
 
 
-def test_point_and_batched_losses_agree():
-    c, st, field, params = setup()
+@pytest.mark.parametrize("modes", [False, True])
+def test_point_and_batched_losses_agree(modes):
+    c, st, field, params = setup(modes=modes)
     params["offset"] = jnp.asarray([0.2, 0.1, -0.05, 0.02])
     groups, batched_loss = P.make_residuals(c, st, field)
     flat, unflatten = ravel_pytree(params)
@@ -316,18 +453,23 @@ def test_the_draws_are_a_function_of_the_seed():
 
 # -- training -------------------------------------------------------------- #
 
-def _tiny(lm_iterations=3):
+def _tiny(lm_iterations=3, modes=False):
     return config(**{"training.adam.steps": 20, "training.lbfgs.cycles": 1,
-                     "training.lm.iterations": lm_iterations, "training.lm.average": 2})
+                     "training.lm.iterations": lm_iterations, "training.lm.average": 2,
+                     **(CORNERS if modes else {})})
 
 
 @pytest.mark.slow
-def test_training_reduces_the_held_out_loss():
-    params, history, info = P.train(_tiny(), verbose=False)
+@pytest.mark.parametrize("modes", [False, True])
+def test_training_reduces_the_held_out_loss(modes):
+    params, history, info = P.train(_tiny(modes=modes), verbose=False)
     held = [row["heldout_loss"] for row in history]
     assert held[-1] < 0.5 * held[0]
     assert info["selected"] != "initial"
     assert "offset(0.35)" in history[-1]
+    if modes:
+        assert "corner0(0.47)" in history[-1]
+        assert np.any(np.asarray(params["corners"]) != 0.0)      # the amplitudes are trained
 
 
 @pytest.mark.slow

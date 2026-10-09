@@ -32,6 +32,7 @@ model:
   wall_extension: 0.5
   blend_exponent: 2.0
   offset_degree: 4            # outlet 1's extra pressure, Chebyshev in s, degree 4
+  corner_modes: none          # psi = G + D^2 N only (see p_re10_3090_equal_corners.yaml)
 sampling:
   designs: 16                 # splits per draw, stratified over the range
   points_per_design: 1024     # 16,384 interior points per draw (the fixed run: 8,192)

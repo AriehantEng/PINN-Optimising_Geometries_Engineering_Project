@@ -1,0 +1,14 @@
+[
+  {
+    "migrated_by": "bifurcation/migrate.py",
+    "migrated_at": "2026-10-09T10:16:01.609336+00:00",
+    "why": "config keys became required after this run finished; values describe what the run actually computed, and no result changed",
+    "added": [
+      {
+        "key": "model.corner_modes",
+        "value": "none",
+        "reason": "before model.corner_modes existed the stream function had no corner modes"
+      }
+    ]
+  }
+]

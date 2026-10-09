@@ -1,6 +1,13 @@
 # Run outputs are written by the code and never edited by hand.
 runs/
 !runs/.gitkeep
+# Finished bifurcation networks are kept: their weights are small, and a
+# rebuilt container loses whatever git does not hold (it has, once, and the
+# parametric network had to be retrained for 215 min). The checkpoint is
+# training state for resuming, not a result.
+!bifurcation/runs/
+bifurcation/runs/*/checkpoint.npz
+bifurcation/runs/*/checkpoint.tmp.npz
 
 __pycache__/
 *.py[cod]

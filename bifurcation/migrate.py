@@ -15,6 +15,7 @@ ACTUALLY did:
                                             interior residual had weight 1
     model.wall_extension = 0.0              walls ended at the openings
     fit.workers = 1                         (Network 3) cross-validation ran in one process
+    model.corner_modes = none               (parametric) psi = G + D^2 N, no corner modes
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -54,8 +55,12 @@ NETWORK3_MIGRATIONS = (
 )
 
 
-#: The same for parametric Network 2 (bifurcation/parametric.py) runs: none yet.
-PARAMETRIC_MIGRATIONS = ()
+#: The same for parametric Network 2 (bifurcation/parametric.py) runs.
+PARAMETRIC_MIGRATIONS = (
+    ("model.corner_modes", "none", r"^  offset_degree: .*$",
+     lambda d: "corner_modes" not in d.get("model", {}),
+     "before model.corner_modes existed the stream function had no corner modes"),
+)
 
 
 def plan(path: pathlib.Path):
