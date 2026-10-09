@@ -1,0 +1,8 @@
+# The junction effect against the Reynolds number, from the closed-length maps
+# (bifurcation/junction_re.py).
+name: junction_closed
+maps:
+  - docs/bifurcation_closed-re10.json
+  - docs/bifurcation_closed-re25.json
+  - docs/bifurcation_closed-re50.json
+  - docs/bifurcation_closed-re100.json
