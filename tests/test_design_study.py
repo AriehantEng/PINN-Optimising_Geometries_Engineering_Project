@@ -56,3 +56,39 @@ def test_merging_studies_refuses_duplicates_and_mismatched_settings(tmp_path):
     (tmp_path / "other.json").write_text(json.dumps(other))
     with pytest.raises(pinn.ConfigError, match="mesh differs"):
         d.merge([src, str(tmp_path / "other.json")], tmp_path / "mixed")
+
+
+def test_exactly_one_length_rule_is_given():
+    doc = base()
+    doc["geometry"]["closed_length"] = 8.0                    # both rules
+    with pytest.raises(pinn.ConfigError, match="exactly one"):
+        d.parse_config(doc)
+    del doc["geometry"]["daughter_length"]                    # the closed rule alone
+    d.parse_config(doc)
+    del doc["geometry"]["closed_length"]                      # neither
+    with pytest.raises(pinn.ConfigError, match="exactly one"):
+        d.parse_config(doc)
+
+
+def test_continuation_is_required_and_increases_below_the_reynolds_number():
+    doc = base()
+    del doc["physics"]["continuation"]
+    with pytest.raises(pinn.ConfigError, match="continuation"):
+        d.parse_config(doc)
+    for steps in ([25.0], [5.0, 5.0], [8.0, 4.0], [0.0]):
+        doc = base()
+        doc["physics"]["continuation"] = steps
+        with pytest.raises(pinn.ConfigError, match="continuation"):
+            d.parse_config(doc)
+    doc = base()
+    doc["physics"]["continuation"] = [2.5, 5.0]
+    d.parse_config(doc)
+
+
+def test_the_closed_rule_gives_both_daughters_the_closed_length():
+    from bifurcation import sensitivity as s
+    config = base()
+    config["geometry"] = {"parent_length": 3.0, "closed_length": 8.0, "min_width": 0.2}
+    for angles in ([0.0, 150.0], [60.0, 60.0], [30.0, 150.0]):
+        g = d.make_geometry(config, 0.3, angles)
+        assert max(abs(x - 8.0) for x in s.closed_lengths(g)) < 1e-12

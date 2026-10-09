@@ -93,7 +93,7 @@ def boundary_facets(m, geometry: Geometry, tol=1e-9):
     edges = geometry.edges()
     distance = np.stack([_distance_to_segment(mid, a, b) for a, b, _ in edges], axis=1)
     nearest = np.argmin(distance, axis=1)
-    if np.max(distance[np.arange(len(facets)), nearest]) > tol * max(1.0, geometry.daughter_length):
+    if np.max(distance[np.arange(len(facets)), nearest]) > tol * max(1.0, *geometry.daughter_lengths):
         raise RuntimeError("a boundary facet lies on no edge of the polygon")
     kinds = {}
     for (_, _, kind), i in zip(edges, range(len(edges))):
@@ -102,8 +102,13 @@ def boundary_facets(m, geometry: Geometry, tol=1e-9):
 
 
 def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, outlet1_share,
-                      max_area, corner_levels, corner_radius, verbose=False):
+                      max_area, corner_levels, corner_radius, *, continuation, verbose=False):
     """Solve one geometry. `inlet(y) -> (u, v)` arrays: the inflow at x* = 0.
+
+    continuation   Reynolds numbers below `reynolds`, increasing, solved first on
+                   the same mesh, each solution starting Newton at the next: for
+                   flows Newton cannot reach from the Stokes solution. Empty: one
+                   solve from Stokes. The converged solution does not depend on it.
 
     outlet1_share  None: both outlets do-nothing, the flow chooses its split.
                    A number in (0, 1): outlet 1 carries exactly that share of
@@ -112,6 +117,10 @@ def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, out
     """
     if outlet1_share is not None and not 0.0 < outlet1_share < 1.0:
         raise ValueError(f"outlet1_share must be None or lie in (0, 1), got {outlet1_share}")
+    steps = [float(r) for r in continuation] + [float(reynolds)]
+    if any(not 0.0 < lo < hi for lo, hi in zip(steps, steps[1:])):
+        raise ValueError(f"continuation must increase to below reynolds = {reynolds}, "
+                         f"got {list(continuation)}")
     a, nu = pinn.scaling_coefficients(reynolds, pressure_scaling)
     m = mesh(geometry, max_area, corner_levels, corner_radius)
     facets = boundary_facets(m, geometry)
@@ -150,10 +159,16 @@ def solve_bifurcation(geometry: Geometry, reynolds, pressure_scaling, inlet, out
             return outflow("outlet1") + outlet1_share * outflow("inlet"), 0.0
 
     start = time.perf_counter()
-    basis_u, basis_p, U, P, info = channel.solve(m, a, nu, marker, value, constraint=constraint,
-                                                 verbose=verbose)
+    state, path = None, []
+    for step in steps:
+        a_s, nu_s = pinn.scaling_coefficients(step, pressure_scaling)
+        basis_u, basis_p, U, P, info = channel.solve(m, a_s, nu_s, marker, value,
+                                                     constraint=constraint, verbose=verbose,
+                                                     initial=state)
+        state = np.concatenate([U, P] + ([[info["multiplier"]]] if "multiplier" in info else []))
+        path.append({"reynolds": step, "newton_iterations": len(info["newton"])})
     info = {**info, "total_seconds": time.perf_counter() - start, "triangles": int(m.nelements),
-            "dirichlet_facets": int(len(dirichlet))}
+            "dirichlet_facets": int(len(dirichlet)), "continuation": path}
     wall = basis_u.get_dofs(facets["wall"]).all()
     if np.any(U[wall] != 0.0):
         raise RuntimeError(f"no-slip is broken at {int(np.count_nonzero(U[wall]))} wall "
@@ -260,7 +275,7 @@ def sweep_split(splits, angle1, angle2, parent_length, daughter_length, min_widt
         g = Geometry.from_split(float(s), angle1, angle2, parent_length, daughter_length,
                                 min_width)
         sol = solve_bifurcation(g, reynolds, pressure_scaling, inlet, outlet1_share, max_area,
-                                corner_levels, corner_radius)
+                                corner_levels, corner_radius, continuation=())
         rows.append({"split": float(s), **sol.measures()})
         if verbose:
             r = rows[-1]

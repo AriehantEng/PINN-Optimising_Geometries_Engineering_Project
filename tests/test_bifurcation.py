@@ -296,7 +296,7 @@ COARSE = dict(max_area=0.04, corner_levels=3, corner_radius=0.4)
 def coarse_solution(split, angle1, angle2):
     from bifurcation import reference as br
     g = make(split, angle1, angle2)
-    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, **COARSE)
+    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, **COARSE, continuation=())
 
 
 def test_the_mesh_fills_the_polygon_and_is_refined_at_the_corners():
@@ -346,7 +346,7 @@ def test_a_mirror_symmetric_bifurcation_splits_the_flow_evenly():
 def prescribed(split, angle1, angle2, share):
     from bifurcation import reference as br
     g = make(split, angle1, angle2)
-    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, share, **COARSE)
+    return br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, share, **COARSE, continuation=())
 
 
 def test_prescribing_the_free_split_changes_nothing():
@@ -406,7 +406,47 @@ def test_the_pressure_drop_converges_as_the_mesh_is_refined():
     drops = []
     for area in (0.08, 0.02, 0.005):
         sol = br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, max_area=area,
-                                   corner_levels=4, corner_radius=0.4)
+                                   corner_levels=4, corner_radius=0.4, continuation=())
         drops.append(sol.measures()["total_pressure_drop"])
     changes = np.abs(np.diff(drops))
     assert changes[1] < 0.5 * changes[0]
+
+
+@pytest.mark.parametrize("angles", [[0.0, 150.0], [30.0, 120.0], [60.0, 60.0], [10.0, 80.0],
+                                    [60.0, 120.0], [30.0, 150.0]])
+@pytest.mark.parametrize("split", [0.2, 0.5, 0.8])
+def test_equal_closed_lengths(angles, split):
+    """from_split_closed: same widths as from_split, each daughter with both walls
+    over exactly the closed length; the outer wall is never the shorter."""
+    from bifurcation import sensitivity
+    g = Geometry.from_split_closed(split, angles[0], angles[1], 3.0, 8.0, 0.2)
+    ref = Geometry.from_split(split, angles[0], angles[1], 3.0, 8.0, 0.2)
+    assert (g.w1, g.w2) == (ref.w1, ref.w2)
+    assert max(abs(x - 8.0) for x in sensitivity.closed_lengths(g)) < 1e-12
+    assert min(g.daughter_lengths) >= 8.0
+    if g.septum == "face":                                   # square entrances: nothing to add
+        assert g.daughter_lengths == (8.0, 8.0)
+
+
+def test_a_pair_of_equal_lengths_is_the_single_length():
+    a = Geometry.from_split(0.4, 30.0, 70.0, 3.0, 8.0, 0.2)
+    b = Geometry.from_split(0.4, 30.0, 70.0, 3.0, (8.0, 8.0), 0.2)
+    assert np.array_equal(a.vertices(), b.vertices())
+    with pytest.raises(GeometryError, match="positive"):
+        Geometry.from_split(0.4, 30.0, 70.0, 3.0, (8.0, -1.0), 0.2)
+
+
+def test_continuation_reaches_the_same_solution():
+    """Starting Newton from a lower-Re solution changes the path, not the answer."""
+    from bifurcation import reference as br
+    g = Geometry.from_split(0.5, 30.0, 90.0, 3.0, 4.0, 0.2)
+    direct = br.solve_bifurcation(g, 25.0, "inertial", br.parabola_inlet, 0.4, **COARSE,
+                                  continuation=())
+    stepped = br.solve_bifurcation(g, 25.0, "inertial", br.parabola_inlet, 0.4, **COARSE,
+                                   continuation=(5.0, 10.0))
+    a, b = direct.measures(), stepped.measures()
+    assert abs(a["total_pressure_drop"] / b["total_pressure_drop"] - 1.0) < 1e-11
+    assert [s["reynolds"] for s in stepped.info["continuation"]] == [5.0, 10.0, 25.0]
+    with pytest.raises(ValueError, match="continuation"):
+        br.solve_bifurcation(g, 25.0, "inertial", br.parabola_inlet, 0.4, **COARSE,
+                             continuation=(30.0,))

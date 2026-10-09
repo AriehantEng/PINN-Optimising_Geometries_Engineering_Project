@@ -90,7 +90,7 @@ def fixed_run(directory):
     solution = reference.solve_bifurcation(
         geometry, config.reynolds, config.pressure_scaling, inlet,
         config.outlet1_share if config.prescribed else None, config.fe_max_area,
-        config.fe_corner_levels, config.fe_corner_radius)
+        config.fe_corner_levels, config.fe_corner_radius, continuation=())
     row = budget(lambda xy: field(params, xy), model, geometry, solution, config.reynolds,
                  config.pressure_scaling, config.n_line)
     return [({"run": pathlib.Path(directory).name, "split": config.split}, row)]
@@ -105,7 +105,7 @@ def parametric_run(directory):
         geometry = config.geometry(s)
         solution = reference.solve_bifurcation(
             geometry, config.reynolds, config.pressure_scaling, inlet, config.outlet1_share,
-            config.fe_max_area, config.fe_corner_levels, config.fe_corner_radius)
+            config.fe_max_area, config.fe_corner_levels, config.fe_corner_radius, continuation=())
         row = budget(lambda xy, s=s: field(params, xy, s), parametric.at_split(model, s),
                      geometry, solution, config.reynolds, config.pressure_scaling, config.n_line)
         out.append(({"run": pathlib.Path(directory).name, "split": s}, row))

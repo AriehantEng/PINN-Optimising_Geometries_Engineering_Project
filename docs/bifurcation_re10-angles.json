@@ -3,7 +3,8 @@
   "name": "study_re10_angles",
   "physics": {
    "reynolds": 10.0,
-   "pressure_scaling": "inertial"
+   "pressure_scaling": "inertial",
+   "continuation": []
   },
   "geometry": {
    "parent_length": 3.0,

@@ -7,6 +7,7 @@ name: study_re10_shares
 physics:
   reynolds: 10.0
   pressure_scaling: inertial
+  continuation: []          # one Newton solve from Stokes (no stepping in Re)
 geometry:
   parent_length: 3.0
   daughter_length: 8.0

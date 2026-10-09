@@ -48,10 +48,14 @@ from developing_flow import pinn
 
 ConfigError = pinn.ConfigError
 
+#: How the solver reports a flow with no steady solution Newton can reach.
+NO_STEADY = "Newton did not converge"
+
 SCHEMA = {
     "name": str,
-    "physics": {"reynolds": float, "pressure_scaling": str},
-    "geometry": {"parent_length": float, "daughter_length": float, "min_width": float},
+    "physics": {"reynolds": float, "pressure_scaling": str,
+                "continuation": list},   # lower Re solved first, each starting Newton at the next
+    "geometry": {"parent_length": float, "min_width": float},   # plus one of LENGTH_RULES
     "angles": list,               # [[angle1, angle2], ...] in degrees
     "shares": list,               # Q1 / Q_in values in (0, 1)
     "search": {"grid": int, "xatol": float},
@@ -61,9 +65,32 @@ SCHEMA = {
 }
 
 
+#: How the daughters' length is set, one key of the two in `geometry`:
+#: daughter_length  both outer walls this long (the paper's Re_h = 10 map);
+#: closed_length    both daughters have both walls over this length
+#:                  (Geometry.from_split_closed), so the friction law's optimum is
+#:                  exactly the Murray split.
+LENGTH_RULES = ("daughter_length", "closed_length")
+
+
+def length_rule(geometry_config):
+    rules = [k for k in LENGTH_RULES if k in geometry_config]
+    if len(rules) != 1:
+        raise ConfigError(f"geometry needs exactly one of {list(LENGTH_RULES)}, got {rules}")
+    return rules[0]
+
+
 def parse_config(document):
     document = copy.deepcopy(document)
-    pinn._check(document, SCHEMA)
+    schema = copy.deepcopy(SCHEMA)
+    if isinstance(document.get("geometry"), dict):
+        schema["geometry"][length_rule(document["geometry"])] = float
+    pinn._check(document, schema)
+    steps = document["physics"]["continuation"] + [document["physics"]["reynolds"]]
+    if any(isinstance(r, bool) or not isinstance(r, (int, float)) for r in steps) or any(
+            not 0.0 < lo < hi for lo, hi in zip(steps, steps[1:])):
+        raise ConfigError("physics.continuation must be increasing Reynolds numbers below "
+                          f"physics.reynolds, got {document['physics']['continuation']}")
     for pair in document["angles"]:
         if not (isinstance(pair, list) and len(pair) == 2):
             raise ConfigError(f"angles must be pairs [angle1, angle2], got {pair!r}")
@@ -75,14 +102,22 @@ def parse_config(document):
     return document
 
 
+def make_geometry(config, split, angles):
+    """The design geometry at one split, by the config's length rule."""
+    g = config["geometry"]
+    if length_rule(g) == "closed_length":
+        return Geometry.from_split_closed(split, angles[0], angles[1], g["parent_length"],
+                                          g["closed_length"], g["min_width"])
+    return Geometry.from_split(split, angles[0], angles[1], g["parent_length"],
+                               g["daughter_length"], g["min_width"])
+
+
 def solve(config, split, angles, share, max_area, corner_levels):
-    g = Geometry.from_split(split, angles[0], angles[1], config["geometry"]["parent_length"],
-                            config["geometry"]["daughter_length"],
-                            config["geometry"]["min_width"])
+    g = make_geometry(config, split, angles)
     sol = reference.solve_bifurcation(
         g, config["physics"]["reynolds"], config["physics"]["pressure_scaling"],
         reference.parabola_inlet, share, max_area, corner_levels,
-        config["mesh"]["corner_radius"])
+        config["mesh"]["corner_radius"], continuation=config["physics"]["continuation"])
     return sol.measures()
 
 
@@ -102,11 +137,12 @@ def optimise(task):
     solves = 0
     cache = {}
 
-    refused = []
+    refused, unsolved = [], []
 
     def drop(split):
-        """The coarse-mesh drop; a geometry the rules refuse counts as infinite
-        and is recorded."""
+        """The coarse-mesh drop. A geometry the rules refuse, or one with no
+        steady solution Newton can reach, counts as infinite and is recorded;
+        an optimum next to an unsolved split is flagged, not trusted."""
         nonlocal solves
         key = round(float(split), 12)
         if key not in cache:
@@ -117,12 +153,18 @@ def optimise(task):
             except GeometryError as error:
                 cache[key] = {"total_pressure_drop": math.inf}
                 refused.append({"split": float(split), "reason": str(error)})
+            except RuntimeError as error:
+                if not str(error).startswith(NO_STEADY):
+                    raise
+                cache[key] = {"total_pressure_drop": math.inf}
+                unsolved.append({"split": float(split), "mesh": "search", "reason": str(error)})
         return cache[key]["total_pressure_drop"]
 
     grid = np.linspace(lo, hi, config["search"]["grid"])
     values = np.array([drop(s) for s in grid])
     if not np.isfinite(values).any():
-        return {"angles": angles, "share": share, "refused": refused, "feasible": False}
+        return {"angles": angles, "share": share, "refused": refused, "unsolved": unsolved,
+                "feasible": False}
     k = int(np.argmin(values))
     left, right = grid[max(k - 1, 0)], grid[min(k + 1, len(grid) - 1)]
     if k in (0, len(grid) - 1):
@@ -136,6 +178,8 @@ def optimise(task):
             best_split, best = float(grid[k]), float(values[k])
         on_bound = False
     measured = cache[round(best_split, 12)]
+    # Trusted only if every split in the optimum's bracket had a steady solution.
+    steady_bracket = not any(left <= u["split"] <= right for u in unsolved)
 
     # the optimum and its neighbours on the finer mesh
     check = config["check"]
@@ -146,19 +190,30 @@ def optimise(task):
                             check["corner_levels"])["total_pressure_drop"]
         except GeometryError:
             fine[s] = math.inf
-    fine_best = fine[best_split]
-    survives = all(fine_best <= v for v in fine.values())
+        except RuntimeError as error:
+            if not str(error).startswith(NO_STEADY):
+                raise
+            fine[s] = math.inf
+            unsolved.append({"split": s, "mesh": "check", "reason": str(error)})
+            steady_bracket = False
+    fine_best = fine[best_split] if math.isfinite(fine[best_split]) else None
+    survives = fine_best is not None and all(fine_best <= v for v in fine.values())
 
-    equal = drop(0.5) if lo <= 0.5 <= hi else None
+    def finite(value):
+        return value if value is not None and math.isfinite(value) else None
+
+    equal = finite(drop(0.5)) if lo <= 0.5 <= hi else None
     friction = friction_split(share, config["geometry"]["min_width"]) if share else None
-    friction_drop = None if friction is None else drop(friction)
+    friction_drop = None if friction is None else finite(drop(friction))
     return {
         "angles": angles, "share": share, "feasible": True,
         "best_split": best_split, "w1": 2.0 * best_split, "w2": 2.0 * (1.0 - best_split),
         "on_bound": on_bound,
         "total_pressure_drop": best,
         "total_pressure_drop_fine": fine_best,
-        "mesh_change": abs(fine_best - best) / abs(fine_best),
+        "mesh_change": None if fine_best is None else abs(fine_best - best) / abs(fine_best),
+        "steady_bracket": steady_bracket,
+        "fine_bracket": [{"split": s, "total_pressure_drop": finite(v)} for s, v in fine.items()],
         "minimum_survives_refinement": survives,
         "equal_widths_drop": equal,
         "saving_vs_equal_widths": None if equal is None else 1.0 - best / equal,
@@ -167,7 +222,8 @@ def optimise(task):
         "flow_split": measured["split_flux"],
         "grid": [{"split": float(s), "total_pressure_drop": float(v)}
                  for s, v in zip(grid, values)],
-        "refused": refused, "solves": solves, "seconds": time.perf_counter() - start,
+        "refused": refused, "unsolved": unsolved, "solves": solves,
+        "seconds": time.perf_counter() - start,
     }
 
 
@@ -186,7 +242,8 @@ def run(config_path, out):
                 label = "equal pressures" if row["share"] is None else f"share {row['share']:.2f}"
                 print(f"  {row['angles'][0]:g}/{row['angles'][1]:g} {label}: best split "
                       f"{row['best_split']:.4f}{' (bound)' if row['on_bound'] else ''}, "
-                      f"drop {row['total_pressure_drop']:.5f} (fine {row['total_pressure_drop_fine']:.5f}), "
+                      f"drop {row['total_pressure_drop']:.5f} (fine {row['total_pressure_drop_fine']}), "
+                      f"{len(row['unsolved'])} unsolved, "
                       f"{row['solves']} solves, {row['seconds']:.0f} s", flush=True)
     summary = {"config": config, "rows": rows, "seconds": time.perf_counter() - start}
     out = pathlib.Path(out)
@@ -205,7 +262,10 @@ def markdown(summary):
         "",
         f"Finite elements (P2/P1, mesh max area {config['mesh']['max_area']}, "
         f"{config['mesh']['corner_levels']} corner refinements), parabolic inflow, parent "
-        f"{g['parent_length']:g} long, daughters {g['daughter_length']:g} long, "
+        f"{g['parent_length']:g} long, " + (
+            f"daughters {g['daughter_length']:g} long along the outer wall, "
+            if length_rule(g) == "daughter_length" else
+            f"each daughter with both walls over {g['closed_length']:g}, ") +
         f"w1 + w2 = 2, every width >= {g['min_width']:g}. 'share' is the fraction of the "
         "flow daughter 1 must carry. 'drop' is the flux-weighted total-pressure drop "
         "(E_in - E_out1 - E_out2) / Q_in, in units of rho U^2. 'fine' re-solves the "
@@ -248,15 +308,16 @@ def markdown(summary):
                   "|---|---|---|---|---|---|---|---|---|"]
         for r in rows:
             if not r["feasible"]:
-                lines.append(f"| {r['share']} | refused | | | | | | | |")
+                lines.append(f"| {r['share']} | no solution (refused, or no steady flow) | | | | | | | |")
                 continue
             share = "equal pressures" if r["share"] is None else f"{r['share']:.2f}"
             fmt = lambda v, f: "-" if v is None else format(v, f)   # noqa: E731
             lines.append(
                 f"| {share} | {r['best_split']:.4f}{' (bound)' if r['on_bound'] else ''}"
-                f"{'' if r['minimum_survives_refinement'] else ' (moves on refinement)'} | "
+                f"{'' if r['minimum_survives_refinement'] else ' (moves on refinement)'}"
+                f"{'' if r.get('steady_bracket', True) else ' (no steady solution nearby)'} | "
                 f"{r['w1']:.3f}, {r['w2']:.3f} | {r['total_pressure_drop']:.5f} | "
-                f"{r['total_pressure_drop_fine']:.5f} | {fmt(r['equal_widths_drop'], '.5f')} | "
+                f"{fmt(r['total_pressure_drop_fine'], '.5f')} | {fmt(r['equal_widths_drop'], '.5f')} | "
                 f"{fmt(r['saving_vs_equal_widths'] and 100 * r['saving_vs_equal_widths'], '.1f')}% | "
                 f"{fmt(r['friction_law_split'], '.4f')} | {r['outlet1_pressure_offset']:+.4f} |")
         lines.append("")

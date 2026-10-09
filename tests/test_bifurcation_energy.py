@@ -11,7 +11,7 @@ from bifurcation.geometry import Geometry
 def coarse(split=0.4, angle1=30.0, angle2=70.0):
     g = Geometry.from_split(split, angle1, angle2, 3.0, 8.0, 0.2)
     return g, br.solve_bifurcation(g, 10.0, "inertial", br.parabola_inlet, None, max_area=0.04,
-                                   corner_levels=3, corner_radius=0.4)
+                                   corner_levels=3, corner_radius=0.4, continuation=())
 
 
 def test_the_dissipation_quadrature_integrates_a_known_field_exactly():

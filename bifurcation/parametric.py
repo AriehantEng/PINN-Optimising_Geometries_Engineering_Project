@@ -629,7 +629,7 @@ def evaluate(config: Config, params, verbose=True):
             solution = reference.solve_bifurcation(
                 config.geometry(s), config.reynolds, config.pressure_scaling, inlet,
                 config.outlet1_share, config.fe_max_area, config.fe_corner_levels,
-                config.fe_corner_radius)
+                config.fe_corner_radius, continuation=())
             solves[key] = (solution, time.perf_counter() - start)
         return solves[key][0]
 

@@ -101,9 +101,7 @@ def centreline_lengths(geometry: Geometry):
 
 
 def make_geometry(study_config, angles, split):
-    g = study_config["geometry"]
-    return Geometry.from_split(split, angles[0], angles[1], g["parent_length"],
-                               g["daughter_length"], g["min_width"])
+    return design_study.make_geometry(study_config, split, angles)
 
 
 def inner_wall_lengths(geometry: Geometry):
@@ -126,7 +124,8 @@ def closed_lengths(geometry: Geometry):
     wall (L_d) and its inner wall, since the outlet is square to both. Upstream of
     that the strip is open to the junction on one side."""
     inner = inner_wall_lengths(geometry)
-    return (min(geometry.daughter_length, inner[0]), min(geometry.daughter_length, inner[1]))
+    outer = geometry.daughter_lengths
+    return (min(outer[0], inner[0]), min(outer[1], inner[1]))
 
 
 def length_corrected_split(study_config, angles, share, tolerance, lengths=centreline_lengths):

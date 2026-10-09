@@ -1,0 +1,32 @@
+# The design map with the junction isolated: equal closed lengths, Re_h = 50
+# (bifurcation/design_study.py).
+#
+# Each daughter has both walls over the same length, closed_length, so the fully
+# developed friction law puts the optimum exactly at the Murray split and any
+# departure from it is a junction and entrance effect by construction. The
+# fifteen layouts and eleven shares of the paper's Re_h = 10 map, plus each
+# layout's equal-pressure floor.
+name: study_closed_re50
+physics:
+  reynolds: 50.0
+  pressure_scaling: inertial
+  continuation: [25.0]   # solved first, each starting Newton at the next
+geometry:
+  parent_length: 3.0
+  closed_length: 8.0          # both daughters, as the outer walls of the Re_h = 10 map
+  min_width: 0.2
+angles: [[60.0, 60.0], [30.0, 90.0], [0.0, 120.0], [90.0, 90.0], [60.0, 120.0], [30.0, 150.0],
+         [15.0, 15.0], [0.0, 30.0], [20.0, 40.0], [0.0, 60.0], [45.0, 45.0], [10.0, 80.0],
+         [75.0, 75.0], [30.0, 120.0], [0.0, 150.0]]
+shares: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+search:
+  grid: 17
+  xatol: 1.0e-3
+mesh:
+  max_area: 0.02
+  corner_levels: 3
+  corner_radius: 0.4
+check:
+  max_area: 0.005
+  corner_levels: 5
+workers: 4

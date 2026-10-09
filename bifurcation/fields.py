@@ -128,7 +128,7 @@ def _gallery_task(task):
     solution = reference.solve_bifurcation(
         geometry, study_config["physics"]["reynolds"], study_config["physics"]["pressure_scaling"],
         reference.parabola_inlet, share, check["max_area"], check["corner_levels"],
-        study_config["mesh"]["corner_radius"])
+        study_config["mesh"]["corner_radius"], continuation=study_config["physics"]["continuation"])
     X, Y, inside = sample_grid(geometry, n)
     u, v, p = sample(lambda x, y: solution(x, y, chunk=PROBE_CHUNK), X, Y, inside)
     m = solution.measures()
@@ -148,7 +148,7 @@ def _reference_task(task):
     geometry = config.geometry(split)
     solution = reference.solve_bifurcation(
         geometry, config.reynolds, config.pressure_scaling, inlet, config.outlet1_share,
-        config.fe_max_area, config.fe_corner_levels, config.fe_corner_radius)
+        config.fe_max_area, config.fe_corner_levels, config.fe_corner_radius, continuation=())
     X, Y, inside = sample_grid(geometry, n)
     u, v, p = sample(lambda x, y: solution(x, y, chunk=PROBE_CHUNK), X, Y, inside)
     m = solution.measures()

@@ -137,7 +137,7 @@ def taylor_hood(mesh):
 
 
 def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
-          traction_facets=None, constraint=None, verbose=False):
+          traction_facets=None, constraint=None, verbose=False, initial=None):
     """Steady Navier-Stokes by Q2/Q1 finite elements and Newton's method.
 
     dirichlet_marker(x) -> bool over facet midpoints selects the velocity
@@ -157,6 +157,11 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
     Formaggia, Gerbeau, Nobile & Quarteroni 2002), which prescribes an
     outlet's flux and lets the outlet's pressure follow. lam is returned as
     info["multiplier"].
+
+    initial, optional: Newton's starting vector (U, P and lam, if constrained),
+    for continuation in the Reynolds number from a solution on the same mesh
+    with the same boundary data: the U and P (and lam) of that solution,
+    concatenated. Without it Newton starts from the Stokes solution.
 
     Returns (basis_u, basis_p, U, P, info).
     """
@@ -205,6 +210,13 @@ def solve(mesh, a, nu, dirichlet_marker, dirichlet_value, traction=None,
     if extra:
         rhs[-1] = target
     x = fem.solve(*fem.condense(K, rhs, x=x, D=fixed_global))
+    if initial is not None:
+        initial = np.asarray(initial, dtype=np.float64)
+        if initial.shape != x.shape:
+            raise ValueError(f"initial has shape {initial.shape}, the system {x.shape}")
+        if np.max(np.abs(initial[fixed_global] - x[fixed_global])) > 1e-12:
+            raise ValueError("initial does not carry this problem's boundary data")
+        x = initial.copy()
 
     history = []
     start = time.perf_counter()

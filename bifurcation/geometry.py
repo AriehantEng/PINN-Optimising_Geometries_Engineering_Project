@@ -13,7 +13,8 @@ The parent runs from the inlet x* = 0 to the junction x* = parent_length.
 Each daughter is a straight strip: its outer wall leaves the parent's corner
 (C or B) at its angle, its inner wall runs parallel at a distance of its width,
 and the two inner walls meet at the septum tip T. Each daughter ends in an
-outlet perpendicular to it, daughter_length along its outer wall.
+outlet perpendicular to it, daughter_length along its outer wall: one length
+for both daughters, or a pair (L1, L2).
 
 Angles are DIRECTIONS, measured from the parent's axis, daughter 1 turning up
 and daughter 2 down; 0 is straight on, above 90 turns back. The bifurcation
@@ -40,6 +41,12 @@ daughters straight (a zero-thickness splitter plate) is.
 Width rules, chosen by the caller:
   * `Geometry.from_split(split, ...)`: w1 + w2 = w0, the parent's width shared
     between the daughters (w1 = split * w0). The main design problem.
+  * `Geometry.from_split_closed(split, ...)`: the same widths, with each
+    daughter's outer wall chosen so that both have the same CLOSED length, the
+    length over which a daughter has both walls (upstream of it the strip is
+    open to the junction). With equal closed lengths the fully developed
+    friction law puts the optimum exactly at the Murray split, so any departure
+    from it is a junction and entrance effect by construction.
   * `Geometry(w1, w2, ...)`: independent widths, for user width limits.
 
 No width may approach zero: a vanishing daughter is not a bifurcation. Every
@@ -84,13 +91,25 @@ class GeometryError(ValueError):
     pass
 
 
+def daughter_lengths(daughter_length):
+    """(L1, L2) from one length for both daughters or from a pair."""
+    if isinstance(daughter_length, (tuple, list)):
+        if len(daughter_length) != 2:
+            raise GeometryError(f"daughter_length must be one length or a pair, got "
+                                f"{daughter_length!r}")
+        return daughter_length[0], daughter_length[1]
+    return daughter_length, daughter_length
+
+
 def vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     """The polygon's 9 vertices, counter-clockwise, as an (9, 2) array:
-    A, B, E2o, E2i, T, E1i, E1o, C, D. Angles in RADIANS here.
+    A, B, E2o, E2i, T, E1i, E1o, C, D. Angles in RADIANS here. `daughter_length`
+    is one outer-wall length for both daughters, or a pair (L1, L2).
 
     Written with `xp` (numpy or jax.numpy) and no branching on values, so it
     is differentiable in every argument.
     """
+    length1, length2 = daughter_lengths(daughter_length)
     one = xp.ones(())
     A = xp.stack([0.0 * one, -one])
     B = xp.stack([parent_length * one, -one])
@@ -111,9 +130,9 @@ def vertices(w1, w2, angle1, angle2, parent_length, daughter_length, xp=np):
     safe = xp.where(parallel, 1.0, det)
     t1 = xp.where(parallel, 0.0, (rhs[0] * (-d2[1]) - rhs[1] * (-d2[0])) / safe)
     T = start1 + t1 * d1
-    E1o = C + daughter_length * d1
+    E1o = C + length1 * d1
     E1i = E1o + w1 * n1
-    E2o = B + daughter_length * d2
+    E2o = B + length2 * d2
     E2i = E2o + w2 * n2
     return xp.stack([A, B, E2o, E2i, T, E1i, E1o, C, D])
 
@@ -257,14 +276,19 @@ class Geometry:
     angle1: float
     angle2: float
     parent_length: float
-    daughter_length: float
+    daughter_length: float | tuple       # outer-wall length: both daughters, or (L1, L2)
     min_width: float
     septum: str = field(init=False, compare=False)
 
     def __post_init__(self):
-        for name in ("min_width", "parent_length", "daughter_length"):
+        if isinstance(self.daughter_length, list):
+            object.__setattr__(self, "daughter_length", tuple(self.daughter_length))
+        for name in ("min_width", "parent_length"):
             if not getattr(self, name) > 0.0:
                 raise GeometryError(f"{name} must be positive, got {getattr(self, name)}")
+        for length in daughter_lengths(self.daughter_length):
+            if not length > 0.0:
+                raise GeometryError(f"daughter_length must be positive, got {self.daughter_length}")
         for name in ("w1", "w2"):
             if not getattr(self, name) >= self.min_width:
                 raise GeometryError(
@@ -335,17 +359,38 @@ class Geometry:
     @classmethod
     def from_split(cls, split, angle1, angle2, parent_length, daughter_length, min_width):
         """Daughters sharing the parent's width: w1 = split * w0, w2 = (1 - split) * w0."""
-        lo, hi = split_bounds(min_width)
-        if not lo <= split <= hi:
-            raise GeometryError(f"split must lie in [{lo:g}, {hi:g}] (min_width {min_width:g} of "
-                                f"the parent's {PARENT_WIDTH:g}), got {split}")
-        # Rounding: 2 (1 - 0.9) is 0.19999999999999996 < 0.2, so the bound
-        # split_bounds returned would be refused. At a bound the narrow
-        # daughter is EXACTLY min_width; inside them, max() only undoes
-        # rounding, since the split was checked above.
-        w1 = min_width if split == lo else max(PARENT_WIDTH * split, min_width)
-        w2 = min_width if split == hi else max(PARENT_WIDTH * (1.0 - split), min_width)
+        w1, w2 = _split_widths(split, min_width)
         return cls(w1, w2, angle1, angle2, parent_length, daughter_length, min_width)
+
+    @classmethod
+    def from_split_closed(cls, split, angle1, angle2, parent_length, closed_length, min_width):
+        """Widths as `from_split`, and each daughter's outer wall as long as it must
+        be for the daughter to have both walls over `closed_length`.
+
+        Daughter i's inner wall starts where its outer wall's cross-section is
+        reached by the septum: at the tip T, or at start_i for the face septum.
+        If that point lies a distance `lead` downstream of the cross-section
+        through the outer corner, the inner wall is `lead` shorter than the
+        outer one, so the outer wall gets closed_length + lead; if it lies
+        upstream, the outer wall is the shorter and gets closed_length."""
+        w1, w2 = _split_widths(split, min_width)
+        a1, a2 = math.radians(angle1), math.radians(angle2)
+        q = corner_points(w1, w2, a1, a2, parent_length, closed_length)
+        if septum_shape(a1, a2) == "tip":
+            inner1 = inner2 = q["T"]
+        else:
+            inner1, inner2 = q["start1"], q["start2"]
+        d1 = np.array([math.cos(a1), math.sin(a1)])
+        d2 = np.array([math.cos(a2), -math.sin(a2)])
+        lead1 = max(float(np.dot(inner1 - q["start1"], d1)), 0.0)
+        lead2 = max(float(np.dot(inner2 - q["start2"], d2)), 0.0)
+        return cls(w1, w2, angle1, angle2, parent_length,
+                   (closed_length + lead1, closed_length + lead2), min_width)
+
+    @property
+    def daughter_lengths(self):
+        """(L1, L2): each daughter's outer-wall length."""
+        return daughter_lengths(self.daughter_length)
 
     def vertices(self):
         """The polygon, counter-clockwise: 9 vertices (septum 'tip') or 10 ('face')."""
@@ -452,6 +497,20 @@ class Geometry:
         points = 0.5 * (a + b) + 0.5 * g[:, None] * (b - a)
         tangent = (b - a) / length
         return points, 0.5 * length * w, np.array([tangent[1], -tangent[0]])
+
+
+def _split_widths(split, min_width):
+    lo, hi = split_bounds(min_width)
+    if not lo <= split <= hi:
+        raise GeometryError(f"split must lie in [{lo:g}, {hi:g}] (min_width {min_width:g} of "
+                            f"the parent's {PARENT_WIDTH:g}), got {split}")
+    # Rounding: 2 (1 - 0.9) is 0.19999999999999996 < 0.2, so the bound
+    # split_bounds returned would be refused. At a bound the narrow
+    # daughter is EXACTLY min_width; inside them, max() only undoes
+    # rounding, since the split was checked above.
+    w1 = min_width if split == lo else max(PARENT_WIDTH * split, min_width)
+    w2 = min_width if split == hi else max(PARENT_WIDTH * (1.0 - split), min_width)
+    return w1, w2
 
 
 def split_bounds(min_width):

@@ -139,7 +139,7 @@ def evaluate(task):
     start = time.perf_counter()
     solution = reference.solve_bifurcation(
         geometry, config["physics"]["reynolds"], config["physics"]["pressure_scaling"],
-        reference.parabola_inlet, share, m["max_area"], m["corner_levels"], m["corner_radius"])
+        reference.parabola_inlet, share, m["max_area"], m["corner_levels"], m["corner_radius"], continuation=())
     measures = solution.measures()
     area = geometry.area()
     b = murray_price(config["physics"]["reynolds"], config["physics"]["pressure_scaling"])

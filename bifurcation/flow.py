@@ -1013,7 +1013,7 @@ def evaluate(config: Config, params, verbose=True):
     solution = reference.solve_bifurcation(
         geometry, config.reynolds, config.pressure_scaling, inlet,
         config.outlet1_share if config.prescribed else None, config.fe_max_area,
-        config.fe_corner_levels, config.fe_corner_radius)
+        config.fe_corner_levels, config.fe_corner_radius, continuation=())
     fe_seconds = time.perf_counter() - start
     a, _ = pinn.scaling_coefficients(config.reynolds, config.pressure_scaling)
     mine = opening_measures(model, geometry, a, config.n_line)
