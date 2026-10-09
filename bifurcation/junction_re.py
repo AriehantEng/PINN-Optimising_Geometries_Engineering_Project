@@ -203,8 +203,22 @@ def panels(summary):
     return roles
 
 
+def spread(values, gap):
+    """Label positions near `values`, at least `gap` apart, in the same order."""
+    order = sorted(range(len(values)), key=lambda k: values[k])
+    placed = {}
+    previous = None
+    for k in order:
+        y = values[k] if previous is None else max(values[k], previous + gap)
+        placed[k] = previous = y
+    shift = (max(placed[k] - values[k] for k in placed) / 2.0) if placed else 0.0
+    return [placed[k] - shift for k in range(len(values))]
+
+
 def plot(summary, path):
-    """Largest |s* - s_M| against Re_h, one panel per bifurcation angle."""
+    """Largest |s* - s_M| against Re_h, one panel per bifurcation angle. A point
+    over fewer shares than the layout has elsewhere (some optima left out for
+    want of a steady solution) is drawn open, joined by a dashed segment."""
     roles = panels(summary)
     fig, axes = plt.subplots(2, 3, figsize=(11, 6.4), sharex=True)
     res = [m["reynolds"] for m in summary["maps"]]
@@ -212,25 +226,38 @@ def plot(summary, path):
     for ax, (total, layouts) in zip(axes.ravel(), sorted(roles.items())):
         bounds = [r["bound"] for t in tables for a, _ in layouts for r in t.get(name(a), [])]
         ax.axhspan(0.0, max(bounds) if bounds else 0.001, color=BAND, lw=0, zorder=0)
-        top = 0.0
+        top, ends = 0.0, []
         for angles, role in layouts:
-            xs, ys = [], []
+            xs, ys, counts = [], [], []
             for re, t in zip(res, tables):
                 rs = t.get(name(angles), [])
                 if rs:
                     xs.append(re)
                     ys.append(max(abs(r["departure"]) for r in rs))
-            ax.plot(xs, ys, color=ROLE_COLOURS[role], lw=2, marker=ROLE_MARKERS[role], ms=6,
-                    zorder=3)
-            if xs:
-                ax.annotate(name(angles), (xs[-1], ys[-1]), xytext=(5, 0),
-                            textcoords="offset points", va="center", fontsize=8, color=INK)
-                top = max(top, max(ys))
+                    counts.append(len(rs))
+            if not xs:
+                continue
+            full = max(counts)
+            colour, marker = ROLE_COLOURS[role], ROLE_MARKERS[role]
+            for k in range(1, len(xs)):
+                dashed = counts[k] < full or counts[k - 1] < full
+                ax.plot(xs[k - 1:k + 1], ys[k - 1:k + 1], color=colour, lw=2,
+                        ls="--" if dashed else "-", zorder=3)
+            for x, y, n in zip(xs, ys, counts):
+                ax.plot([x], [y], marker=marker, ms=6, color=colour, zorder=4,
+                        markerfacecolor="white" if n < full else colour, markeredgewidth=1.5)
+            ends.append((xs[-1], ys[-1], name(angles) + ("" if counts[-1] == full
+                                                         else f" ({counts[-1]} shares)")))
+            top = max(top, max(ys))
+        ylim = 1.15 * max(top, 0.0015)
+        for (x, _, label), y in zip(ends, spread([y for _, y, _ in ends], 0.07 * ylim)):
+            ax.annotate(label, (x, y), xytext=(5, 0), textcoords="offset points", va="center",
+                        fontsize=8, color=INK)
         ax.set_xscale("log")
         ax.set_xticks(res, [f"{r:g}" for r in res])
         ax.minorticks_off()
-        ax.set_ylim(0.0, 1.15 * max(top, 0.0015))
-        ax.set_xlim(min(res) / 1.15, max(res) * 1.6)
+        ax.set_ylim(0.0, ylim)
+        ax.set_xlim(min(res) / 1.15, max(res) * 2.2)
         ax.set_title(f"{total:g}°" + (" (face septum)" if total == 180 else ""),
                      fontsize=10, color=INK)
         for side in ("top", "right"):
@@ -243,8 +270,10 @@ def plot(summary, path):
         ax.set_ylabel("largest |s* − s_M| over the shares", fontsize=9, color=INK)
     handles = [plt.Line2D([], [], color=c, lw=2, marker=ROLE_MARKERS[k], ms=6, label=k)
                for k, c in ROLE_COLOURS.items()]
+    handles.append(plt.Line2D([], [], color=MUTED, lw=2, ls="--", marker="o", ms=6,
+                              markerfacecolor="white", label="fewer shares (no steady solution)"))
     handles.append(plt.Rectangle((0, 0), 1, 1, color=BAND, label="largest location bound"))
-    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9)
+    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9)
     fig.suptitle("Departure of the optimal split from the Murray split, daughters of equal "
                  "closed length", fontsize=11, color=INK)
     fig.tight_layout(rect=(0, 0.06, 1, 0.96))
