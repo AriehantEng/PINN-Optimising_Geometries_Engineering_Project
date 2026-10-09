@@ -1,0 +1,82 @@
+# Parametric Network 2 with the Stokes corner modes (bifurcation/corners.py):
+# everything is p_re10_3090_equal.yaml's, the seed included, so the network's
+# initial weights and every collocation draw are the same, and the comparison
+# isolates the modes. That run plateaued at a held-out loss of ~0.02 after
+# about 60 Levenberg-Marquardt steps, with u 1.3e-2 at split 0.5 and the drop
+# error 1.4-2.1% at the range's upper edge. Near the corners B (210 deg),
+# C (270 deg) and the septum tip T (240 deg) the flow goes like r^z with
+# z = 0.752, 0.544 and 0.616 (and a second mode at C, z = 0.909), which
+# psi = G + D^2 N cannot represent; here each such mode is added with a trained
+# amplitude, a degree-4 Chebyshev series in s, inside a cutoff of radius 0.5.
+# The nearest other edge is 0.7 from T (at s = 0.35) and from C (at s = 0.65).
+name: parametric_re10_3090_equal_corners
+seed: 21
+physics:
+  reynolds: 10.0              # Re_h of the parent, as Network 1
+  pressure_scaling: inertial
+geometry:
+  angle1: 30.0                # degrees from the parent's axis, daughter 1 up
+  angle2: 90.0                # daughter 2 down
+  parent_length: 3.0
+  daughter_length: 4.0
+  min_width: 0.2
+design:
+  split_min: 0.35             # w1 / w0, the network's input range
+  split_max: 0.65
+  outlet1_share: 0.5          # prescribed, at every split
+inlet:
+  profile: parabola
+model:
+  width: 40                   # inputs (x, y, s): 5,507 parameters with the offset and corner series
+  depth: 4
+  activation: tanh
+  init_gain: 1.0
+  input_scale: 2.0            # x* - centre, divided by this; s mapped onto [-1, 1]
+  distance_order: 1
+  wall_extension: 0.5
+  blend_exponent: 2.0
+  offset_degree: 4            # outlet 1's extra pressure, Chebyshev in s, degree 4
+  corner_modes: stokes        # psi += c(s) chi(r) r^(1+z) f(theta) at B, C and T
+  corner_degree: 4            # c(s): Chebyshev in s, as the offset
+  corner_cutoff: 0.5          # chi's radius; 0.2 short of the nearest other edge
+sampling:
+  designs: 16                 # splits per draw, stratified over the range
+  points_per_design: 1024     # 16,384 interior points per draw (the fixed run: 8,192)
+  corner_fraction: 0.1
+  corner_radius: 0.5
+  corner_exclusion: 0.02
+  inlet_per_design: 32
+  outlet_per_design: 32       # per outlet
+  validation_designs: 32      # held-out: 32 splits x 1,024 points
+  n_flux: 64
+weights:
+  momentum_x: 1.0
+  momentum_y: 1.0
+  inlet: 1.0
+  outlet: 1.0
+  corner_radius: 0.3
+training:
+  adam:
+    steps: 3000
+    learning_rate: 1.0e-3
+    decay_rate: 0.9
+    decay_steps: 1000
+    resample_every: 250
+  lbfgs:
+    cycles: 4
+    iterations_per_cycle: 500
+    gtol: 1.0e-14
+  lm:
+    iterations: 150
+    damping: 1.0e-4
+    resample_every: 1
+    average: 20
+  check_every: 250
+evaluation:
+  max_area: 0.002             # the reference's mesh, as the fixed run
+  corner_levels: 6
+  corner_radius: 0.4
+  n_line: 256
+  splits: [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
+  search_xatol: 0.002         # Brent's tolerance on both optima
+  curve_points: 61            # the PINN's drop curve over the range
