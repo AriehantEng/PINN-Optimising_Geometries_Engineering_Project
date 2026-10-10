@@ -1,0 +1,11 @@
+# Where the parametric PINN's error lives (bifurcation/diagnose.py): the
+# original run and the one with the Stokes corner modes, same layout, seed,
+# points and evaluation mesh, at both ends of the split range and its middle.
+name: diagnose_re10_3090_equal
+seed: 7                       # the residual subsample
+runs:
+  - {label: original, run: bifurcation/runs/parametric_re10_3090_equal}
+  - {label: corner modes, run: bifurcation/runs/parametric_re10_3090_equal_corners}
+splits: [0.35, 0.5, 0.65]
+corner_bins: [0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 100.0]   # 0.02: training's corner exclusion
+residual_points: 20000
