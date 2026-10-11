@@ -66,6 +66,7 @@ training:
     resample_every: 1
     average: 20
   check_every: 250
+  init_from: random            # a random start (training.init_from)
 evaluation:
   max_area: 0.002             # the reference's mesh, as the fixed run
   corner_levels: 6

@@ -36,6 +36,7 @@ BASE = {
         "lbfgs": {"cycles": 0, "iterations_per_cycle": 10, "gtol": 1e-14},
         "lm": {"iterations": 0, "damping": 1e-4, "resample_every": 1, "average": 0},
         "check_every": 10,
+        "init_from": "random",
     },
     "evaluation": {"max_area": 0.05, "corner_levels": 2, "corner_radius": 0.4, "n_line": 64,
                    "splits": [0.35, 0.45, 0.6], "search_xatol": 0.01, "curve_points": 5},
@@ -43,7 +44,8 @@ BASE = {
 
 #: the corner-mode network: four modes on BASE's 30/70 layout (B 210, C 250,
 #: T 260 degrees: T beyond 257.45 has an odd mode too), cutoff 0.4 < 0.7
-CORNERS = {"model.corner_modes": "stokes", "model.corner_degree": 2, "model.corner_cutoff": 0.4}
+CORNERS = {"model.corner_modes": "stokes", "model.corner_degree": 2, "model.corner_cutoff": 0.4,
+           "model.corner_exponent_max": 1.0}
 
 Q_IN = 4.0 / 3.0                     # the parabola's flux
 SPLITS = (0.35, 0.4123, 0.5, 0.6)    # both ends of the range and two inside it
@@ -216,6 +218,7 @@ def test_at_a_fixed_split_it_is_the_fixed_geometry_network():
     del fixed["design"]
     fixed["model"].update(formulation="stream_pressure")
     del fixed["model"]["offset_degree"], fixed["model"]["corner_modes"]
+    del fixed["training"]["init_from"]
     fixed["sampling"] = {"n_interior": 64, "corner_fraction": 0.25, "corner_radius": 0.5,
                          "corner_exclusion": 0.05, "n_inlet": 16, "n_outlet": 16,
                          "n_validation": 64, "n_flux": 32}
@@ -499,3 +502,80 @@ def test_a_finished_run_loads_and_evaluates(tmp_path):
     expected = np.asarray(P.make_field(c, P.structure(c), P.flow.inlet_flux(
         flow.inlet_function(c), c.n_flux))(params, jnp.asarray([1.0, 0.2]), 0.45))
     assert np.allclose([u[0], v[0], p[0]], expected, rtol=1e-12, atol=1e-15)
+
+
+# -- warm starts: the same function, grown ------------------------------------ #
+
+def _finished(tmp_path, name, changes, params=None):
+    """A 'finished' run directory: config and parameters (random, or given)."""
+    import yaml
+    document = copy.deepcopy(BASE)
+    document["name"] = name
+    for dotted, value in changes.items():
+        node = document
+        parts = dotted.split(".")
+        for part in parts[:-1]:
+            node = node[part]
+        node[parts[-1]] = value
+    directory = tmp_path / name
+    directory.mkdir()
+    (directory / "config.yaml").write_text(yaml.safe_dump(document, sort_keys=False))
+    c = P.load_config(directory / "config.yaml")
+    if params is None:
+        params = P.init_params(c, jax.random.PRNGKey(11))
+        params["offset"] = jnp.asarray([0.3, -0.1, 0.05, 0.02])
+        if "corners" in params:
+            params["corners"] = 0.2 * jax.random.normal(jax.random.PRNGKey(12),
+                                                        params["corners"].shape)
+    pinn.save_params(directory / "params.npz", params)
+    return directory, c, params
+
+
+def _same_field(parent_dir, child_config, child_params, splits=(0.35, 0.47, 0.6)):
+    model, c, params = P.load_run(parent_dir)
+    _, _, _, child_field = P.build(child_config)
+    for s in splits:
+        pts = jnp.asarray(c.geometry(s).sample_interior(np.random.default_rng(3), 40))
+        _, _, _, field = P.build(c)
+        a = np.asarray(jax.vmap(lambda q: field(params, q, s))(pts))
+        b = np.asarray(jax.vmap(lambda q: child_field(child_params, q, s))(pts))
+        assert np.max(np.abs(a - b)) < 1e-13 * (1 + np.max(np.abs(a)))
+
+
+@pytest.mark.parametrize("child", [
+    {},                                                                  # continue as is
+    {"model.width": 12},                                                 # wider
+    {"model.offset_degree": 5},                                          # higher offset degree
+    {**{k: v for k, v in CORNERS.items()}},                              # corner modes added
+])
+def test_a_warm_start_is_the_parent_function(tmp_path, child):
+    parent_dir, _, _ = _finished(tmp_path, "parent", {})
+    c = config(**{**child, "seed": 9, "training.init_from": "parent"})
+    params, digest = P.warm_start(c, parent_dir, jax.random.PRNGKey(0))
+    assert len(digest) == 64
+    _same_field(parent_dir, c, params)
+    if child.get("model.width"):
+        # the new units are live: random input weights, zero effect on the output
+        assert np.any(np.asarray(params["net"]["hidden"][1]["W"])[8:, :] != 0.0)
+        assert np.all(np.asarray(params["net"]["output"]["W"])[:, 8:] == 0.0)
+
+
+def test_a_warm_start_can_add_the_complex_corner_modes(tmp_path):
+    parent_dir, _, _ = _finished(tmp_path, "parent", CORNERS)
+    c = config(**{**CORNERS, "model.corner_exponent_max": 2.0, "model.corner_degree": 3,
+                  "seed": 9, "training.init_from": "parent"})
+    params, _ = P.warm_start(c, parent_dir, jax.random.PRNGKey(0))
+    assert params["corners"].shape[0] > 4 and params["corners"].shape[1] == 4
+    _same_field(parent_dir, c, params)
+
+
+def test_a_warm_start_refuses_what_would_change_or_bias_it(tmp_path):
+    parent_dir, _, _ = _finished(tmp_path, "parent", {})
+    for changes, match in (({"seed": 5}, "seed 5"),                      # the parent's seed
+                           ({"seed": 9, "geometry.angle2": 75.0}, "angle2"),
+                           ({"seed": 9, "model.width": 6}, "never shrink")):
+        with pytest.raises(pinn.ConfigError, match=match):
+            P.warm_start(config(**{**changes, "training.init_from": "parent"}), parent_dir,
+                         jax.random.PRNGKey(0))
+    with pytest.raises(pinn.ConfigError, match="init_from"):
+        config(**{"training.init_from": "../parent"})

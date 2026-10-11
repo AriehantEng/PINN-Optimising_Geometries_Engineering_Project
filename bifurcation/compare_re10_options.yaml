@@ -1,0 +1,11 @@
+# The parametric runs side by side (bifurcation/compare_runs.py): the original
+# network, the corner modes, and the four ways of continuing from it with an
+# equal budget (50 Levenberg-Marquardt steps on seed 22's draws).
+name: compare_re10_options
+runs:
+  - {label: original, run: bifurcation/runs/parametric_re10_3090_equal}
+  - {label: corner modes, run: bifurcation/runs/parametric_re10_3090_equal_corners}
+  - {label: "1: continue", run: bifurcation/runs/parametric_re10_3090_corners_more}
+  - {label: "2: ease corner weight", run: bifurcation/runs/parametric_re10_3090_corners_ease}
+  - {label: "3: next corner terms", run: bifurcation/runs/parametric_re10_3090_corners_next}
+  - {label: "4: wider", run: bifurcation/runs/parametric_re10_3090_corners_wide}

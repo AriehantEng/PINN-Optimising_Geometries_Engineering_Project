@@ -1,0 +1,18 @@
+# What a design evaluation costs (bifurcation/cost.py): finite elements on a
+# ladder of meshes against the two parametric PINNs, on their 30/90 layout at
+# split 0.5, Re_h = 10, half the flow through each daughter.
+name: cost_re10_3090_equal
+split: 0.5
+meshes:                                   # coarsest first; the finest is the yardstick
+  - {max_area: 0.08, corner_levels: 2}
+  - {max_area: 0.04, corner_levels: 3}
+  - {max_area: 0.02, corner_levels: 3}    # the design study's search mesh
+  - {max_area: 0.01, corner_levels: 4}
+  - {max_area: 0.005, corner_levels: 5}   # the design study's check mesh
+  - {max_area: 0.002, corner_levels: 6}   # the PINNs' reference mesh
+  - {max_area: 0.001, corner_levels: 7}
+runs:
+  - {label: original, run: bifurcation/runs/parametric_re10_3090_equal}
+  - {label: corner modes, run: bifurcation/runs/parametric_re10_3090_equal_corners}
+repeats: 20
+widths: [40, 56, 72]                      # one LM step at each width (option 4's cost)

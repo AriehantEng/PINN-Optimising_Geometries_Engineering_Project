@@ -17,7 +17,11 @@ solves the biharmonic equation, and no-slip on both walls (psi = d(psi)/d(theta)
     odd    psi odd about the bisector    sin(z Theta) =  z sin(Theta)
 
 A root z < 1 makes the velocity gradients, the vorticity and the pressure
-singular, like r^(z-1). The bifurcation PINN writes psi = G + D^2 N with smooth
+singular, like r^(z-1); a root with 1 < Re z < 2 leaves the gradients bounded
+but the second derivatives, and so the momentum residual, singular. Beyond the
+first roots they come in complex pairs z, conj(z) (Moffatt 1964): the mode is
+then Re[c r^(1+z) f(theta)] with a complex amplitude c, and z, f and the
+pressure below are the same formulae in complex arithmetic. The bifurcation PINN writes psi = G + D^2 N with smooth
 G, D and network N, and D ~ r at the corner, so N would have to grow like
 r^(z-1): no network can, and the residual grows like 1/r near every reflex
 corner (bifurcation/flow.py). Adding each mode with z < 1 explicitly, with a
@@ -42,6 +46,7 @@ Every function here is pure and takes non-dimensional inputs.
 
 from __future__ import annotations
 
+import cmath
 import math
 from typing import NamedTuple
 
@@ -54,6 +59,9 @@ FAMILIES = ("even", "odd")
 #: Points per unit of z on which the eigenvalue condition is scanned for sign changes.
 SCAN = 20000
 
+#: Starting points of the complex search: real parts per unit of z, imaginary parts.
+COMPLEX_STARTS = (40, np.linspace(0.02, 1.5, 30))
+
 
 def condition(z, angle, family):
     """sin(z Theta) +- z sin(Theta): zero at the family's eigenvalues."""
@@ -61,30 +69,55 @@ def condition(z, angle, family):
     return np.sin(z * angle) + sign * z * np.sin(angle)
 
 
-def eigenvalues(angle, family):
-    """The family's roots z in (0, 1) for fluid-side angle `angle` (radians),
-    ascending. z = 0, and z = 1 for the odd family, are trivial (f = 0)."""
+def eigenvalues(angle, family, upper):
+    """The family's roots with 0 < Re z < `upper` for fluid-side angle `angle`
+    (radians), by ascending real part: real roots as floats, complex ones as
+    complex with Im z > 0 (each stands for its conjugate pair). z = 0, and
+    z = 1 for the odd family, are trivial (f = 0)."""
     if family not in FAMILIES:
         raise ValueError(f"family must be one of {FAMILIES}, got {family!r}")
     if not math.pi < angle < 2.0 * math.pi:
         raise ValueError("a reflex corner has a fluid-side angle between 180 and 360 degrees")
-    z = np.linspace(1e-6, 1.0 - 1e-9, SCAN)
+    sign = 1.0 if family == "even" else -1.0
+
+    def trivial(z):
+        return family == "odd" and abs(z - 1.0) < 1e-9
+
+    z = np.linspace(1e-6, upper, int(SCAN * upper))
     g = condition(z, angle, family)
     roots = []
     for k in np.nonzero(np.sign(g[:-1]) != np.sign(g[1:]))[0]:
-        roots.append(brentq(condition, z[k], z[k + 1], args=(angle, family), xtol=1e-15,
-                            rtol=4 * np.finfo(float).eps))
-    return roots
+        root = brentq(condition, z[k], z[k + 1], args=(angle, family), xtol=1e-15,
+                      rtol=4 * np.finfo(float).eps)
+        if not trivial(root):
+            roots.append(root)
+    per_unit, imaginary = COMPLEX_STARTS
+    for re in np.linspace(0.02, upper, max(2, int(per_unit * upper))):
+        for im in imaginary:
+            w = complex(re, im)
+            for _ in range(80):
+                step = ((cmath.sin(w * angle) + sign * w * math.sin(angle))
+                        / (angle * cmath.cos(w * angle) + sign * math.sin(angle)))
+                w -= step
+                if abs(step) < 1e-15 or abs(w) > 1e3:
+                    break
+            if (abs(cmath.sin(w * angle) + sign * w * math.sin(angle)) < 1e-12
+                    and w.imag > 1e-9 and 0.0 < w.real < upper
+                    and not any(isinstance(r, complex) and abs(r - w) < 1e-8 for r in roots)):
+                roots.append(w)
+    return sorted(roots, key=lambda r: (r.real, abs(r.imag) if isinstance(r, complex) else 0.0))
 
 
 def mode_coefficients(z, angle, family):
-    """(a1, a2, a3, a4) of the mode with eigenvalue z, scaled so that
-    max |f| over the fluid sector is 1."""
+    """(a1, a2, a3, a4) of the mode with eigenvalue z, real or complex, scaled so
+    that max |f| over the fluid sector is 1."""
     half = 0.5 * angle
     if family == "even":
-        a = np.array([math.cos((z - 1.0) * half), 0.0, -math.cos((1.0 + z) * half), 0.0])
+        a = np.array([cmath.cos((z - 1.0) * half), 0.0, -cmath.cos((1.0 + z) * half), 0.0])
     else:
-        a = np.array([0.0, math.sin((z - 1.0) * half), 0.0, -math.sin((1.0 + z) * half)])
+        a = np.array([0.0, cmath.sin((z - 1.0) * half), 0.0, -cmath.sin((1.0 + z) * half)])
+    if not isinstance(z, complex):
+        a = a.real
     theta = np.linspace(-half, half, 4001)
     return a / np.max(np.abs(angular(a, z, theta, np)))
 
@@ -114,14 +147,19 @@ def cutoff(r, radius):
 
 
 class Mode(NamedTuple):
-    z: float
+    z: float | complex        # complex: Re[c r^(1+z) f], c = two trained amplitudes
     family: str
     coefficients: tuple
+
+    @property
+    def amplitudes(self):
+        """Trained amplitudes it takes: 1 for a real eigenvalue, 2 for a complex pair."""
+        return 2 if isinstance(self.z, complex) else 1
 
 
 class Corner(NamedTuple):
     """One reflex corner: its vertex index in the polygon, the unit bisector of
-    its fluid sector, its fluid-side angle (radians) and its modes with z < 1."""
+    its fluid sector, its fluid-side angle (radians) and its modes."""
     vertex: int
     bisector: tuple
     angle: float
@@ -141,11 +179,11 @@ def sector(vertices, i):
     return (math.cos(middle), math.sin(middle)), angle
 
 
-def corner(vertices, i):
-    """The Corner at vertex i, with every mode of either family that has z < 1."""
+def corner(vertices, i, upper):
+    """The Corner at vertex i, with every mode of either family that has Re z < upper."""
     bisector, angle = sector(vertices, i)
     modes = tuple(Mode(z, family, tuple(mode_coefficients(z, angle, family)))
-                  for family in FAMILIES for z in eigenvalues(angle, family))
+                  for family in FAMILIES for z in eigenvalues(angle, family, upper))
     return Corner(i, bisector, angle, modes)
 
 

@@ -16,6 +16,8 @@ ACTUALLY did:
     model.wall_extension = 0.0              walls ended at the openings
     fit.workers = 1                         (Network 3) cross-validation ran in one process
     model.corner_modes = none               (parametric) psi = G + D^2 N, no corner modes
+    model.corner_exponent_max = 1.0         (parametric, corner modes) the modes with z < 1
+    training.init_from = random             (parametric) a random start
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -60,6 +62,14 @@ PARAMETRIC_MIGRATIONS = (
     ("model.corner_modes", "none", r"^  offset_degree: .*$",
      lambda d: "corner_modes" not in d.get("model", {}),
      "before model.corner_modes existed the stream function had no corner modes"),
+    ("model.corner_exponent_max", 1.0, r"^  corner_cutoff: .*$",
+     lambda d: (d.get("model", {}).get("corner_modes") == "stokes"
+                and "corner_exponent_max" not in d["model"]),
+     "before model.corner_exponent_max existed the corner modes were those with real z < 1; "
+     "no eigenvalue at these corners is complex with Re z < 1, so that is Re z < 1"),
+    ("training.init_from", "random", r"^  check_every: .*$",
+     lambda d: "init_from" not in d.get("training", {}),
+     "before training.init_from existed every parametric run started from a random network"),
 )
 
 

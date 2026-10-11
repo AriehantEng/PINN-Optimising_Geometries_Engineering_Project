@@ -10,5 +10,17 @@
         "reason": "before model.corner_modes existed the stream function had no corner modes"
       }
     ]
+  },
+  {
+    "migrated_by": "bifurcation/migrate.py",
+    "migrated_at": "2026-10-11T09:47:41.368936+00:00",
+    "why": "config keys became required after this run finished; values describe what the run actually computed, and no result changed",
+    "added": [
+      {
+        "key": "training.init_from",
+        "value": "random",
+        "reason": "before training.init_from existed every parametric run started from a random network"
+      }
+    ]
   }
 ]

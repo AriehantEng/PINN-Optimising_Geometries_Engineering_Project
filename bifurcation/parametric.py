@@ -30,7 +30,9 @@ made a function of s:
                    psi += c(s) chi(r) r^(1+z) f(theta) and its pressure partner
                    p += c(s) chi(r) nu P(r, theta), with c(s) a trained
                    Chebyshev series in s of degree model.corner_degree and chi
-                   a cutoff of radius model.corner_cutoff. psi = G + D^2 N
+                   a cutoff of radius model.corner_cutoff, for every mode with
+                   Re z < model.corner_exponent_max (complex eigenvalues take
+                   a complex amplitude, two series). psi = G + D^2 N
                    alone would need N ~ r^(z-1) at the corner, which no network
                    can give; the modes leave N a bounded remainder. Mass, the
                    share and no-slip stay exact. `none` is the original network
@@ -110,6 +112,7 @@ SCHEMA = {
         "lbfgs": {"cycles": int, "iterations_per_cycle": int, "gtol": float},
         "lm": {"iterations": int, "damping": float, "resample_every": int, "average": int},
         "check_every": int,
+        "init_from": str,     # 'random', or the name of a finished run beside this one
     },
     "evaluation": {"max_area": float, "corner_levels": int, "corner_radius": float,
                    "n_line": int, "splits": list, "search_xatol": float, "curve_points": int},
@@ -119,7 +122,8 @@ SCHEMA = {
 CONDITIONAL = {("inlet", "run"): str, ("inlet", "station"): float}
 
 #: model.corner_modes = stokes only
-CORNER_KEYS = {("model", "corner_degree"): int, ("model", "corner_cutoff"): float}
+CORNER_KEYS = {("model", "corner_degree"): int, ("model", "corner_cutoff"): float,
+               ("model", "corner_exponent_max"): float}
 
 #: Splits at which the range is checked: every geometry must be valid and of
 #: the same shape, so one differentiable construction serves the whole range.
@@ -155,6 +159,7 @@ class Config:
     corner_modes: str
     corner_degree: int | None
     corner_cutoff: float | None
+    corner_exponent_max: float | None
     designs: int
     points_per_design: int
     corner_fraction: float
@@ -179,6 +184,7 @@ class Config:
     lm_resample_every: int
     lm_average: int
     check_every: int
+    init_from: str
     fe_max_area: float
     fe_corner_levels: int
     fe_corner_radius: float
@@ -232,8 +238,14 @@ def parse_config(document) -> Config:
         if stokes:
             pinn._check_value(where, conditional[(section, key)], expected)
     if stokes and (conditional[("model", "corner_degree")] < 0
-                   or conditional[("model", "corner_cutoff")] <= 0.0):
-        raise ConfigError("model.corner_degree must be >= 0 and model.corner_cutoff > 0")
+                   or conditional[("model", "corner_cutoff")] <= 0.0
+                   or conditional[("model", "corner_exponent_max")] <= 0.0):
+        raise ConfigError("model.corner_degree must be >= 0, model.corner_cutoff and "
+                          "model.corner_exponent_max > 0")
+    init_from = document["training"]["init_from"]
+    if not init_from or "/" in init_from or init_from in (".", ".."):
+        raise ConfigError("training.init_from must be 'random' or the NAME of a finished run "
+                          "beside this one")
     g, d, m, s, t, e = (document[k] for k in ("geometry", "design", "model", "sampling",
                                                  "training", "evaluation"))
     lo, hi = split_bounds(g["min_width"])
@@ -281,6 +293,8 @@ def parse_config(document) -> Config:
         corner_modes=m["corner_modes"],
         corner_degree=conditional.get(("model", "corner_degree")),
         corner_cutoff=(float(conditional[("model", "corner_cutoff")]) if stokes else None),
+        corner_exponent_max=(float(conditional[("model", "corner_exponent_max")]) if stokes
+                             else None),
         designs=s["designs"], points_per_design=s["points_per_design"],
         corner_fraction=float(s["corner_fraction"]), corner_radius=float(s["corner_radius"]),
         corner_exclusion=float(s["corner_exclusion"]), inlet_per_design=s["inlet_per_design"],
@@ -295,7 +309,7 @@ def parse_config(document) -> Config:
         lbfgs_gtol=float(t["lbfgs"]["gtol"]),
         lm_iterations=t["lm"]["iterations"], lm_damping=float(t["lm"]["damping"]),
         lm_resample_every=t["lm"]["resample_every"], lm_average=t["lm"]["average"],
-        check_every=t["check_every"],
+        check_every=t["check_every"], init_from=t["init_from"],
         fe_max_area=float(e["max_area"]), fe_corner_levels=e["corner_levels"],
         fe_corner_radius=float(e["corner_radius"]), n_line=e["n_line"],
         eval_splits=tuple(float(v) for v in e["splits"]), search_xatol=float(e["search_xatol"]),
@@ -403,7 +417,7 @@ def singular_modes(config: Config, st: Structure):
     out = None
     for split in np.linspace(config.split_min, config.split_max, RANGE_CHECKS):
         v = config.geometry(split).vertices()
-        found = tuple(corners.corner(v, i) for i in st.singular)
+        found = tuple(corners.corner(v, i, config.corner_exponent_max) for i in st.singular)
         for c in found:
             try:
                 corners.check_cutoff(v, c.vertex, config.corner_cutoff)
@@ -473,7 +487,8 @@ def init_params(config: Config, key):
     params = {"net": pinn.init_network(key, 3, config.width, config.depth, 2, config.init_gain),
               "offset": jnp.zeros(config.offset_degree + 1, dtype=jnp.float64)}
     if config.corner_modes == "stokes":
-        count = sum(len(c.modes) for c in singular_modes(config, structure(config)))
+        count = sum(m.amplitudes for c in singular_modes(config, structure(config))
+                    for m in c.modes)
         params["corners"] = jnp.zeros((count, config.corner_degree + 1), dtype=jnp.float64)
     return params
 
@@ -524,10 +539,18 @@ def make_field(config: Config, st: Structure, q_in):
             chi = corners.cutoff(r, config.corner_cutoff)
             for mode in c.modes:
                 a = jnp.asarray(mode.coefficients)
-                total_psi = total_psi + amplitude[k] * chi * corners.stream(r, theta, mode.z, a)
-                total_p = total_p + amplitude[k] * chi * viscous * corners.pressure(
-                    r, theta, mode.z, a)
-                k += 1
+                if mode.amplitudes == 1:
+                    total_psi = total_psi + amplitude[k] * chi * corners.stream(
+                        r, theta, mode.z, a)
+                    total_p = total_p + amplitude[k] * chi * viscous * corners.pressure(
+                        r, theta, mode.z, a)
+                else:                   # Re[c mode], c = a_k + i a_(k+1)
+                    c_k = amplitude[k] + 1j * amplitude[k + 1]
+                    total_psi = total_psi + jnp.real(
+                        c_k * chi * corners.stream(r, theta, mode.z, a))
+                    total_p = total_p + jnp.real(
+                        c_k * chi * viscous * corners.pressure(r, theta, mode.z, a))
+                k += mode.amplitudes
         return total_psi, total_p
 
     def field(params, xy, s):
@@ -638,8 +661,125 @@ def sample_batch(rng, config: Config, inlet, designs) -> flow.Batch:
 # --------------------------------------------------------------------------- #
 
 
-def _fingerprint(config: Config) -> dict:
+#: What a warm start must keep, so that the parent's parameters mean the same
+#: function in this run's construction. The network may only grow (width,
+#: offset degree, corner modes and their degree); sampling, weights and the
+#: training schedule may change.
+WARM_START_FIXED = ("reynolds", "pressure_scaling", "angle1", "angle2", "parent_length",
+                    "daughter_length", "min_width", "split_min", "split_max", "outlet1_share",
+                    "inlet_profile", "inlet_run", "inlet_station", "depth", "activation",
+                    "input_scale", "distance_order", "wall_extension", "blend_exponent")
+
+#: Points at which a warm start checks that it reproduces the parent's field.
+WARM_START_CHECKS = 64
+
+
+def _grown(parent, child, old):
+    """`parent`'s dense layer placed in `child`'s: the first `old` units are the
+    parent's; inputs from new units to old ones are zero (and so are the new
+    units' outputs when `child` is the output layer), new units keep `child`'s
+    random weights. Inputs are the same size or the hidden width."""
+    W, b = np.array(child["W"]), np.array(child["b"])
+    pW, pb = np.asarray(parent["W"]), np.asarray(parent["b"])
+    rows, cols = pW.shape
+    W[:rows, :cols] = pW
+    W[:rows, cols:] = 0.0
+    b[:rows] = pb
+    return {"W": jnp.asarray(W), "b": jnp.asarray(b)}
+
+
+def warm_start(config: Config, parent_directory, key):
+    """(params, sha256 of the parent's params.npz): the finished run in
+    `parent_directory` written in this config's construction, the same function
+    to round-off (checked). New hidden units, offset coefficients, corner modes
+    and Chebyshev degrees enter with zero effect; new units keep random input
+    weights, so their gradients are not zero."""
+    parent_directory = pathlib.Path(parent_directory)
+    if not (parent_directory / "params.npz").is_file():
+        raise ConfigError(f"training.init_from = {config.init_from!r}: {parent_directory} is not "
+                          "a finished run (no params.npz)")
+    _, parent, parent_params = load_run(parent_directory)
+    for name in WARM_START_FIXED:
+        if getattr(parent, name) != getattr(config, name):
+            raise ConfigError(f"training.init_from = {config.init_from!r}: {name} is "
+                              f"{getattr(parent, name)!r} there and {getattr(config, name)!r} "
+                              "here; a warm start keeps the construction")
+    if config.width < parent.width or config.offset_degree < parent.offset_degree:
+        raise ConfigError("a warm start may widen the network and raise the offset degree, "
+                          "never shrink them")
+    if parent.corner_modes == "stokes" and (
+            config.corner_modes != "stokes" or config.corner_cutoff != parent.corner_cutoff
+            or config.corner_degree < parent.corner_degree
+            or config.corner_exponent_max < parent.corner_exponent_max):
+        raise ConfigError("a warm start keeps the parent's corner modes and cutoff, and may "
+                          "only add modes or raise their degree")
+    # The parent's held-out points chose its network (CLAUDE.md): an ancestor's
+    # seed would score the start with that bias. So the whole chain differs.
+    seeds, ancestor, where = {}, parent, parent_directory
+    while True:
+        if ancestor.name in seeds.values():
+            raise ConfigError(f"training.init_from: the chain of starting runs loops at "
+                              f"{ancestor.name!r}")
+        seeds.setdefault(ancestor.seed, ancestor.name)
+        if ancestor.init_from == "random":
+            break
+        where = where.parent / ancestor.init_from
+        ancestor = load_config(where / "config.yaml")
+    if config.seed in seeds:
+        raise ConfigError(f"seed {config.seed} is also the seed of {seeds[config.seed]!r}, which "
+                          f"this run starts from; use a seed not in {sorted(seeds)}")
+
+    child = init_params(config, key)
+    net, old = child["net"], parent.width
+    out = {"encoder_u": _grown(parent_params["net"]["encoder_u"], net["encoder_u"], old),
+           "encoder_v": _grown(parent_params["net"]["encoder_v"], net["encoder_v"], old),
+           "hidden": [_grown(p, c, old) for p, c in zip(parent_params["net"]["hidden"],
+                                                         net["hidden"])],
+           "output": _grown(parent_params["net"]["output"], net["output"], old)}
+    params = {"net": out,
+              "offset": child["offset"].at[:parent.offset_degree + 1].set(
+                  parent_params["offset"])}
+    if config.corner_modes == "stokes":
+        rows = np.zeros(child["corners"].shape)
+        if parent.corner_modes == "stokes":
+            parent_rows = np.asarray(parent_params["corners"])
+
+            def index(found):
+                table, k = {}, 0
+                for c in found:
+                    for m in c.modes:
+                        table[(c.vertex, m.family, complex(m.z))] = (k, m.amplitudes)
+                        k += m.amplitudes
+                return table
+
+            mine = index(singular_modes(config, structure(config)))
+            for ident, (k, n) in index(singular_modes(parent, structure(parent))).items():
+                match = [v for i, v in mine.items() if i[:2] == ident[:2]
+                         and abs(i[2] - ident[2]) < 1e-9]
+                if len(match) != 1:
+                    raise RuntimeError(f"warm start: parent mode {ident} has no counterpart")
+                j, _ = match[0]
+                rows[j:j + n, :parent_rows.shape[1]] = parent_rows[k:k + n]
+        params["corners"] = jnp.asarray(rows)
+    # The point of a warm start: the same function. Checked, not assumed.
+    _, _, _, field = build(config)
+    _, _, _, parent_field = build(parent)
+    rng = np.random.default_rng(0)
+    for s in (config.split_min, config.split_mid, config.split_max):
+        pts = jnp.asarray(config.geometry(s).sample_interior(rng, WARM_START_CHECKS))
+        a = np.asarray(jax.vmap(lambda q: parent_field(parent_params, q, s))(pts))
+        b = np.asarray(jax.vmap(lambda q: field(params, q, s))(pts))
+        if np.max(np.abs(a - b)) > 1e-12 * (1.0 + np.max(np.abs(a))):
+            raise RuntimeError(f"warm start changed the field by {np.max(np.abs(a - b)):.3e} "
+                               f"at split {s}")
+    raw = (parent_directory / "params.npz").read_bytes()
+    return params, hashlib.sha256(raw).hexdigest()
+
+
+def _fingerprint(config: Config, parent_hash=None) -> dict:
     text = json.dumps(dataclasses.asdict(config), sort_keys=True, default=repr)
+    if parent_hash is not None:
+        text += parent_hash
     code = hashlib.sha256()
     for path in (pathlib.Path(__file__), HERE / "flow.py", HERE / "geometry.py",
                  HERE / "corners.py", pathlib.Path(pinn.__file__)):
@@ -658,11 +798,21 @@ def build(config: Config):
     return st, inlet, q_in, make_field(config, st, q_in)
 
 
-def train(config: Config, verbose=True, checkpoint=None, resume=False):
+def train(config: Config, verbose=True, checkpoint=None, resume=False, parent_directory=None):
+    """With training.init_from naming a run, `parent_directory` is that run's
+    directory (run() finds it beside this run's)."""
     st, inlet, q_in, field = build(config)
     groups, batched_loss = make_residuals(config, st, field)
     model_key, draws, heldout_rng = flow._streams(config.seed)
-    params = init_params(config, model_key)
+    parent_hash = None
+    if config.init_from == "random":
+        if parent_directory is not None:
+            raise ValueError("a parent run given, but training.init_from is 'random'")
+        params = init_params(config, model_key)
+    else:
+        if parent_directory is None:
+            raise ValueError(f"training.init_from = {config.init_from!r}: pass its directory")
+        params, parent_hash = warm_start(config, parent_directory, model_key)
 
     def draw():
         return sample_batch(draws, config, inlet, config.designs)
@@ -678,10 +828,14 @@ def train(config: Config, verbose=True, checkpoint=None, resume=False):
                         for k, a in enumerate(amplitude)})
         return out
 
+    start_heldout = float(batched_loss(params, heldout))
     best, history, info = flow.optimise(config, params, groups, batched_loss, draws, draw,
-                                        heldout, _fingerprint(config), describe, verbose,
-                                        checkpoint, resume)
+                                        heldout, _fingerprint(config, parent_hash), describe,
+                                        verbose, checkpoint, resume)
     info["inlet_flux"] = q_in
+    info["start_heldout_loss"] = start_heldout
+    if parent_hash is not None:
+        info["parent"] = {"run": config.init_from, "params_sha256": parent_hash}
     return best, history, info
 
 
@@ -857,7 +1011,8 @@ def run(config_path, out=None, verbose=True, resume=False):
         if (directory / "checkpoint.npz").exists():
             raise FileExistsError(f"{directory} holds a checkpoint: resume it or remove it")
         stored.write_text(text)
-    params, history, info = train(config, verbose, directory / "checkpoint.npz", resume)
+    parent = None if config.init_from == "random" else directory.parent / config.init_from
+    params, history, info = train(config, verbose, directory / "checkpoint.npz", resume, parent)
     pinn.save_params(directory / "params.npz", params)
     (directory / "history.json").write_text(json.dumps(flow._json_safe(history), indent=1))
     metrics = evaluate(config, params, verbose)
