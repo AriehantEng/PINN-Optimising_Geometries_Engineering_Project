@@ -1,0 +1,206 @@
+{
+ "config": {
+  "name": "cost_re10_3090_equal",
+  "split": 0.5,
+  "meshes": [
+   {
+    "max_area": 0.08,
+    "corner_levels": 2
+   },
+   {
+    "max_area": 0.04,
+    "corner_levels": 3
+   },
+   {
+    "max_area": 0.02,
+    "corner_levels": 3
+   },
+   {
+    "max_area": 0.01,
+    "corner_levels": 4
+   },
+   {
+    "max_area": 0.005,
+    "corner_levels": 5
+   },
+   {
+    "max_area": 0.002,
+    "corner_levels": 6
+   },
+   {
+    "max_area": 0.001,
+    "corner_levels": 7
+   }
+  ],
+  "runs": [
+   {
+    "label": "original",
+    "run": "bifurcation/runs/parametric_re10_3090_equal"
+   },
+   {
+    "label": "corner modes",
+    "run": "bifurcation/runs/parametric_re10_3090_equal_corners"
+   }
+  ],
+  "repeats": 20,
+  "widths": [
+   40,
+   56,
+   72
+  ]
+ },
+ "fe": [
+  {
+   "max_area": 0.08,
+   "corner_levels": 2,
+   "seconds": 0.46761367799990694,
+   "triangles": 520,
+   "unknowns": 2569,
+   "newton_iterations": 4,
+   "drop": 4.048909374662545,
+   "peak_mb": 236.30859375,
+   "drop_error_vs_finest": -0.0006644496567626001
+  },
+  {
+   "max_area": 0.04,
+   "corner_levels": 3,
+   "seconds": 0.45822933100021146,
+   "triangles": 1127,
+   "unknowns": 5383,
+   "newton_iterations": 4,
+   "drop": 4.049837423470644,
+   "peak_mb": 252.40234375,
+   "drop_error_vs_finest": -0.00043539237724166124
+  },
+  {
+   "max_area": 0.02,
+   "corner_levels": 3,
+   "seconds": 0.997149957000147,
+   "triangles": 2176,
+   "unknowns": 10236,
+   "newton_iterations": 4,
+   "drop": 4.05059290457425,
+   "peak_mb": 284.38671875,
+   "drop_error_vs_finest": -0.0002489275654652401
+  },
+  {
+   "max_area": 0.01,
+   "corner_levels": 4,
+   "seconds": 2.912437935000071,
+   "triangles": 4844,
+   "unknowns": 22517,
+   "newton_iterations": 4,
+   "drop": 4.051389243847544,
+   "peak_mb": 368.36328125,
+   "drop_error_vs_finest": -5.237830434379198e-05
+  },
+  {
+   "max_area": 0.005,
+   "corner_levels": 5,
+   "seconds": 9.832994618000157,
+   "triangles": 11181,
+   "unknowns": 51326,
+   "newton_iterations": 4,
+   "drop": 4.051519463863896,
+   "peak_mb": 598.5546875,
+   "drop_error_vs_finest": -2.0237922906618522e-05
+  },
+  {
+   "max_area": 0.002,
+   "corner_levels": 6,
+   "seconds": 34.512292118999994,
+   "triangles": 28399,
+   "unknowns": 129562,
+   "newton_iterations": 4,
+   "drop": 4.051575963401137,
+   "peak_mb": 1414.08203125,
+   "drop_error_vs_finest": -6.292934042084752e-06
+  },
+  {
+   "max_area": 0.001,
+   "corner_levels": 7,
+   "seconds": 115.37017648300002,
+   "triangles": 61770,
+   "unknowns": 280609,
+   "newton_iterations": 4,
+   "drop": 4.051601459861889,
+   "peak_mb": 2935.203125,
+   "drop_error_vs_finest": 0.0
+  }
+ ],
+ "fe_time_exponent": 1.4460327572922311,
+ "pinn": [
+  {
+   "label": "original",
+   "run": "bifurcation/runs/parametric_re10_3090_equal",
+   "query": {
+    "drop_query_seconds": 0.023474006500123323,
+    "drop_query_first_seconds": 1.4907926920000136,
+    "field_points": 340788,
+    "field_seconds": 0.8927893969998877,
+    "field_first_seconds": 3.4344517889999224,
+    "parameters": 5487,
+    "peak_mb": 1554.41015625
+   },
+   "lm_step": {
+    "width": 40,
+    "parameters": 5487,
+    "rows": 17920,
+    "seconds": 36.16181016600001,
+    "first_seconds": 93.67808181100008,
+    "peak_mb": 2977.23046875
+   },
+   "training_seconds": 9777.74705696106,
+   "lm_iterations": 150
+  },
+  {
+   "label": "corner modes",
+   "run": "bifurcation/runs/parametric_re10_3090_equal_corners",
+   "query": {
+    "drop_query_seconds": 0.023320409000007203,
+    "drop_query_first_seconds": 1.8501943559999745,
+    "field_points": 340788,
+    "field_seconds": 0.9674793550000231,
+    "field_first_seconds": 4.81285042699983,
+    "parameters": 5507,
+    "peak_mb": 1547.765625
+   },
+   "lm_step": {
+    "width": 40,
+    "parameters": 5507,
+    "rows": 17920,
+    "seconds": 37.56739063800012,
+    "first_seconds": 117.60970809499986,
+    "peak_mb": 3891.34765625
+   },
+   "training_seconds": 10536.972182750702,
+   "lm_iterations": 150
+  }
+ ],
+ "lm_step_by_width": [
+  {
+   "width": 40,
+   "parameters": 5487,
+   "rows": 17920,
+   "seconds": 36.19860403950008,
+   "first_seconds": 86.32176904400012,
+   "peak_mb": 2601.91015625
+  },
+  {
+   "width": 56,
+   "parameters": 10367,
+   "rows": 17920,
+   "seconds": 122.36263931650012,
+   "first_seconds": 176.60980908800002,
+   "peak_mb": 4168.24609375
+  },
+  {
+   "width": 72,
+   "parameters": 16783,
+   "rows": 17920,
+   "seconds": 382.0884774005003,
+   "first_seconds": 431.8841943120001,
+   "peak_mb": 8398.4453125
+  }
+ ]
+}

@@ -28,6 +28,14 @@ reference's own mesh (CLAUDE.md):
                  flow.opening_measures uses for both models.
     training     the selected iterate's held-out loss, the held-out to
                  training ratio at the end, and the training time.
+    loss-term gradients
+                 at the trained parameters, for the held-out design nearest
+                 each split: each loss term's value and the norm of its
+                 gradient in the parameters, and the ratio of the interior
+                 (momentum) term's gradient norm to the boundary terms'
+                 (inlet and outlets). A ratio far from 1 is the stiffness
+                 Wang, Teng & Perdikaris (2021) diagnose in gradient-trained
+                 PINNs; this measures it at the end of training.
 """
 
 from __future__ import annotations
@@ -178,6 +186,39 @@ def reference_points(solution):
             ref_u[1].ravel(), ref_p.ravel())
 
 
+def term_gradients(config, params, splits):
+    """{split: {term: (loss, gradient norm)}, plus the interior/boundary ratio}
+    on the held-out design nearest each split (the run's own held-out draw)."""
+    from jax.flatten_util import ravel_pytree
+    st, inlet, _, field = P.build(config)
+    groups, _ = P.make_residuals(config, st, field)
+    _, _, heldout_rng = flow._streams(config.seed)
+    batch = P.sample_batch(heldout_rng, config, inlet, config.validation_designs)
+    designs = np.unique(batch.interior[:, 2])
+    names = ("interior", "inlet", "outlet1", "outlet2")
+    out = {}
+    for s in splits:
+        nearest = designs[np.argmin(np.abs(designs - s))]
+        terms = {}
+        flat_grads = {}
+        for name, (fn, rows) in zip(names, groups(batch)):
+            mine = jnp.asarray(rows[rows[:, 2] == nearest])
+            n = mine.shape[0]
+
+            def loss(p, mine=mine, n=n, fn=fn):
+                return jnp.sum(jax.vmap(lambda row: fn(p, row, n))(mine) ** 2)
+
+            value, grad = jax.value_and_grad(loss)(params)
+            flat_grads[name] = np.asarray(ravel_pytree(grad)[0])
+            terms[name] = {"loss": float(value), "gradient_norm":
+                           float(np.linalg.norm(flat_grads[name]))}
+        boundary = flat_grads["inlet"] + flat_grads["outlet1"] + flat_grads["outlet2"]
+        out[f"{s:g}"] = {"design": float(nearest), "terms": terms,
+                         "interior_over_boundary": float(np.linalg.norm(flat_grads["interior"])
+                                                         / np.linalg.norm(boundary))}
+    return out
+
+
 def training_summary(run):
     directory = ROOT / run
     history = json.loads((directory / "history.json").read_text())
@@ -239,6 +280,8 @@ def diagnose(document):
             })
         out["splits"].append(entry)
     out["training"] = {run["label"]: training_summary(run["run"]) for run in runs}
+    out["term_gradients"] = {run["label"]: term_gradients(run["config"], run["params"],
+                                                          document["splits"]) for run in runs}
     return out
 
 
@@ -262,6 +305,17 @@ def markdown(result):
         lines.append(f"| {label} | {t['parameters']} | {t['training_minutes']:.0f} | "
                      f"{t['selected']} | {t['selected_heldout_loss']:.3e} | "
                      f"{t['final_heldout_over_train']:.2f} |")
+    lines += ["", "### Loss terms and their gradients at the trained parameters", "",
+              "On the held-out design nearest each split. Ratio: gradient norm of the interior "
+              "(momentum) term over that of the boundary terms together.", "",
+              "| run | split | interior loss | inlet loss | outlet 1 loss | outlet 2 loss "
+              "| interior / boundary gradient |", "|---|---|---|---|---|---|---|"]
+    for label, by_split in result.get("term_gradients", {}).items():
+        for key, g in by_split.items():
+            t = g["terms"]
+            lines.append(f"| {label} | {g['design']:.4f} | {t['interior']['loss']:.2e} | "
+                         f"{t['inlet']['loss']:.2e} | {t['outlet1']['loss']:.2e} | "
+                         f"{t['outlet2']['loss']:.2e} | {g['interior_over_boundary']:.2f} |")
     for entry in result["splits"]:
         s = entry["split"]
         lines += ["", f"### Split {s:g}", "",
