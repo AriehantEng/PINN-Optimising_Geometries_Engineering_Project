@@ -46,7 +46,7 @@ The PINN's optimum is found by a 61-point scan of its drop curve followed by Bre
 | Murray split | 0.5000 | |
 
 - **Argmin error:** −0.0003, inside the search tolerance of ±0.002. The network and the reference agree to within the precision of the search.
-- **Regret** (the extra pressure drop of building the network's split, both evaluated by finite elements): +0.0004%. Since each optimum is located only to ±0.002 and J″/J ≈ 44 (Appendix A.3), the regret is better stated as below about 0.01%.
+- **Regret** (the extra pressure drop of building the network's split, both evaluated by finite elements): +0.0004%. Since each optimum is located only to ±0.002 and J″/J = 33.6 for this layout (Appendix A.3; measured in `docs/bifurcation_re10-cost-checks.md`), the regret is better stated as below about 0.01%.
 - **Error in the minimum drop:** +0.07%.
 
 The location agrees because the drop error is nearly flat between s = 0.45 and 0.50 (0.06% to 0.11%). The optimum's position depends on that slope, not on the error's size (Appendix A.3, hypothesis H3). The much larger errors at the edges of the range do not move it.

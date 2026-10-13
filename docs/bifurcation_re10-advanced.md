@@ -48,17 +48,21 @@ evaluations are independent, so four FE solves can run at once on the same
 machine, which would divide C_FE by up to four and multiply every n\* by up to
 four. And T counts training only, not the FE solves that verified it.
 
-The comparison is meaningful only at equal accuracy (Section 2.5). The PINN's
-drop error against the reference mesh is 0.076% at s = 0.5 and up to 1.15% at the
-edge of its range (Table A3). The coarsest FE mesh measured has a drop error of
-0.066% at s = 0.5, so **every FE mesh in Table A1 is at least as accurate as the
-PINN**, and the coarsest is the fair baseline.
+The comparison is meaningful only at equal accuracy (Section 2.5). Table A1b sets
+the coarsest FE mesh against both PINNs at the centre and both edges of the PINN's
+range. The coarsest mesh's drop error is 0.066–0.089% at all three splits; the
+corner-mode PINN's is 0.076% at s = 0.5 and 0.58% and 1.15% at the edges, the
+original's 0.11–2.05%. So **every FE mesh in Table A1 is at least as accurate as
+either PINN across the range**, and the coarsest is the fair baseline. The margin
+is small at s = 0.5 (0.066% against 0.076%); at the edges the coarsest mesh is 6.5
+and 15 times more accurate than the corner-mode PINN.
 
 ### A.2 Measurements
 
 **Table A1. Finite elements on a ladder of meshes** (s = 0.5; Taylor–Hood P2/P1;
-error against the finest mesh; peak memory includes the ≈ 220 MB interpreter and
-libraries).
+finite-element errors are measured against the finest mesh, PINN errors (Tables
+A1b and A3) against the reference mesh 0.002/6; peak memory includes the ≈ 220 MB
+interpreter and libraries).
 
 | max element area | corner levels | triangles | unknowns N | solve (s) | peak memory (MB) | J | drop error |
 |---|---|---|---|---|---|---|---|
@@ -73,6 +77,19 @@ libraries).
 The 0.02/3 mesh is the design study's search mesh; 0.005/5 its check mesh;
 0.002/6 the reference against which both PINNs are scored.
 
+**Table A1b. The equal-accuracy baseline across the range.** Drop error in J at the
+centre and both edges of the PINN's range. Finite-element errors are measured
+against the finest mesh (0.001/7); PINN errors against the reference mesh
+(0.002/6), on which the PINNs were scored. The last column shows that the two
+yardsticks differ by at most 0.0006% (`python -m bifurcation.cost_checks --config
+bifurcation/cost_checks_re10.yaml`, `docs/bifurcation_re10-cost-checks.md`).
+
+| split | coarsest FE mesh (0.08/2) | PINN, original | PINN, corner modes | reference mesh against finest |
+|---|---|---|---|---|
+| 0.35 | −0.089% | +0.21% | −0.58% | −0.0002% |
+| 0.50 | −0.066% | +0.11% | −0.076% | −0.0006% |
+| 0.65 | −0.078% | −2.05% | −1.15% | −0.0003% |
+
 **Table A2. The parametric PINNs** (query times are medians of 20 after one
 warm-up call; the warm-up pays for JIT compilation).
 
@@ -85,7 +102,7 @@ warm-up call; the warm-up pays for JIT compilation).
 | full field at the reference mesh's 340,788 Gauss points | 0.89 s | 0.97 s |
 | one Levenberg–Marquardt step (normal equations on 17,920 rows, and their solve) | 36.2 s | 37.6 s |
 | peak memory, queries only | — | 447 MB (217 MB of it libraries) |
-| peak memory, one LM step | 2.98 GB | 3.89 GB |
+| peak memory, one LM step | 2.98 GB (2.6 GB when repeated, Table A5) | 3.89 GB |
 
 **Table A3. Accuracy of the two PINNs against the reference mesh** (relative L2
 errors integrated on the reference's own mesh; drop error in J).
@@ -155,7 +172,11 @@ P^{2.4} from 10,367 to 16,783, as the cubic solve takes over, and memory like
 P² (the matrix JᵀJ alone is 8P² bytes: 2.25 GB at P = 16,783).
 
 **Table A5. One Levenberg–Marquardt step against the network's width**
-(17,920 rows).
+(17,920 rows). Width 40 is the original network's step of Table A2, measured again
+in a separate process: 2.6 GB here against 2.98 GB there. A process's peak memory
+varies by that much, about 15%, from one measurement to the next, so the memory
+figures in Tables A2, A4 and A5 are good to about 15%; the corner-mode network's
+3.89 GB is a single measurement.
 
 | width | parameters P | step (s) | peak memory |
 |---|---|---|---|
@@ -632,8 +653,11 @@ J = 4.0516, so building s\* instead of s_M saves 0.39% of the pressure drop at t
 design flux, or carries 0.39% more flow at the design pressure drop. The PINNs
 place the optimum at 0.4845 (original) and 0.4862 (corner modes), both within the
 search tolerance of 0.002, at a cost against the true optimum of 0.0004% and
-0.0035%. With J″/J ≈ 44 at the optimum (Appendix A.3), a split error δ costs
-½ · 44 · δ²: δ = 0.0014 predicts 0.0043%, against the measured 0.0035%.
+0.0035%. For this layout J″/J = 33.6 at the optimum, measured by central
+differences on the reference mesh (`docs/bifurcation_re10-cost-checks.md`); the
+J″/J ≈ 44 of Appendix A.3 is for the design study's daughters of length 8. A split
+error δ costs ½ · 33.6 · δ²: the corner-mode network's δ = 0.00143 predicts 0.0034%,
+against the measured 0.0035%.
 
 ---
 

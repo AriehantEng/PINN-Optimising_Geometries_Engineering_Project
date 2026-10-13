@@ -1,0 +1,117 @@
+{
+ "config": {
+  "name": "cost_checks_re10_3090_equal",
+  "run": "bifurcation/runs/parametric_re10_3090_equal_corners",
+  "meshes": {
+   "coarse": {
+    "max_area": 0.08,
+    "corner_levels": 2
+   },
+   "reference": {
+    "max_area": 0.002,
+    "corner_levels": 6
+   },
+   "finest": {
+    "max_area": 0.001,
+    "corner_levels": 7
+   }
+  },
+  "accuracy_splits": [
+   0.35,
+   0.5,
+   0.65
+  ],
+  "curvature_steps": [
+   0.01,
+   0.02
+  ],
+  "runs": [
+   {
+    "label": "original",
+    "run": "bifurcation/runs/parametric_re10_3090_equal"
+   },
+   {
+    "label": "corner modes",
+    "run": "bifurcation/runs/parametric_re10_3090_equal_corners"
+   }
+  ]
+ },
+ "accuracy": [
+  {
+   "split": 0.35,
+   "drops": {
+    "coarse": 5.459968006939403,
+    "reference": 5.46480781411741,
+    "finest": 5.464820907077979
+   },
+   "coarse_vs_finest": -0.0008880254670909915,
+   "coarse_vs_reference": -0.0008856317262437852,
+   "reference_vs_finest": -2.395862699233753e-06,
+   "pinn_vs_reference": {
+    "original": 0.0020628973334473333,
+    "corner modes": -0.0057794533930951575
+   },
+   "stored_reference_drop": 5.46480781411741
+  },
+  {
+   "split": 0.5,
+   "drops": {
+    "coarse": 4.048909374662545,
+    "reference": 4.051575963401137,
+    "finest": 4.051601459861889
+   },
+   "coarse_vs_finest": -0.0006644496567626001,
+   "coarse_vs_reference": -0.000658160864483448,
+   "reference_vs_finest": -6.292934042084752e-06,
+   "pinn_vs_reference": {
+    "original": 0.0011054257715725768,
+    "corner modes": -0.0007597565202878132
+   },
+   "stored_reference_drop": 4.051575963401137
+  },
+  {
+   "split": 0.65,
+   "drops": {
+    "coarse": 6.5309785342535145,
+    "reference": 6.536078258892202,
+    "finest": 6.536099051639175
+   },
+   "coarse_vs_finest": -0.0007834210199700875,
+   "coarse_vs_reference": -0.0007802422854635838,
+   "reference_vs_finest": -3.1812166261246944e-06,
+   "pinn_vs_reference": {
+    "original": -0.020519375879294866,
+    "corner modes": -0.011485036299801687
+   },
+   "stored_reference_drop": 6.536078258892202
+  }
+ ],
+ "curvature": {
+  "centre": 0.48475260310208196,
+  "drop": 4.035830512390037,
+  "stored_min_drop": 4.035830512390037,
+  "differences": [
+   {
+    "h": 0.01,
+    "left": 4.042660870254953,
+    "right": 4.042572518715707,
+    "second_difference": 135.7236419058605
+   },
+   {
+    "h": 0.02,
+    "left": 4.063050114996214,
+    "right": 4.0630432048665215,
+    "second_difference": 136.0807377066542
+   }
+  ],
+  "second_derivative": 135.60460997226258,
+  "ratio": 33.60017462476563,
+  "ratio_by_step": [
+   33.629668413772,
+   33.71814978079111
+  ],
+  "argmin_error": 0.0014277367854169665,
+  "predicted_regret": 3.4245841098054386e-05,
+  "measured_regret": 3.4929284686624484e-05
+ }
+}

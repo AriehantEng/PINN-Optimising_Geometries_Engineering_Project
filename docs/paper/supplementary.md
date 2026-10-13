@@ -46,7 +46,7 @@ In units of 12μLQ₀²/w₀³, for daughters of equal length L, the daughters' 
 \hat D(s) = \frac{q^2}{s^3} + \frac{(1-q)^2}{(1-s)^3}, \qquad \hat D''(s) = 12\left[\frac{q^2}{s^5} + \frac{(1-q)^2}{(1-s)^5}\right], \qquad \frac{\hat D''}{\hat D}\bigg|_{s_M} = \frac{12}{s_M(1-s_M)}
 ```
 
-The ratio is 48 at q = ½ and about 79 at q = 0.05. The parent's fixed dissipation lowers it for the total objective: J″/J = 48 × 6.4/7.0 = 43.9 at q = ½ by the friction law, against 44.1 measured by finite elements, and 38 for the shorter daughters of the parametric study (L_d = 4). With unequal lengths each term carries Lᵢ/L; the J″/J used for the bounds of S1.9 is measured, so it includes them.
+The ratio is 48 at q = ½ and about 79 at q = 0.05. The parent's fixed dissipation lowers it for the total objective: J″/J = 48 × 6.4/7.0 = 43.9 at q = ½ by the friction law, against 44.1 measured by finite elements, and 33.6 for the shorter daughters of the parametric study (L_d = 4), measured by central differences on its reference mesh at the optimum. With unequal lengths each term carries Lᵢ/L; the J″/J used for the bounds of S1.9 is measured, so it includes them.
 
 - Cost of a split error. J/J* ≈ 1 + ½(J″/J)δs², so δs = 0.01 costs about 0.22%.
 - Where an approximate J puts the minimum. If a network or a coarser mesh gives Ĵ = J(1 + e(s)), its minimum moves by δs* ≈ −e′(s*)/(J″/J). An error that changes by 1% of J over Δs = 0.1 has e′ = 0.1, so δs* ≈ 0.1/44 ≈ 0.002. The value of e itself does not enter.
