@@ -64,27 +64,29 @@ def main():
 
     # (b) cumulative machine time for N designs
     designs = np.logspace(0, 4, 200)
-    lines = ((SOLVE_S[5], BLUE, "FE, the PINN's reference mesh (34.5 s)"),
-             (SOLVE_S[2], YELLOW, "FE, the design study's search mesh (1.0 s)"),
-             (SOLVE_S[0], ORANGE, f"FE at the PINN's accuracy (0.47 s; drop error "
-                                  f"{100 * abs(DROP_ERROR[0]):.3f}% vs PINN {100 * abs(PINN_DROP_ERROR):.3f}%)"))
+    lines = ((SOLVE_S[5], BLUE, "FE, reference mesh: 34.5 s each"),
+             (SOLVE_S[2], YELLOW, "FE, search mesh: 1.0 s each"),
+             (SOLVE_S[0], ORANGE, "FE at the PINN's accuracy: 0.47 s each"))
+    beyond = []
     for each, colour, name in lines:
         b.loglog(designs, designs * each / 3600.0, color=colour, lw=2, label=name)
         crossing = TRAIN_S / (each - QUERY_S)
         if crossing <= designs[-1]:
             b.plot([crossing], [crossing * each / 3600.0], "o", color=colour, ms=7, zorder=4)
-            b.annotate(f"break-even\nN* = {crossing:,.0f}", (crossing, crossing * each / 3600.0),
-                       xytext=(8, -18), textcoords="offset points", fontsize=8, color=INK)
+            b.annotate(f"break-even at N* = {crossing:,.0f}", (crossing, crossing * each / 3600.0),
+                       xytext=(10, -20), textcoords="offset points", fontsize=8.5, color=INK)
         else:
-            b.annotate(f"N* = {crossing:,.0f}, off this axis", (designs[-1], designs[-1] * each / 3600.0),
-                       xytext=(-6, -14), textcoords="offset points", fontsize=8, color=INK,
-                       ha="right")
+            beyond.append(f"{name.split(':')[0]}: N* = {crossing:,.0f}")
     b.loglog(designs, (TRAIN_S + designs * QUERY_S) / 3600.0, color=AQUA, lw=2,
              label="parametric PINN: 2.9 h training, then 0.023 s each")
+    # the break-evens past 10^4 go in one note, in the empty corner under the lines
+    b.text(0.98, 0.04, "break-even beyond this axis:\n" + "\n".join(beyond),
+           transform=b.transAxes, ha="right", va="bottom", fontsize=8.5, color=INK,
+           linespacing=1.5)
     b.set_xlabel("number of design evaluations", fontsize=9, color=INK)
     b.set_ylabel("cumulative machine time (h)", fontsize=9, color=INK)
     b.set_title("(b) many design evaluations", fontsize=10, color=INK, loc="left")
-    b.legend(fontsize=7.5, frameon=False, loc="upper left")
+    b.legend(fontsize=8, frameon=False, loc="upper left")
     style(b)
 
     fig.tight_layout()
