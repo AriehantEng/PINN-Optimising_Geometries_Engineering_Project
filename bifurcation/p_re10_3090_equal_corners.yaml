@@ -3,12 +3,12 @@
 # initial weights and every collocation draw are the same, and the comparison
 # isolates the modes. That run plateaued at a held-out loss of ~0.02 after
 # about 60 Levenberg-Marquardt steps, with u 1.3e-2 at split 0.5 and the drop
-# error 1.4-2.1% at the range's upper edge. Near the corners B (210 deg),
-# C (270 deg) and the septum tip T (240 deg) the flow goes like r^z with
-# z = 0.752, 0.544 and 0.616 (and a second mode at C, z = 0.909), which
+# error 1.4-2.1% at the range's upper edge. Near the corners C (210 deg),
+# B (270 deg) and the septum tip T (240 deg) the flow goes like r^z with
+# z = 0.752, 0.544 and 0.616 (and a second mode at B, z = 0.909), which
 # psi = G + D^2 N cannot represent; here each such mode is added with a trained
 # amplitude, a degree-4 Chebyshev series in s, inside a cutoff of radius 0.5.
-# The nearest other edge is 0.7 from T (at s = 0.35) and from C (at s = 0.65).
+# The nearest other edge is 0.7 from T (at s = 0.35) and from B (at s = 0.65).
 name: parametric_re10_3090_equal_corners
 seed: 21
 physics:

@@ -33,7 +33,7 @@ model:
   corner_modes: stokes        # psi += c(s) chi(r) r^(1+z) f(theta) at B, C and T
   corner_degree: 4            # c(s): Chebyshev in s, as the offset
   corner_cutoff: 0.5          # chi's radius; 0.2 short of the nearest other edge
-  corner_exponent_max: 2.0  # was 1.0: adds 1.4858 at B, 1.1489 and 1.8335+0.2523i at T, 1.6293+0.2313i at C
+  corner_exponent_max: 2.0  # was 1.0: adds 1.4858 at C, 1.1489 and 1.8335+0.2523i at T, 1.6293+0.2313i at B
 sampling:
   designs: 16                 # splits per draw, stratified over the range
   points_per_design: 1024     # 16,384 interior points per draw (the fixed run: 8,192)

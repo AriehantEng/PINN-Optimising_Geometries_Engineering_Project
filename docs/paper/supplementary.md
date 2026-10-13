@@ -154,7 +154,7 @@ In the design study a refused split counts as J = +∞ and its reason is recorde
 
 **Finite-element reference.** The underlying solver reproduces Poiseuille flow to round-off and converges on Kovasznay flow at third order in velocity and second in pressure, as Taylor–Hood theory predicts. On the bifurcation the test suite requires mass conservation to 10⁻¹² and an energy consistency (S1.6) below 10⁻³ on a coarse mesh; equal shares, to 10⁻⁴, in a mirror-symmetric geometry; no change, to 10⁻¹⁰, when the share the flow chose freely is prescribed; per-path drops that recombine to J to 10⁻¹²; and convergence of J under mesh refinement. The inlet profile is applied only on the inlet segment, never on the line x = 0: a daughter turned back beyond about 112° crosses that line, and an earlier version that used it produced a 152% mass error. Every solve now refuses a solution whose wall velocity is not exactly zero.
 
-The reference used to score Network 2 has maximum element area 0.002 and six corner rounds: 28,399 triangles, 129,562 unknowns, 37 s per solve and an energy consistency of 7.5 × 10⁻⁶. The design study's meshes have 2,852 triangles (coarse, 30/90 at s = 0.5) and 12,837 (fine). The study took about one hour on four processes: 4,381 coarse and 526 fine solves, a median of 76 s per optimisation.
+The reference used to score Network 2 has maximum element area 0.002 and six corner rounds: 28,399 triangles, 129,562 unknowns, 34.5 s per solve (one job alone on the machine) and an energy consistency of 7.5 × 10⁻⁶. The design study's meshes have 2,852 triangles (coarse, 30/90 at s = 0.5) and 12,837 (fine). The study took about one hour on four processes: 4,381 coarse and 526 fine solves, a median of 76 s per optimisation.
 
 **Network 2.** The parametric network's wall segments equal the fixed-geometry construction at every split tested, and with its s-inputs switched off it reproduces the fixed-geometry network's field and loss to 2 × 10⁻¹⁵. Training is resumable bit for bit.
 
@@ -166,7 +166,7 @@ The reference used to score Network 2 has maximum element area 0.002 and six cor
 
 Network 2 was developed in three stages on one geometry (30/90, s = 0.5, q = 0.5, L_d = 4). Table S1 compares them.
 
-**Table S1.** The three formulations of Network 2 (reference solve: 37 s).
+**Table S1.** The three formulations of Network 2 (reference solve: 34.5 s).
 
 |  | Velocity–pressure | Stream function | Stream function, walls extended |
 | --- | --- | --- | --- |
@@ -325,7 +325,7 @@ The ratio of the inconsistency to the true pressure-drop error ranges from 0.33 
 
 ### S5.8 The parametric Network 2
 
-Trained once over s ∈ [0.35, 0.65], the network predicts the pressure drop within 0.06–0.11% at s = 0.45–0.50 and within 0.2–0.3% at s = 0.35–0.40, with errors of +0.68% at 0.55, +1.42% at 0.60 and −2.05% at 0.65. Its u error is 1.3–1.9% across the range; mass and the share are exact at every split. Training took 215 min.
+Trained once over s ∈ [0.35, 0.65], the network predicts the pressure drop within 0.06–0.11% at s = 0.45–0.50 and within 0.2–0.3% at s = 0.35–0.40, with errors of +0.68% at 0.55, +1.42% at 0.60 and −2.05% at 0.65. Its u error is 1.3–1.9% across the range; mass and the share are exact at every split. Training took 163 min.
 
 **Table S10.** The optimal split by each route (30/90, q = 0.5, L_d = 4).
 
@@ -352,8 +352,8 @@ For the optimal drop, the fair baseline is one solve at s_L. Against the fine-me
 | Task | Finite elements | Network |
 | --- | --- | --- |
 | Channel flow (Network 1) | 283 s (finest of four meshes) | 263 min of training |
-| One bifurcation (Network 2) | 37 s | 90 min of training |
-| One design question, fixed angles and share (parametric Network 2) | 11.4 min (14 solves at the network's mesh) | 215 min of training |
+| One bifurcation (Network 2) | 34.5 s | 90 min of training |
+| One design question, fixed angles and share (parametric Network 2) | 8.1 min (14 solves of 34.5 s at the network's reference mesh) | 163 min of training, then 0.023 s per query: break-even after 284 solves on the reference mesh (about 20 design questions), 10,044 on the search mesh and about 22,000 on the coarsest mesh, whose drop error (0.07–0.09%) is below the network's |
 | A map of design questions (Network 3) | 76 s per search, or 1.7 s for one solve at s_L (drop error 0.021%) | 3.9 core-hours of data and a 3.8 h fit, then 0.02 s per question |
 
 ## S6. Code and data availability

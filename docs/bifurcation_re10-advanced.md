@@ -135,7 +135,7 @@ memory (George 1973 ⚠). The measured solve time over the meshes with at least
 O(N³) scaling sometimes quoted for FE is that of dense Gaussian elimination, which
 no FE code uses for a problem of this kind: anchored at the reference mesh, N³
 would put the finest mesh at 351 s against the measured 115 s, and the coarsest at
-0.4 ms against the measured 0.47 s. Below
+0.27 ms against the measured 0.47 s. Below
 about 10⁴ unknowns the time is set by fixed costs (meshing, Python-level
 assembly), which is why the two coarsest meshes cost the same 0.46 s.
 
@@ -298,7 +298,7 @@ Three conclusions follow.
    2.39 × 10⁻³ at s = 0.352, 5.91 × 10⁻⁴ at 0.503 and 2.64 × 10⁻³ at 0.645: four times
    larger at both edges. Two causes act together. Geometrically, at s = 0.65 the
    90° daughter is narrowest (w₂ = 0.70) while carrying half the flow, so its mean
-   speed (0.95) is 43% above the symmetric case, the turn at C is fastest, and C
+   speed (0.95) is 43% above the symmetric case, the turn at B is fastest, and B
    is closest to the opposite wall (0.70, the margin the corner cutoff was checked
    against); s = 0.35 does the same to the 30° daughter and the septum tip. Statistically,
    the stratified design sampling puts one design in each of 16 bins of width
@@ -377,7 +377,8 @@ the trained parameters, produced Table B3 (`bifurcation/diagnose.py`,
 
 ### B.5 Residual-based adaptive refinement (RAR)
 
-RAR (Lu et al. 2021 ⚠) adds collocation points where the residual is large. The
+RAR, introduced with the DeepXDE library (Lu et al. 2021a), adds collocation points
+where the residual is large. The
 density-based form (RAR-D; Wu et al. 2023 ⚠) draws, at each resampling, a pool
 X_pool of M uniform points and keeps n of them with probability
 
@@ -617,9 +618,12 @@ at every pressure drop; it is then Helmholtz's minimum-dissipation theorem (the
 Stokes solution dissipates least among divergence-free fields with the same
 boundary data), since Q₀J = Φ + B with the boundary term B vanishing for
 developed outflow (Appendix A.6). At finite Reynolds number s\* depends on Q
-through Re_h; Section 7.6 measures that dependence for the closed-length layouts
-(the largest shift of the optimum from the Murray split below 180° grows from
-0.0082 at Re_h = 10 to 0.013 at Re_h = 100).
+through Re_h. The closed-length maps at Re_h = 10, 25, 50 and 100 measure that
+dependence (`docs/bifurcation_closed-junction.md`): with both daughters' walls
+8 long, s_M is the friction optimum, and the largest |s\* − s_M| below 180° grows
+from 0.0082 at Re_h = 10 (30/120) to 0.013 at Re_h = 100 (0/120, 30/120 and 0/150).
+[Author note: these maps are in no version of the paper yet. Add them as a section
+and cite it here, or cut this sentence.]
 
 To first order the flux gained at a fixed pressure drop equals the drop saved at
 a fixed flux: Q ∝ 1/R gives δQ/Q = −δR/R. For this layout the finite-element
@@ -648,9 +652,10 @@ daughter at 30° and one at 90°, each 4 long; the inlet and the two outlets are
 orange. Three outlines are overlaid: s = 0.35 (light grey: daughter 1 narrow, 0.70
 wide), s = 0.4848, the finite-element optimum (black), and s = 0.65 (mid grey:
 daughter 2 narrow). The blue points are the three reflex corners, where two walls
-meet with more than 180° of fluid: B (210°), C (270°) and the septum tip T (240°), the
-tip moving with s. Beside each is the exponent z of its singular Stokes modes
-(|u| ~ r^z near the corner): 0.752 at B, 0.5445 and 0.9085 at C, 0.6157 at T. Every
+meet with more than 180° of fluid: C (210°), where the 30° daughter leaves the parent's
+upper wall, B (270°), where the 90° daughter leaves its lower wall, and the septum tip
+T (240°), the tip moving with s. Beside each is the exponent z of its singular Stokes modes
+(|u| ~ r^z near the corner): 0.752 at C, 0.5445 and 0.9085 at B, 0.6157 at T. Every
 z < 1 makes the velocity gradient and the pressure infinite at the corner, which is
 what the original network could not represent. The dashed circles are the corner
 modes' cutoff radius, 0.5, which reaches no other wall at any split in the range.
@@ -677,7 +682,7 @@ crosses mark the reflex corners. **Top (original):** a bright halo of error,
 10⁻²–10⁻¹, surrounds all three corners and fills the junction; the error away from the
 junction is 10⁻³–10⁻², carried there by the corner's misfit. **Middle (corner modes):**
 the halos are gone; the error is 10⁻⁴–10⁻³ through the domain, in thin streaks, with
-a faint bright zone left only between C and T at s = 0.65. **Bottom (option 4, width
+a faint bright zone left only between B and T at s = 0.65. **Bottom (option 4, width
 56):** the streaks are fainter again in the middle of the range (u error 8.1 × 10⁻⁴ at
 s = 0.5), and the edge splits keep their junction zone. The relative L2 error of u at
 each split is printed in its panel.

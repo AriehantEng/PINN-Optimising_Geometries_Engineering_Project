@@ -4,7 +4,7 @@ Version 9, revised after review. Figure files are in this directory: fig1_geomet
 
 ## Abstract
 
-Murray's law sizes the branches of a fluid network as if every channel were fully developed and every junction lossless. We map how the pressure-drop-optimal width split of a planar bifurcation departs from it with the junction flow resolved: 165 finite-element optima over fifteen layouts (bifurcation angles 30–180°, flow shares 5–95%, daughters sharing the parent's width, Reynolds number 10). Below 180°, the optimum departs from the planar Murray split by at most 0.010 up to 90° and by up to 0.072 at 150°. Most of this is a length effect: with each outer wall fixed, a turned daughter's centreline is longer, and Murray's relation applied with the real centreline lengths, with no fitted parameter, removes 78–96% of the squared departure in eleven of twelve layouts. The remaining junction and entrance effect is at most 0.003 unless a daughter turns back beyond 90°; there it reaches 0.013–0.035, depending on how length is counted, and always widens the turned daughter, but a junction-loss model does not locate it. Ignoring lengths and junction costs a median 0.016% in pressure drop, but up to 8.9% where a daughter turns back. Physics-informed networks cost 19–150 times the finite-element solves they replace, though one located the optimum within the search tolerance. A network trained on the optima has 0.016% mean regret on held-out layouts, against 0.109% for the Murray split, but the free length-corrected split matches it (0.015%), and one solve there gives the optimal drop to 0.02%, against the network's 0.48%.
+Murray's law sizes the branches of a fluid network as if every channel were fully developed and every junction lossless. We map how the pressure-drop-optimal width split of a planar bifurcation departs from it with the junction flow resolved: 165 finite-element optima over fifteen layouts (bifurcation angles 30–180°, flow shares 5–95%, daughters sharing the parent's width, Reynolds number 10). Below 180°, the optimum departs from the planar Murray split by at most 0.010 up to 90° and by up to 0.072 at 150°. Most of this is a length effect: with each outer wall fixed, a turned daughter's centreline is longer, and Murray's relation applied with the real centreline lengths, with no fitted parameter, removes 78–96% of the squared departure in eleven of twelve layouts. The remaining junction and entrance effect is at most 0.003 unless a daughter turns back beyond 90°; there it reaches 0.013–0.035, depending on how length is counted, and always widens the turned daughter, but a junction-loss model does not locate it. Ignoring lengths and junction costs a median 0.016% in pressure drop, but up to 8.9% where a daughter turns back. Physics-informed networks cost 20–160 times the finite-element solves they replace, though one located the optimum within the search tolerance. A network trained on the optima has 0.016% mean regret on held-out layouts, against 0.109% for the Murray split, but the free length-corrected split matches it (0.015%), and one solve there gives the optimal drop to 0.02%, against the network's 0.48%.
 
 **Keywords:** Murray's law; bifurcation; junction losses; physics-informed neural networks; shape optimisation; finite elements
 
@@ -72,7 +72,7 @@ Critical studies have since tested that claim.
 - Grossmann et al. (2024) compared PINNs with finite elements on Poisson, Allen–Cahn and Schrödinger problems. PINNs did not win on solution time or accuracy, although once trained they were sometimes faster to evaluate.
 - McGreivy and Hakim (2024) reviewed machine-learning studies of fluid-related PDEs. They found that 79% of those claiming to beat a numerical method compared against a weak baseline, and proposed comparing at equal accuracy or equal runtime against an efficient solver.
 
-One response has been to build constraints into the network so that the optimiser cannot trade them away. Lu et al. (2021) imposed boundary conditions exactly through the network's output. Sukumar and Srivastava (2022) generalised this with approximate distance functions that vanish on the boundary, so that no-slip and other Dirichlet conditions hold for any network weights. For the flow shares, Hennigh et al. (2021) and Gammaidoni et al. (2026) instead added integral flow-rate terms over cross-sections to the loss, a softer way of holding the shares. Exact constraints remove one source of error, but they also remove the corresponding check: a network that conserves mass by construction can no longer be tested by its conservation error.
+One response has been to build constraints into the network so that the optimiser cannot trade them away. Lu et al. (2021b) imposed boundary conditions exactly through the network's output. Sukumar and Srivastava (2022) generalised this with approximate distance functions that vanish on the boundary, so that no-slip and other Dirichlet conditions hold for any network weights. For the flow shares, Hennigh et al. (2021) and Gammaidoni et al. (2026) instead added integral flow-rate terms over cross-sections to the loss, a softer way of holding the shares. Exact constraints remove one source of error, but they also remove the corresponding check: a network that conserves mass by construction can no longer be tested by its conservation error.
 
 ### 2.4 Networks inside the design loop
 
@@ -80,7 +80,7 @@ Because a PINN is differentiable in its inputs, a geometric parameter can be mad
 
 Optimisation with networks follows three patterns.
 
-- **One-shot.** The design is trained together with the flow field. Lu et al. (2021) showed that simply adding the objective to the loss lets the optimiser lower the objective by violating the physics, and used penalty and augmented-Lagrangian formulations instead.
+- **One-shot.** The design is trained together with the flow field. Lu et al. (2021b) showed that simply adding the objective to the loss lets the optimiser lower the objective by violating the physics, and used penalty and augmented-Lagrangian formulations instead.
 - **Nested.** The PDE solve and the design update are separated. Hao et al. (2023) used bi-level optimisation with Broyden hypergradients. X. Wang et al. (2024) combined neural state and adjoint solvers with shape derivatives on boundary points, which avoids mesh deformation.
 - **Surrogate then optimise.** A network represents the family of designs and a standard optimiser searches it. Y. Sun et al. (2023) made airfoil shape parameters network inputs, obtained objective gradients by automatic differentiation without deriving an adjoint, and refined collocation near the optimum.
 
@@ -96,7 +96,7 @@ A separate family of networks learns from solver data rather than from the equat
 | Loss-coefficient models | Summarised by empirical coefficients | A corrected rule for the junctions the coefficients describe | Wechsatol et al. (2006) |
 | Resolved evaluation | Resolved | The error of a given design | Emerson et al. (2006) |
 | Constructal and topology optimisation | Resolved | One optimal layout per problem | Bejan et al. (2000); Borrvall & Petersson (2003); Gersborg-Hansen et al. (2005) |
-| Network-based shape optimisation | Resolved by the network | One optimum per problem, rarely checked against an independent solver | Lu et al. (2021); Y. Sun et al. (2023); X. Wang et al. (2024) |
+| Network-based shape optimisation | Resolved by the network | One optimum per problem, rarely checked against an independent solver | Lu et al. (2021b); Y. Sun et al. (2023); X. Wang et al. (2024) |
 | This study | Resolved | A map of the optimal width split over branch angles and flow shares | — |
 
 Read together, the literature offers either a rule that ignores the junction or resolved answers for one layout at a time. To our knowledge, the width rule that designers use has not been mapped against the variables they usually cannot change, the branch angles and the flow shares, with the junction flow resolved.
@@ -224,15 +224,15 @@ The Murray split costs a median of 0.016% in pressure drop, at most 0.24% up to 
 | Network | Scope | Accuracy | Design accuracy | Cost against FE |
 | --- | --- | --- | --- | --- |
 | 1: PINN, parent channel | Straight channel, Re_h = 10 | u error 3.3 × 10⁻⁶ (FE's own 8.7 × 10⁻⁷) | — | 263 min against 283 s (56×) |
-| 2: PINN, one bifurcation | 30/90, s = 0.5, q = 0.5, L_d = 4 | u error 0.9%; drop +0.42%; mass and share exact | — | 90 min against 37 s (about 150×) |
-| 2: parametric PINN | 30/90, q = 0.5, L_d = 4; s from 0.35 to 0.65 | Drop error 0.06–2.05% | s* off by 0.0003 (search ±0.002); regret 0.0004% | 215 min against 11.4 min (19×) |
+| 2: PINN, one bifurcation | 30/90, s = 0.5, q = 0.5, L_d = 4 | u error 0.9%; drop +0.42%; mass and share exact | — | 90 min against 34.5 s (about 160×) |
+| 2: parametric PINN | 30/90, q = 0.5, L_d = 4; s from 0.35 to 0.65 | Drop error 0.06–2.05% | s* off by 0.0003 (search ±0.002); regret 0.0004% | 163 min against 8.1 min, the 14 solves of one design question (20×); break-even after 284 solves on the reference mesh, about 22,000 at equal accuracy |
 | 3: learned correction | Angles inside the sampled range, Re_h = 10 | Drop error 0.48% mean, 3.0% max (one solve at s_L: 0.021%, 0.16%); 26–49% at the edges of the angle space | Held-out regret 0.016% mean, 0.077% max (Murray split 0.109%, 0.70%; s_L 0.015%, 0.087%) | 0.02 s per query after 19 core-hours of data and fitting, against 1.7 s for one solve at s_L: break-even about 41,000 queries |
 
 **H3** is consistent with the parametric network: its drop error reaches 2.05% at the edge of its range, yet it locates the optimum within the ±0.002 search tolerance, because near the optimum its error changes by only 0.92% per unit s; S1.3 then predicts a shift of −0.00024, against −0.00027 measured. A network's design can be better than its field, but its cost should be re-checked by an independent solve (Mowlavi & Nabi, 2023).
 
 **Network 3 against free rules.** Under the fair-baseline rule (McGreivy & Hakim, 2024), Network 3 must beat the free s_L. For the split it does not: on the 18 held-out cases s_L's regret is 0.015% on average and 0.087% at worst, against 0.016% and 0.077%, and 0.023% against 0.028% on the nine with a daughter turned back (S5.9). For the optimal drop, one 1.7 s solve at s_L errs by 0.021%, against Network 3's 0.48%; Network 3 repays its 19 core-hours only after about 41,000 queries, and is even then less accurate. It trades accuracy for speed, which suits only tasks needing thousands of approximate drops, such as a network-level optimisation.
 
-**Cost.** On the same hardware each PINN costs 19–150 times the finite-element work it replaces, as Chuang and Barba (2022) and Grossmann et al. (2024) found for other problems; a GPU would have to speed up double-precision training by more than that factor to close the gap, which we did not test.
+**Cost.** On the same hardware each PINN costs 20–160 times the finite-element work it replaces, as Chuang and Barba (2022) and Grossmann et al. (2024) found for other problems; a GPU would have to speed up double-precision training by more than that factor to close the gap, which we did not test.
 
 ### 4.4 Limitations
 
@@ -248,7 +248,7 @@ With the junction flow resolved at Re_h = 10, Murray's split, applied with each 
 
 **RQ2.** The physics-informed networks did not beat the solver, and the learned network did not beat the free rule: for designs it matched s_L, and for drops it trades accuracy for speed.
 
-- The physics-informed networks reproduced the flow to 3 × 10⁻⁶ in a channel and to about 1% in one bifurcation, with mass and shares exact, at 19–150 times the cost of the finite-element solves they replace.
+- The physics-informed networks reproduced the flow to 3 × 10⁻⁶ in a channel and to about 1% in one bifurcation, with mass and shares exact, at 20–160 times the cost of the finite-element solves they replace.
 - The parametric PINN, for one layout and one share, located the optimum within the search tolerance (±0.002) despite pressure-drop errors of up to 2% elsewhere in its range, because its error was nearly flat near the optimum (H3).
 - The network trained on the finite-element optima answers in 0.02 s, but on held-out layouts its splits are no better than s_L's (mean regret 0.016% against 0.015%), and one 1.7 s solve at s_L gives the optimal drop to 0.021% against its 0.48%. It repays its 19 core-hours only after about 41,000 queries, so it suits only tasks that need many approximate drops, such as a network-level optimisation.
 
@@ -312,7 +312,9 @@ Li, Z., Kovachki, N., Azizzadenesheli, K., Liu, B., Bhattacharya, K., Stuart, A.
 
 † Liu, D. C., & Nocedal, J. (1989). On the limited memory BFGS method for large scale optimization. *Mathematical Programming, 45*(1–3), 503–528. https://doi.org/10.1007/BF01589116
 
-Lu, L., Pestourie, R., Yao, W., Wang, Z., Verdugo, F., & Johnson, S. G. (2021). Physics-informed neural networks with hard constraints for inverse design. *SIAM Journal on Scientific Computing, 43*(6), B1105–B1132. https://doi.org/10.1137/21M1397908
+† Lu, L., Meng, X., Mao, Z., & Karniadakis, G. E. (2021a). DeepXDE: A deep learning library for solving differential equations. *SIAM Review, 63*(1), 208–228. https://doi.org/10.1137/19M1274067
+
+Lu, L., Pestourie, R., Yao, W., Wang, Z., Verdugo, F., & Johnson, S. G. (2021b). Physics-informed neural networks with hard constraints for inverse design. *SIAM Journal on Scientific Computing, 43*(6), B1105–B1132. https://doi.org/10.1137/21M1397908
 
 † Marquardt, D. W. (1963). An algorithm for least-squares estimation of nonlinear parameters. *Journal of the Society for Industrial and Applied Mathematics, 11*(2), 431–441. https://doi.org/10.1137/0111030
 

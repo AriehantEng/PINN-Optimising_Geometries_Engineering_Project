@@ -60,6 +60,8 @@ The optimum lies 0.015 below the Murray split, so the more-turned daughter 2 is 
 | finite elements | 14 solves × 49 s = 11.4 min (7 evaluation splits, then 7 Brent steps) |
 | parametric PINN | 215 min of training; then seconds per query |
 
+**Re-measured** (`docs/bifurcation_re10-cost.md`, one job alone on the machine). The times above are the first run's. The stored retrain took 163 min (9,778 s), and one reference solve takes 34.5 s, so the 14 solves take 8.1 min and the ratio is 20, not 19. The network then repays its training after 284 reference solves, about 20 design questions, or after about 22,000 solves on the coarsest mesh, which is more accurate than the network at s = 0.35, 0.5 and 0.65 (`docs/bifurcation_re10-cost-checks.md`). The paper uses these numbers.
+
 For a single layout and share, finite elements are about 19 times cheaper. The parametric network answers only the question it was trained on. It would repay its training only if it replaced about 19 such optimisations, which requires the angles and the share to become inputs as well. For that wider question, Network 3 already answers in milliseconds, trained on the 165 finite-element optima of the design study (about one hour of solves). What this run does establish is that a physics-informed network, trained with no flow data at all, located the optimum to within the search tolerance with a regret below 0.01%.
 
 ### Training history

@@ -42,7 +42,7 @@ BASE = {
                    "splits": [0.35, 0.45, 0.6], "search_xatol": 0.01, "curve_points": 5},
 }
 
-#: the corner-mode network: four modes on BASE's 30/70 layout (B 210, C 250,
+#: the corner-mode network: four modes on BASE's 30/70 layout (C 210, B 250,
 #: T 260 degrees: T beyond 257.45 has an odd mode too), cutoff 0.4 < 0.7
 CORNERS = {"model.corner_modes": "stokes", "model.corner_degree": 2, "model.corner_cutoff": 0.4,
            "model.corner_exponent_max": 1.0}
@@ -274,7 +274,7 @@ def test_every_singular_corner_gets_its_modes_with_z_below_one():
     found = P.singular_modes(c, st)
     assert [k.vertex for k in found] == list(st.singular)
     angles = sorted(round(math.degrees(k.angle), 9) for k in found)
-    assert angles == [210.0, 250.0, 260.0]                       # B, C, T at 30/70
+    assert angles == [210.0, 250.0, 260.0]                       # C, B, T at 30/70
     assert [len(k.modes) for k in sorted(found, key=lambda k: k.angle)] == [1, 1, 2]
     assert P.init_params(c, jax.random.PRNGKey(0))["corners"].shape == (4, 3)
     assert P.singular_modes(config(), st) == ()

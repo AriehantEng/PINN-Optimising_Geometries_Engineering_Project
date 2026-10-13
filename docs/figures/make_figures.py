@@ -94,11 +94,12 @@ def figure1():
         i = int(np.argmin(np.linalg.norm(v - corner, axis=1)))
         c = K.corner(v, i, 2.0)
         real = [m.z for m in c.modes if not isinstance(m.z, complex) and m.z < 1.0]
-        name = {210: "B", 270: "C", 240: "T"}[round(np.degrees(c.angle))]
+        # the paper's names: C where daughter 1 leaves the upper wall, B the lower
+        name = {210: "C", 270: "B", 240: "T"}[round(np.degrees(c.angle))]
         names[name] = (corner, np.degrees(c.angle), real)
         ax.add_patch(plt.Circle(corner, 0.5, fill=False, ls="--", lw=0.8, color="#2a78d6"))
         ax.plot(*corner, "o", color="#2a78d6", ms=5, zorder=4)
-    places = {"B": (0.2, 2.6), "C": (0.2, -2.6), "T": (5.0, -0.9)}
+    places = {"C": (0.2, 2.6), "B": (0.2, -2.6), "T": (5.0, -0.9)}
     for name, (corner, angle, real) in names.items():
         zs = ", ".join(f"{z:.4f}" for z in real)
         ax.annotate(f"{name}: {angle:.0f}° of fluid\nz = {zs}", corner, xytext=places[name],
