@@ -1,4 +1,4 @@
-"""Three checks on the cost benchmark (bifurcation/cost.py), for the paper.
+"""Two checks on the cost benchmark (bifurcation/cost.py), for the paper.
 
     python -m bifurcation.cost_checks --config bifurcation/cost_checks_re10.yaml \\
         --out docs/bifurcation_re10-cost-checks
@@ -14,9 +14,6 @@
                 differences on the reference mesh at the listed steps and their
                 Richardson extrapolation, and the regret it predicts for the
                 run's argmin error, (J''/J) delta^2 / 2, beside the measured one.
-    memory      the peak memory of one Levenberg-Marquardt step, each run
-                measured in several separate processes, since one process's
-                ru_maxrss varies from one to the next.
 
 Every measurement runs in its own subprocess (cost.child), one at a time.
 """
@@ -43,9 +40,7 @@ SCHEMA = {
     "meshes": {"coarse": MESH, "reference": MESH, "finest": MESH},
     "accuracy_splits": list,
     "curvature_steps": list,      # h for (J(s*+h) - 2J(s*) + J(s*-h)) / h^2, smallest first
-    "memory_runs": list,          # [{label, run}]
-    "memory_processes": int,
-    "memory_repeats": int,        # LM steps timed in each process after its warm-up
+    "runs": list,                 # [{label, run}] the PINNs whose stored drop errors are shown
 }
 
 
@@ -57,11 +52,9 @@ def parse_config(document):
         raise ConfigError("curvature_steps must be two increasing positive steps")
     if not document["accuracy_splits"]:
         raise ConfigError("accuracy_splits must list at least one split")
-    for k, entry in enumerate(document["memory_runs"]):
+    for k, entry in enumerate(document["runs"]):
         if not isinstance(entry, dict) or set(entry) != {"label", "run"}:
-            raise ConfigError(f"memory_runs[{k}] must be a mapping with exactly 'label' and 'run'")
-    if document["memory_processes"] < 1 or document["memory_repeats"] < 1:
-        raise ConfigError("memory_processes and memory_repeats must be at least 1")
+            raise ConfigError(f"runs[{k}] must be a mapping with exactly 'label' and 'run'")
     return document
 
 
@@ -81,7 +74,7 @@ def accuracy(document, verbose=True):
     metrics = json.loads((ROOT / document["run"] / "metrics.json").read_text())
     stored = {round(r["split"], 6): r for r in metrics["splits"]}
     runs = {e["label"]: json.loads((ROOT / e["run"] / "metrics.json").read_text())
-            for e in document["memory_runs"]}
+            for e in document["runs"]}
     rows = []
     for split in document["accuracy_splits"]:
         drops = {mesh: _drop(document, mesh, split) for mesh in ("coarse", "reference", "finest")}
@@ -124,22 +117,6 @@ def curvature(document, verbose=True):
     return result
 
 
-def memory(document, verbose=True):
-    rows = []
-    for entry in document["memory_runs"]:
-        peaks, seconds = [], []
-        for _ in range(document["memory_processes"]):
-            r = cost.child("measure_lm_step", {"run_dir": entry["run"], "width": None,
-                                               "repeats": document["memory_repeats"]})
-            peaks.append(r["peak_mb"])
-            seconds.append(r["seconds"])
-        rows.append({"label": entry["label"], "run": entry["run"], "parameters": r["parameters"],
-                     "rows": r["rows"], "peak_mb": peaks, "seconds": seconds})
-        if verbose:
-            print("  memory", rows[-1], flush=True)
-    return rows
-
-
 def markdown(result):
     c = result["config"]
     m = c["meshes"]
@@ -174,22 +151,13 @@ def markdown(result):
     lines += ["", f"Richardson extrapolation: **J''/J = {k['ratio']:.2f}**. For the run's argmin "
                   f"error δ = {k['argmin_error']:+.5f}, (J''/J) δ²/2 predicts a regret of "
                   f"{100 * k['predicted_regret']:.4f}%; measured {100 * k['measured_regret']:.4f}%."]
-    lines += ["", "### Peak memory of one Levenberg-Marquardt step", "",
-              f"{c['memory_processes']} separate processes per run, {c['memory_repeats']} timed "
-              "steps each after a warm-up.", "",
-              "| run | parameters | rows | peak memory per process (MB) | median (MB) | step (s) |",
-              "|---|---|---|---|---|---|"]
-    for r in result["memory"]:
-        lines.append(f"| {r['label']} | {r['parameters']} | {r['rows']} | "
-                     f"{', '.join(f'{p:.0f}' for p in r['peak_mb'])} | {np.median(r['peak_mb']):.0f} | "
-                     f"{np.median(r['seconds']):.1f} |")
     return "\n".join(lines) + "\n"
 
 
 def run(config_path, out):
     document = parse_config(yaml.safe_load(pathlib.Path(config_path).read_text()))
     result = {"config": document, "accuracy": accuracy(document),
-              "curvature": curvature(document), "memory": memory(document)}
+              "curvature": curvature(document)}
     out = pathlib.Path(out)
     out.with_suffix(".json").write_text(json.dumps(result, indent=1))
     out.with_suffix(".md").write_text(markdown(result))

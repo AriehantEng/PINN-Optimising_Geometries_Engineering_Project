@@ -1,6 +1,6 @@
 # Checks on the cost benchmark (bifurcation/cost_checks.py): the equal-accuracy
-# baseline at the edges of the PINN's range, the objective's curvature at the
-# finite-element optimum, and the spread of one LM step's peak memory.
+# baseline at the edges of the PINN's range, and the objective's curvature at
+# the finite-element optimum.
 name: cost_checks_re10_3090_equal
 run: bifurcation/runs/parametric_re10_3090_equal_corners
 meshes:
@@ -9,8 +9,6 @@ meshes:
   finest: {max_area: 0.001, corner_levels: 7}      # the yardstick of the cost table
 accuracy_splits: [0.35, 0.5, 0.65]                 # 0.5 repeats the cost table's row
 curvature_steps: [0.01, 0.02]
-memory_runs:
+runs:                                              # their stored drop errors, beside the coarse mesh's
   - {label: original, run: bifurcation/runs/parametric_re10_3090_equal}
   - {label: corner modes, run: bifurcation/runs/parametric_re10_3090_equal_corners}
-memory_processes: 3
-memory_repeats: 2
