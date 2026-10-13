@@ -187,107 +187,6 @@ unchanged.
 
 ---
 
-## C. Fluid mechanics: dissipation, wetted perimeter and Murray's law
-
-### C.1 Why splitting a channel raises its resistance
-
-For steady, fully developed flow in a planar channel of width w carrying flux Q
-per unit depth (non-dimensional, density 1, kinematic viscosity ν = 1/Re_h),
-
-$$
-u(\eta) = \frac{6Q}{w^3}\left(\frac{w^2}{4} - \eta^2\right), \qquad
-\Delta p = \frac{12\,\nu L Q}{w^3}, \qquad
-\tau_w = \frac{6\,\nu Q}{w^2}, \qquad
-R = \frac{\Delta p}{Q} = \frac{12\,\nu L}{w^3}.
-$$
-
-A force balance on the fluid between two cross-sections a length L apart gives
-Δp · w = 2 τ_w L: the pressure force is carried by shear on the two walls. The
-mechanical energy balance (Appendix A.6) gives the dissipation as the work of
-the pressure drop, Φ = Q Δp, so per unit length
-
-$$
-\frac{\Phi}{L} = \frac{Q\,\Delta p}{L} = \frac{2\,\tau_w}{w}\,Q = P_w\,\tau_w\,U ,
-\qquad P_w = 2, \quad U = \frac{Q}{w}.
-$$
-
-Here P_w is the wetted perimeter per unit depth and length (two walls in a
-planar channel): the dissipation is the rate of work done against wall shear,
-the wall area times the shear stress times the mean speed. In thermodynamic
-terms, at a uniform temperature T₀ the viscous heating produces entropy at the
-rate Ṡ = Φ/T₀ = ∫ 2ν e:e dA / T₀ ≥ 0, and at a fixed flux every extra unit of
-resistance is extra entropy produced.
-
-Now split a parent of width w₀ into two daughters of the same length L with
-w₁ + w₂ = w₀ (the planar design constraint of this study) and equal outlet
-pressures, so they act as parallel resistances:
-
-$$
-\frac{1}{R_\parallel} = \frac{w_1^3 + w_2^3}{12\,\nu L}, \qquad
-\frac{R_\parallel}{R_0} = \frac{1}{s^3 + (1-s)^3} = \frac{1}{1 - 3s(1-s)} \ \ge\ 1 ,
-$$
-
-with R₀ = 12νL/w₀³ the undivided channel's resistance; equality holds only as
-s → 0 or 1, and the ratio is 4 at s = 1/2. The septum adds two walls of length L,
-doubling P_w from 2 to 4, while the cross-section stays w₀. For n equal daughters
-of width w₀/n,
-
-$$
-R_\parallel = n^2 R_0 = \left(\frac{P_w}{2}\right)^{2} R_0 ,
-$$
-
-so at a fixed footprint the resistance grows as the square of the wetted
-perimeter: the same flux is driven past more wall, through narrower passages
-whose shear (τ_w ∝ Q/w²) is higher. This is a statement about a fixed total
-width. Murray's three-dimensional law keeps volume, not cross-section, and its
-daughters' total cross-section exceeds the parent's (r₁³ + r₂³ = r₀³ gives an
-area ratio of 2^{1/3} ≈ 1.26 at a symmetric split), so it does not imply a rise in
-resistance. At the junction itself the developing flow and the corners add
-losses beyond friction, modelled in Section 4.7 as Kᵢ ½Uᵢ².
-
-### C.2 Minimum dissipation at fixed flux is maximum flux at fixed pressure drop
-
-Let J(s, Q) be the drop in total pressure at split s and inflow Q, with the share
-q held fixed, and suppose ∂J/∂Q > 0 (more flow needs more pressure: exact in Stokes
-flow, where J = R(s) Q with R > 0, and assumed here for the laminar range studied). The design problem of this paper is
-
-$$
-s^{*} = \arg\min_{s}\, J(s, Q_0) \qquad \text{(fixed flux)} .
-$$
-
-Fix instead the pressure drop, J(s, Q) = ΔP, and let Q(s) be the flux that
-results. Differentiating the constraint,
-
-$$
-J_s + J_Q\,Q'(s) = 0 \ \Rightarrow\ Q'(s) = -\frac{J_s}{J_Q}, \qquad
-Q''(s)\big|_{Q'=0} = -\frac{J_{ss}}{J_Q} .
-$$
-
-Q is stationary exactly where J_s = 0, and since J_Q > 0, a minimum of J in s
-(J_ss > 0) is a maximum of Q. So **the split that minimises the pressure drop at a
-fixed flux is the split that maximises the flux at a fixed pressure drop**, at the
-operating point where the two problems meet, Q(s\*) = Q₀ when ΔP = J(s\*, Q₀). In
-Stokes flow J = R(s)Q, the argmin does not depend on Q, and the equivalence holds
-at every pressure drop; it is then Helmholtz's minimum-dissipation theorem (the
-Stokes solution dissipates least among divergence-free fields with the same
-boundary data), since Q₀J = Φ + B with the boundary term B vanishing for
-developed outflow (Appendix A.6). At finite Reynolds number s\* depends on Q
-through Re_h; Section 7.6 measures that dependence for the closed-length layouts
-(the largest shift of the optimum from the Murray split below 180° grows from
-0.0082 at Re_h = 10 to 0.013 at Re_h = 100).
-
-To first order the flux gained at a fixed pressure drop equals the drop saved at
-a fixed flux: Q ∝ 1/R gives δQ/Q = −δR/R. For this layout the finite-element
-optimum is s\* = 0.4848 with J\* = 4.0358, and the Murray split s_M = 0.5 gives
-J = 4.0516, so building s\* instead of s_M saves 0.39% of the pressure drop at the
-design flux, or carries 0.39% more flow at the design pressure drop. The PINNs
-place the optimum at 0.4845 (original) and 0.4862 (corner modes), both within the
-search tolerance of 0.002, at a cost against the true optimum of 0.0004% and
-0.0035%. With J″/J ≈ 44 at the optimum (Appendix A.3), a split error δ costs
-½ · 44 · δ²: δ = 0.0014 predicts 0.0043%, against the measured 0.0035%.
-
----
-
 ## B. Diagnostics of the lagging components
 
 The measurements below come from `python -m bifurcation.diagnose --config
@@ -568,84 +467,270 @@ recommended one; (ii) is the only one that keeps a single network, at the price 
 a corner whose angle, and so whose singular exponent, varies along the design
 path.
 
-### B.7 The four accuracy options (running)
+### B.7 The four accuracy options, tested
 
-The four ways of improving the corner-mode network further are being tested as
-equal-budget continuations from it (50 Levenberg–Marquardt steps on seed 22's
-draws, ranked against finite elements): continue unchanged; ease the corner weight
-from 0.3 to 0.1; add the next corner terms (Re z < 2: 1.4858 at B, 1.1489 and
-1.8335 ± 0.2523i at T, 1.6293 ± 0.2313i at C); widen to 56 neurons per layer
-(10,387 parameters, each LM step 3.4 times dearer, Table A5). Results will be
-added from `docs/bifurcation_re10-options.md`.
+Each option continues the corner-mode network from its selected parameters for 50
+Levenberg–Marquardt steps on seed 22's draws (a seed its ancestors did not use,
+so its held-out points did not choose the starting network), with exactly one
+change. The start scores 9.47 × 10⁻⁴ on seed 22's held-out points. All are ranked
+against finite elements at the seven evaluation splits
+(`python -m bifurcation.compare_runs --config bifurcation/compare_re10_options.yaml`,
+`docs/bifurcation_re10-options.md`; Figure 9).
+
+**Table B4. The four options against their starting network** (relative L2 errors,
+mean and worst over the seven splits; drop error, worst over the splits; the
+held-out loss is the diagnostic, and option 2's is not comparable because its
+weights differ).
+
+| run | u mean | u worst | v mean | p mean | worst drop error | argmin error | regret | held-out loss | training |
+|---|---|---|---|---|---|---|---|---|---|
+| original | 1.50e-2 | 1.91e-2 | 1.92e-2 | 1.60e-2 | 2.05% | −0.0003 | 0.0004% | 1.48e-2 | 163 min |
+| corner modes (start) | 2.19e-3 | 4.01e-3 | 2.31e-3 | 6.21e-3 | 1.15% | +0.0014 | 0.0035% | 9.15e-4 | 176 min |
+| 1: continue unchanged | 1.68e-3 | 2.89e-3 | 1.94e-3 | 5.61e-3 | 0.84% | +0.0008 | 0.0011% | 6.61e-4 | +37 min |
+| 2: corner weight 0.3 → 0.1 | 3.37e-3 | 6.85e-3 | 3.99e-3 | 5.57e-3 | 1.15% | +0.0014 | 0.0035% | (2.08e-3) | +38 min |
+| 3: corner modes to Re z < 2 | 1.66e-3 | 2.96e-3 | 1.58e-3 | 5.88e-3 | 0.86% | +0.0014 | 0.0035% | 5.32e-4 | +40 min |
+| 4: width 40 → 56 | 1.63e-3 | 3.13e-3 | 1.62e-3 | 5.26e-3 | 0.82% | +0.0007 | 0.0011% | 6.62e-4 | +111 min |
+
+**1. Longer training helps, and is the cheapest gain.** Fifty more steps lowered the
+mean u error by 23% (2.19 → 1.68 × 10⁻³), the worst drop error from 1.15% to 0.84% and
+the regret from 0.0035% to 0.0011%, for 37 minutes. The corner-mode network had not
+converged at 150 steps, as its still-falling loss suggested (Figure 5).
+
+**2. Easing the corner weight makes the network worse.** With residuals down-weighted
+only within 0.1 of a corner instead of 0.3, the mean u error rose 54% above the
+start (3.37 × 10⁻³), most at the edges (6.85 × 10⁻³ at s = 0.65), and the worst drop
+error did not move. The corner modes remove the singular part of the flow but not
+the remaining near-corner residual of ψ = G + D²N (B.1, B.2); at full weight that
+residual pulls the fit away from the bulk. The weight is still doing its job.
+
+**3. The next corner terms lower the loss more than the error.** Adding every mode
+with Re z < 2 (six real exponents and two complex pairs, 30 more parameters) gave the
+lowest held-out loss of all (5.3 × 10⁻⁴) and the best v error (1.58 × 10⁻³), but u and
+the drop error equal option 1's within 2%. This is B.2's finding again: once the
+singular part is represented, the residual left near the corners no longer marks
+where the error is, so reducing it further buys little accuracy.
+
+**4. A wider network is best, by little, at three times the cost.** Width 56 gave the
+lowest mean u error (1.63 × 10⁻³), the best mid-range fields (8.1 × 10⁻⁴ at s = 0.5) and
+the lowest worst drop error (0.82%), but only 3% better than option 1 in mean u and
+2.5% in worst drop error, at 111 minutes against 37, and with the largest drop error
+at s = 0.35 (−0.72%). Each step costs 3.4 times as much (Table A5).
+
+**What remains.** In every option the largest errors sit at the two ends of the
+range: the drop error at s = 0.35 and 0.65 is 0.54–0.86%, against 0.03–0.33% between
+them (Figure 9). No change to the network removed it, which supports B.3's
+explanation (one-sided sampling at the range's edges, where the narrowest daughter
+carries half the flow) and its remedy: train on a wider range than the one reported.
+The optimum stays within 0.0007–0.0014 of the finite-element one in every run, inside
+the search tolerance of 0.002, at a regret of at most 0.0035%.
+
+**Caution.** The differences among options 1, 3 and 4 (1.63–1.68 × 10⁻³ in mean u) are
+smaller than the scatter a different seed could produce: each is one run on one
+seed, and the selected iterate is chosen on a finite held-out set (Section 7.5's
+selection noise). Only option 2's deterioration and the gain of all three others
+over the start are clear.
 
 ---
 
-## D. Figure inventory
+## C. Fluid mechanics: dissipation, wetted perimeter and Murray's law
 
-Eight figures. Colours follow one rule across all of them, so an entity keeps its
-colour from figure to figure: finite elements are ink (#0b0b0b) points, the
-original PINN orange (#eb6834), the corner-mode PINN blue (#2a78d6), and the
-three FE meshes of the cost figures blue, yellow (#eda100) and orange as in
-Figures A–B. Sequential fields use `viridis`; signed fields, whose zero means
-something, use `coolwarm` with symmetric limits; the cyclic `twilight` is reserved
-for an angle, the flow direction, where 0 and 2π are the same value. Error
-magnitudes spanning decades use `magma` on a logarithmic scale. One vertical axis
-per panel throughout.
+### C.1 Why splitting a channel raises its resistance
 
-**Figure 1. Geometry and design variable.** Axes x*, y* (non-dimensional, equal
-aspect). The polygon outlines at s = 0.35, 0.4848 (the optimum) and 0.65,
-overlaid in three greys, with the inlet and outlets in orange. Callouts at the
-reflex corners: B (210°, z = 0.752), C (270°, z = 0.5445 and 0.9085) and the
-septum tip T (240°, z = 0.6157), with the corner modes' cutoff circles
-(radius 0.5) dashed. Source: the paper's existing Figure 1 plus
-`bifurcation/corners.py` for the exponents.
+For steady, fully developed flow in a planar channel of width w carrying flux Q
+per unit depth (non-dimensional, density 1, kinematic viscosity ν = 1/Re_h),
 
-**Figure 2. Reference flow at three splits.** Three columns, s = 0.35, 0.4848,
-0.65, finite elements on the reference mesh (0.002, 6 levels). Row 1: speed |u|,
-`viridis`, 16 equal levels from 0 to the largest speed of the three panels
-(shared colour bar), with streamlines in white at 0.6 pt. Row 2: pressure
-relative to outlet 2, `coolwarm` with limits ±max|p| over the three panels, so
-that the sign of outlet 1's offset λ(s) (−6.59, +0.53, +9.31) is read off the
-colour. Optional row 3: flow direction atan2(v, u), `twilight`, showing the
-turn into each daughter and any reversal near C. Callouts: s, J and λ in each
-column's title. Source: `bifurcation/fields.py fe` (sampled fields cached in
-`runs/fields_re10`).
+$$
+u(\eta) = \frac{6Q}{w^3}\left(\frac{w^2}{4} - \eta^2\right), \qquad
+\Delta p = \frac{12\,\nu L Q}{w^3}, \qquad
+\tau_w = \frac{6\,\nu Q}{w^2}, \qquad
+R = \frac{\Delta p}{Q} = \frac{12\,\nu L}{w^3}.
+$$
 
-**Figure 3. Where each PINN is wrong.** Two rows (original, corner modes) by
-three columns (s = 0.35, 0.5, 0.65). Pointwise velocity error |u_PINN − u_FE|,
-`magma`, logarithmic from 10⁻⁵ to 10⁻¹ (one colour bar for all six panels), with
-the singular corners marked by small white crosses and the training's excluded
-discs (radius 0.02) outlined. A fourth column, or a separate panel, gives the
-signed pressure error p_PINN − p_FE with `coolwarm` and symmetric limits.
-Callout in each panel: its relative L2 errors from Table A3. Source:
-`bifurcation/fields.py pinn` for both runs.
+A force balance on the fluid between two cross-sections a length L apart gives
+Δp · w = 2 τ_w L: the pressure force is carried by shear on the two walls. The
+mechanical energy balance (Appendix A.6) gives the dissipation as the work of
+the pressure drop, Φ = Q Δp, so per unit length
 
-**Figure 4. Error against distance to the nearest corner.** x: distance r to
-the nearest singular corner (log, 0.02 to 2); y: relative RMS velocity error in
-each annulus (log). One line per run (orange, blue), one panel per split
-(0.35, 0.5, 0.65), with the area share of each annulus as a grey bar strip
-below. Callouts: the annuli holding most of the squared error. Source:
-`python -m bifurcation.diagnose --config bifurcation/diagnose_re10.yaml`
-(`docs/bifurcation_re10-diagnostic.png`).
+$$
+\frac{\Phi}{L} = \frac{Q\,\Delta p}{L} = \frac{2\,\tau_w}{w}\,Q = P_w\,\tau_w\,U ,
+\qquad P_w = 2, \quad U = \frac{Q}{w}.
+$$
 
-**Figure 5. Training.** x: wall time (min); y: held-out loss (log). Both runs,
-phases shaded in light grey bands (Adam, L-BFGS, Levenberg–Marquardt), each
-run's selected iterate marked with an open circle and labelled with its loss
-(1.48 × 10⁻² and 9.15 × 10⁻⁴). A second panel, same axes, adds the four
-equal-budget continuations of Section B.6 once they finish. Loss is shown as
-the diagnostic it is; the y-axis label says so. Source: each run's
-`history.json`.
+Here P_w is the wetted perimeter per unit depth and length (two walls in a
+planar channel): the dissipation is the rate of work done against wall shear,
+the wall area times the shear stress times the mean speed. In thermodynamic
+terms, at a uniform temperature T₀ the viscous heating produces entropy at the
+rate Ṡ = Φ/T₀ = ∫ 2ν e:e dA / T₀ ≥ 0, and at a fixed flux every extra unit of
+resistance is extra entropy produced.
 
-**Figure 6. The design objective and its optimum.** x: split s (0.35 to 0.65);
-y: total-pressure drop J. Finite elements as ink points at the seven evaluation
-splits; each PINN's 61-point curve as a line; vertical markers at the FE optimum
-0.4848, the PINN optima 0.4845 and 0.4862 and the Murray split 0.5, labelled
-directly. Inset or second panel: drop error (%) against s for both PINNs, zero
-line in grey. Callouts: the regrets 0.0004% and 0.0035% and the 0.39% saved by
-s\* over s_M. Source: `metrics.json` of both runs (`optimum.curve`, `splits`).
+Now split a parent of width w₀ into two daughters of the same length L with
+w₁ + w₂ = w₀ (the planar design constraint of this study) and equal outlet
+pressures, so they act as parallel resistances:
 
-**Figure 7 (A). Simulation time scaling.** As specified in Section A.4;
-`docs/figures/fig_a_time_scaling.py`.
+$$
+\frac{1}{R_\parallel} = \frac{w_1^3 + w_2^3}{12\,\nu L}, \qquad
+\frac{R_\parallel}{R_0} = \frac{1}{s^3 + (1-s)^3} = \frac{1}{1 - 3s(1-s)} \ \ge\ 1 ,
+$$
 
-**Figure 8 (B). Amortisation and break-even.** As specified in Section A.4;
-`docs/figures/fig_b_break_even.py`.
+with R₀ = 12νL/w₀³ the undivided channel's resistance; equality holds only as
+s → 0 or 1, and the ratio is 4 at s = 1/2. The septum adds two walls of length L,
+doubling P_w from 2 to 4, while the cross-section stays w₀. For n equal daughters
+of width w₀/n,
+
+$$
+R_\parallel = n^2 R_0 = \left(\frac{P_w}{2}\right)^{2} R_0 ,
+$$
+
+so at a fixed footprint the resistance grows as the square of the wetted
+perimeter: the same flux is driven past more wall, through narrower passages
+whose shear (τ_w ∝ Q/w²) is higher. This is a statement about a fixed total
+width. Murray's three-dimensional law keeps volume, not cross-section, and its
+daughters' total cross-section exceeds the parent's (r₁³ + r₂³ = r₀³ gives an
+area ratio of 2^{1/3} ≈ 1.26 at a symmetric split), so it does not imply a rise in
+resistance. At the junction itself the developing flow and the corners add
+losses beyond friction, modelled in Section 4.7 as Kᵢ ½Uᵢ².
+
+### C.2 Minimum dissipation at fixed flux is maximum flux at fixed pressure drop
+
+Let J(s, Q) be the drop in total pressure at split s and inflow Q, with the share
+q held fixed, and suppose ∂J/∂Q > 0 (more flow needs more pressure: exact in Stokes
+flow, where J = R(s) Q with R > 0, and assumed here for the laminar range studied). The design problem of this paper is
+
+$$
+s^{*} = \arg\min_{s}\, J(s, Q_0) \qquad \text{(fixed flux)} .
+$$
+
+Fix instead the pressure drop, J(s, Q) = ΔP, and let Q(s) be the flux that
+results. Differentiating the constraint,
+
+$$
+J_s + J_Q\,Q'(s) = 0 \ \Rightarrow\ Q'(s) = -\frac{J_s}{J_Q}, \qquad
+Q''(s)\big|_{Q'=0} = -\frac{J_{ss}}{J_Q} .
+$$
+
+Q is stationary exactly where J_s = 0, and since J_Q > 0, a minimum of J in s
+(J_ss > 0) is a maximum of Q. So **the split that minimises the pressure drop at a
+fixed flux is the split that maximises the flux at a fixed pressure drop**, at the
+operating point where the two problems meet, Q(s\*) = Q₀ when ΔP = J(s\*, Q₀). In
+Stokes flow J = R(s)Q, the argmin does not depend on Q, and the equivalence holds
+at every pressure drop; it is then Helmholtz's minimum-dissipation theorem (the
+Stokes solution dissipates least among divergence-free fields with the same
+boundary data), since Q₀J = Φ + B with the boundary term B vanishing for
+developed outflow (Appendix A.6). At finite Reynolds number s\* depends on Q
+through Re_h; Section 7.6 measures that dependence for the closed-length layouts
+(the largest shift of the optimum from the Murray split below 180° grows from
+0.0082 at Re_h = 10 to 0.013 at Re_h = 100).
+
+To first order the flux gained at a fixed pressure drop equals the drop saved at
+a fixed flux: Q ∝ 1/R gives δQ/Q = −δR/R. For this layout the finite-element
+optimum is s\* = 0.4848 with J\* = 4.0358, and the Murray split s_M = 0.5 gives
+J = 4.0516, so building s\* instead of s_M saves 0.39% of the pressure drop at the
+design flux, or carries 0.39% more flow at the design pressure drop. The PINNs
+place the optimum at 0.4845 (original) and 0.4862 (corner modes), both within the
+search tolerance of 0.002, at a cost against the true optimum of 0.0004% and
+0.0035%. With J″/J ≈ 44 at the optimum (Appendix A.3), a split error δ costs
+½ · 44 · δ²: δ = 0.0014 predicts 0.0043%, against the measured 0.0035%.
+
+---
+
+## D. Figures and what the data show
+
+Colours follow one entity through every figure: finite elements ink, the original
+network orange, the corner-mode network blue, and the four continuations aqua (1),
+yellow (2), magenta (3) and green (4). Figures 1–6 and 9 are drawn by
+`python docs/figures/make_figures.py`; Figures 7 and 8 (A and B above) by their own
+standalone scripts.
+
+![Figure 1](figures/fig1_geometry.png)
+
+**Figure 1. The design geometry.** The parent (x\* from 0 to 3, width 2) splits into a
+daughter at 30° and one at 90°, each 4 long; the inlet and the two outlets are
+orange. Three outlines are overlaid: s = 0.35 (light grey: daughter 1 narrow, 0.70
+wide), s = 0.4848, the finite-element optimum (black), and s = 0.65 (mid grey:
+daughter 2 narrow). The blue points are the three reflex corners, where two walls
+meet with more than 180° of fluid: B (210°), C (270°) and the septum tip T (240°), the
+tip moving with s. Beside each is the exponent z of its singular Stokes modes
+(|u| ~ r^z near the corner): 0.752 at B, 0.5445 and 0.9085 at C, 0.6157 at T. Every
+z < 1 makes the velocity gradient and the pressure infinite at the corner, which is
+what the original network could not represent. The dashed circles are the corner
+modes' cutoff radius, 0.5, which reaches no other wall at any split in the range.
+
+![Figure 2](figures/fig2_fe_fields.png)
+
+**Figure 2. The reference flow** (finite elements, 28,000 triangles). Top row: speed,
+with streamlines. The fluid enters with the parabolic profile (peak 1) and divides
+at the junction; whichever daughter is narrow carries its half of the flow faster,
+1.44 in daughter 1 at s = 0.35 and in daughter 2 at s = 0.65, against about 0.95 at the
+optimum. Bottom row: pressure, measured from outlet 2 (0), on one colour scale for
+all three. Because each daughter must carry half the flow, outlet 1's pressure is set
+by the multiplier λ: 6.6 below outlet 2 at s = 0.35 (blue: daughter 1 is narrow and
+needs a larger pressure difference to pass its half), close to equal at the optimum
+(λ = −0.07) and 9.3 above at s = 0.65, where the narrow 90° daughter 2 needs the
+larger drop and the whole parent sits near 11. The objective J is 5.46, 4.04 and 6.54:
+the optimum lies where neither daughter is pinched.
+
+![Figure 3](figures/fig3_error_maps.png)
+
+**Figure 3. Where each network is wrong.** The pointwise velocity error against the
+reference, on a logarithmic scale from 10⁻⁵ (black) to 10⁻¹ (pale yellow); white
+crosses mark the reflex corners. **Top (original):** a bright halo of error,
+10⁻²–10⁻¹, surrounds all three corners and fills the junction; the error away from the
+junction is 10⁻³–10⁻², carried there by the corner's misfit. **Middle (corner modes):**
+the halos are gone; the error is 10⁻⁴–10⁻³ through the domain, in thin streaks, with
+a faint bright zone left only between C and T at s = 0.65. **Bottom (option 4, width
+56):** the streaks are fainter again in the middle of the range (u error 8.1 × 10⁻⁴ at
+s = 0.5), and the edge splits keep their junction zone. The relative L2 error of u at
+each split is printed in its panel.
+
+![Figure 4](figures/fig4_error_vs_corner_distance.png)
+
+**Figure 4. Error against distance from the nearest corner.** Each point is the local
+relative velocity error in one annulus of distance r to the nearest reflex corner,
+integrated on the reference mesh (Table B1). The original network's error falls
+steadily from 0.7 at r ≈ 0.01 to 0.003–0.01 beyond r = 1: the corner sets the error
+everywhere. With the corner modes it starts 25–50 times lower (0.015–0.055) and, at
+s = 0.5, flattens beyond r = 0.1 at 1.3–1.7 × 10⁻³: the error is no longer a corner
+error. At the two edge splits it still falls with distance, which is B.3's
+edge effect.
+
+![Figure 5](figures/fig5_training.png)
+
+**Figure 5. Training.** Left: held-out loss against training time for the two full
+runs, with the three phases shaded. Both follow the same path through Adam
+(0.85 → 0.10); in L-BFGS and especially Levenberg–Marquardt they part: the original
+stops improving near 2 × 10⁻² after about 75 minutes and only fluctuates, while the
+corner-mode network keeps falling to 9.15 × 10⁻⁴, the circled selected iterate.
+Right: the four continuations, step by step on seed 22's held-out points, starting
+from 9.47 × 10⁻⁴ (dotted: the start's selected value on its own points). Options 1, 3
+and 4 first rise as the damping adapts, then fall below the start, to 6.6, 5.3 and
+6.6 × 10⁻⁴ at their selected iterates; option 2's loss is higher by construction,
+because its weights differ, and is not comparable. The loss is plotted as the
+diagnostic it is: Table B4 ranks the runs against finite elements.
+
+![Figure 6](figures/fig6_objective.png)
+
+**Figure 6. The design objective.** Left: J(s) from three networks (61 points each)
+and the finite-element values at the seven evaluation splits (black); on this scale
+all agree. Centre: the optimum magnified. The finite-element minimum (star) is at
+s\* = 0.4848, J\* = 4.0358; the networks' minima (diamonds) are at 0.4845 (original),
+0.4862 (corner modes) and 0.4855 (option 4), all inside the 0.002 search tolerance,
+though each curve sits slightly above or below the reference, the corner-mode
+curve within 0.001 of it near the optimum. The Murray split, 0.5, costs 0.39% more
+drop than s\* (the black point on the dash-dotted line). Right: the drop error at
+each evaluation split for all six runs: within ±0.35% between s = 0.40 and 0.60 for
+every corner-mode run, larger at both ends; the original's error swings from +1.4%
+to −2.1% across the last two splits.
+
+**Figures 7 and 8** are Figures A and B of Section A.4: the time of one evaluation
+against the mesh size, and the cost and break-even count against the number of
+evaluations.
+
+![Figure 9](figures/fig9_options.png)
+
+**Figure 9. The four accuracy options.** Left: the relative L2 error of u at each
+split; right: the magnitude of the drop error; the dashed blue line is the starting
+corner-mode network. Options 1 (aqua), 3 (magenta) and 4 (green) lower the u error at
+every split, most in the middle of the range (to 0.8–1.1 × 10⁻³), and the worst drop
+error at s = 0.65 from 1.15% to 0.82–0.86%. Option 2 (yellow) raises the u error at
+every split, most at the edges. All six curves rise at both ends of the range: the
+edge effect of B.3, which no change to the network removed.
