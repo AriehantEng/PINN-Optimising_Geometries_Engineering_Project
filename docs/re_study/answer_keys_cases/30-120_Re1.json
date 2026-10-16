@@ -1,0 +1,282 @@
+{
+ "layout": [
+  30.0,
+  120.0
+ ],
+ "reynolds": 1.0,
+ "pressure_scaling": "viscous",
+ "continuation": [],
+ "share": 0.5,
+ "key": "30-120_Re1",
+ "s_fe": 0.26803398874989487,
+ "J_fe_search": 27.515649382294463,
+ "J_fe_check": 27.525517870636776,
+ "on_bound": false,
+ "minimum_survives_refinement": true,
+ "steady_bracket": true,
+ "argmin_bound": null,
+ "mesh_bound": null,
+ "J_fe_reference_at_s_fe": 27.52832993471698,
+ "reference": [
+  {
+   "split": 0.35,
+   "J": 31.196846927202884
+  },
+  {
+   "split": 0.4,
+   "J": 31.82992504924275
+  },
+  {
+   "split": 0.45,
+   "J": 33.1510900619962
+  },
+  {
+   "split": 0.5,
+   "J": 35.89483296109376
+  },
+  {
+   "split": 0.55,
+   "J": 40.92956900472994
+  },
+  {
+   "split": 0.6,
+   "J": 49.71771603922392
+  },
+  {
+   "split": 0.65,
+   "J": 65.11604359770327
+  }
+ ],
+ "reference_unsolved": [],
+ "centreline_lengths": [
+  2.0003164641699542,
+  6.463785150967801
+ ],
+ "closed_lengths": [
+  0.0006329283399082313,
+  4.0
+ ],
+ "s_murray": 0.5,
+ "s_length_corrected": 0.4523425214845621,
+ "inside_pinn_range": false,
+ "optimum": {
+  "angles": [
+   30.0,
+   120.0
+  ],
+  "share": 0.5,
+  "feasible": true,
+  "best_split": 0.26803398874989487,
+  "w1": 0.5360679774997897,
+  "w2": 1.4639320225002104,
+  "on_bound": false,
+  "total_pressure_drop": 27.515649382294463,
+  "total_pressure_drop_fine": 27.525517870636776,
+  "mesh_change": 0.000358521441401856,
+  "steady_bracket": true,
+  "fine_bracket": [
+   {
+    "split": 0.25,
+    "total_pressure_drop": null
+   },
+   {
+    "split": 0.26803398874989487,
+    "total_pressure_drop": 27.525517870636776
+   },
+   {
+    "split": 0.35,
+    "total_pressure_drop": 31.19610220113537
+   }
+  ],
+  "minimum_survives_refinement": true,
+  "equal_widths_drop": 35.880738153555875,
+  "saving_vs_equal_widths": 0.23313591642017018,
+  "friction_law_split": 0.5,
+  "friction_law_drop": 35.880738153555875,
+  "outlet1_pressure_offset": -16.712445147260286,
+  "flow_split": 0.5,
+  "grid": [
+   {
+    "split": 0.1,
+    "total_pressure_drop": Infinity
+   },
+   {
+    "split": 0.15000000000000002,
+    "total_pressure_drop": Infinity
+   },
+   {
+    "split": 0.2,
+    "total_pressure_drop": Infinity
+   },
+   {
+    "split": 0.25,
+    "total_pressure_drop": Infinity
+   },
+   {
+    "split": 0.30000000000000004,
+    "total_pressure_drop": 30.05967312157859
+   },
+   {
+    "split": 0.35,
+    "total_pressure_drop": 31.185980742982643
+   },
+   {
+    "split": 0.4,
+    "total_pressure_drop": 31.819465634356014
+   },
+   {
+    "split": 0.45000000000000007,
+    "total_pressure_drop": 33.14066321791063
+   },
+   {
+    "split": 0.5,
+    "total_pressure_drop": 35.880738153555875
+   },
+   {
+    "split": 0.55,
+    "total_pressure_drop": 40.91550513410554
+   },
+   {
+    "split": 0.6,
+    "total_pressure_drop": 49.68615295346347
+   },
+   {
+    "split": 0.65,
+    "total_pressure_drop": 65.07408667185616
+   },
+   {
+    "split": 0.7000000000000001,
+    "total_pressure_drop": 93.25211782059469
+   },
+   {
+    "split": 0.75,
+    "total_pressure_drop": 149.19837645910997
+   },
+   {
+    "split": 0.8,
+    "total_pressure_drop": 275.82555935707563
+   },
+   {
+    "split": 0.85,
+    "total_pressure_drop": 629.521066210975
+   },
+   {
+    "split": 0.9,
+    "total_pressure_drop": 2069.3537925756023
+   }
+  ],
+  "refused": [
+   {
+    "split": 0.1,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (7.650, 3.454)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.2 and 1.8 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.15000000000000002,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (7.377, 3.180)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.3 and 1.7 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.2,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (7.103, 2.907)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.4 and 1.6 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.25,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (6.830, 2.634)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.5 and 1.5 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.2645898033750316,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (6.750, 2.554)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.52918 and 1.47082 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.2667184270002524,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (6.739, 2.543)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.533437 and 1.46656 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   },
+   {
+    "split": 0.2675314888758307,
+    "reason": "the inner walls meet beyond an outlet (septum tip at (6.734, 2.538)): daughter_length is too short, or the angles 30 + 120 are so near 180 that walls 0.535063 and 1.46494 wide cannot meet near the junction. At exactly 180 the junction closes with a flat far wall instead"
+   }
+  ],
+  "unsolved": [],
+  "solves": 28,
+  "seconds": 185.8653591330003
+ },
+ "seconds": 1159.052595862,
+ "in_range": {
+  "range": [
+   0.35,
+   0.65
+  ],
+  "s": 0.35,
+  "J_search": 31.185980742982643,
+  "on_range_bound": true,
+  "grid": [
+   [
+    0.35,
+    31.185980742982643
+   ],
+   [
+    0.36874999999999997,
+    31.400032695487837
+   ],
+   [
+    0.38749999999999996,
+    31.63110678910774
+   ],
+   [
+    0.40625,
+    31.931714219779586
+   ],
+   [
+    0.425,
+    32.34320772763368
+   ],
+   [
+    0.44375,
+    32.91007640866885
+   ],
+   [
+    0.4625,
+    33.667381264176875
+   ],
+   [
+    0.48125,
+    34.638992699169435
+   ],
+   [
+    0.5,
+    35.880738153555875
+   ],
+   [
+    0.51875,
+    37.43954549620168
+   ],
+   [
+    0.5375,
+    39.37374479027846
+   ],
+   [
+    0.55625,
+    41.7664446029938
+   ],
+   [
+    0.575,
+    44.700658484034136
+   ],
+   [
+    0.59375,
+    48.30970118503262
+   ],
+   [
+    0.6125,
+    52.756292887188074
+   ],
+   [
+    0.6312500000000001,
+    58.25067624731641
+   ],
+   [
+    0.65,
+    65.07408667185616
+   ]
+  ]
+ }
+}
