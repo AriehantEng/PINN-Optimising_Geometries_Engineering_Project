@@ -90,6 +90,62 @@ def key(angles, reynolds):
     return f"{angles[0]:g}-{angles[1]:g}_Re{reynolds:g}"
 
 
+def in_range(config, angles, case):
+    """The optimum inside the PINNs' range [min, max of reference.splits], by the
+    same procedure: scan (search.grid points), Brent to search.xatol, and the
+    optimum and its grid neighbours on the check mesh, with the mesh bound. For a
+    case whose global optimum lies outside that range (or on a geometry limit)."""
+    from scipy.optimize import minimize_scalar
+    study = study_config(config, case)
+    share, mesh, check = config["share"], config["mesh"], config["check"]
+    lo, hi = min(config["reference"]["splits"]), max(config["reference"]["splits"])
+    cache = {}
+
+    def drop(s):
+        k = round(float(s), 12)
+        if k not in cache:
+            cache[k] = design_study.solve(study, float(s), angles, share, mesh["max_area"],
+                                          mesh["corner_levels"])["total_pressure_drop"]
+        return cache[k]
+
+    grid = np.linspace(lo, hi, config["search"]["grid"])
+    values = np.array([drop(s) for s in grid])
+    k = int(np.argmin(values))
+    if k in (0, len(grid) - 1):
+        return {"range": [lo, hi], "s": float(grid[k]), "J_search": float(values[k]),
+                "on_range_bound": True, "grid": list(zip(grid.tolist(), values.tolist()))}
+    left, right = float(grid[k - 1]), float(grid[k + 1])
+    result = minimize_scalar(drop, bounds=(left, right), method="bounded",
+                             options={"xatol": config["search"]["xatol"]})
+    s_star, j_star = (float(result.x), float(result.fun)) if result.fun <= values[k] else \
+        (float(grid[k]), float(values[k]))
+    fine = {x: design_study.solve(study, x, angles, share, check["max_area"],
+                                  check["corner_levels"])["total_pressure_drop"]
+            for x in (left, s_star, right)}
+    row = {"grid": [{"split": float(g), "total_pressure_drop": float(v)}
+                    for g, v in zip(grid, values)],
+           "best_split": s_star, "total_pressure_drop": j_star,
+           "total_pressure_drop_fine": fine[s_star]}
+    bound = sensitivity.mesh_bound(row, fine[left], fine[right], config["search"]["xatol"])
+    return {"range": [lo, hi], "s": s_star, "J_search": j_star, "J_check": fine[s_star],
+            "on_range_bound": False, "argmin_bound": bound["bound"], "mesh_bound": bound,
+            "survives_refinement": bool(fine[s_star] <= min(fine[left], fine[right])),
+            "grid": list(zip(grid.tolist(), values.tolist()))}
+
+
+def complete(task):
+    """A finished case whose optimum lies outside the PINNs' range gets in_range."""
+    config, path = task
+    r = json.loads(pathlib.Path(path).read_text())
+    if "failed" in r or r.get("inside_pinn_range") or "in_range" in r:
+        return r
+    case = {"reynolds": r["reynolds"], "pressure_scaling": r["pressure_scaling"],
+            "continuation": r["continuation"]}
+    r["in_range"] = in_range(config, r["layout"], case)
+    pathlib.Path(path).write_text(json.dumps(r, indent=1, default=str))
+    return r
+
+
 def answer(task):
     config, angles, case = task
     start = time.perf_counter()
@@ -171,6 +227,19 @@ def markdown(result):
                      f"{r['centreline_lengths'][0]:.4f}, {r['centreline_lengths'][1]:.4f} | "
                      f"{r['s_murray']:.4f} | {r['s_length_corrected']:.4f} | "
                      f"{'yes' if r['minimum_survives_refinement'] else 'NO'} |")
+    outside = [r for r in result["cases"] if "in_range" in r]
+    if outside:
+        lines += ["", "### Cases whose optimum lies outside the PINNs' range: the optimum inside it",
+                  "", "| case | global s_FE | why outside | s* in range | argmin bound | J (search) "
+                  "| J (check) | on the range's bound |", "|---|---|---|---|---|---|---|---|"]
+        for r in outside:
+            g = r["in_range"]
+            refused = [x["split"] for x in r["optimum"].get("refused", [])]
+            why = (f"splits below {max(x for x in refused if x < r['s_fe'] + 1e-3):.4f} refused "
+                   "by the geometry" if refused and min(refused) < r["s_fe"] else "flow")
+            lines.append(f"| {r['key']} | {r['s_fe']:.4f} | {why} | {g['s']:.4f} | "
+                         f"{g.get('argmin_bound', float('nan')):.4f} | {g['J_search']:.6g} | "
+                         f"{g.get('J_check', float('nan')):.6g} | {g['on_range_bound']} |")
     splits = c["reference"]["splits"]
     lines += ["", "### J on the reference mesh", "",
               "| case | " + " | ".join(f"s = {s:.2f}" for s in splits) + " |",
@@ -212,8 +281,13 @@ def run(config_path, out):
             else:
                 print(f"  {r['key']}: s_FE {r['s_fe']:.4f} (bound {r['argmin_bound']}), "
                       f"J {r['J_fe_search']:.6g}, {r['seconds']:.0f} s", flush=True)
-    cases = [json.loads((done_dir / f"{key(t[1], t[2]['reynolds'])}.json").read_text())
-             for t in tasks]
+    paths = [done_dir / f"{key(t[1], t[2]['reynolds'])}.json" for t in tasks]
+    with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
+        for r in pool.imap_unordered(complete, [(config, str(p)) for p in paths]):
+            if "in_range" in r:
+                print(f"  {r['key']}: inside the PINNs' range s* = {r['in_range']['s']:.4f}",
+                      flush=True)
+    cases = [json.loads(p.read_text()) for p in paths]
     result = {"config": config, "cases": cases, "seconds": time.perf_counter() - start}
     out.parent.mkdir(parents=True, exist_ok=True)
     out.with_suffix(".json").write_text(json.dumps(result, indent=1, default=str))

@@ -1,0 +1,179 @@
+{
+ "layout": [
+  30.0,
+  90.0
+ ],
+ "reynolds": 1.0,
+ "pressure_scaling": "viscous",
+ "continuation": [],
+ "share": 0.5,
+ "key": "30-90_Re1",
+ "s_fe": 0.48507380975964737,
+ "J_fe_search": 40.08627251430067,
+ "J_fe_check": 40.09461868188841,
+ "on_bound": false,
+ "minimum_survives_refinement": true,
+ "steady_bracket": true,
+ "argmin_bound": 0.0010028757725011775,
+ "mesh_bound": {
+  "mesh_error_slope": 0.00010049733353606966,
+  "curvature": 34.946204365931514,
+  "argmin_shift": -2.875772501177349e-06,
+  "bound": 0.0010028757725011775
+ },
+ "J_fe_reference_at_s_fe": 40.09526724890957,
+ "reference": [
+  {
+   "split": 0.35,
+   "J": 54.28129526265487
+  },
+  {
+   "split": 0.4,
+   "J": 45.15432220847672
+  },
+  {
+   "split": 0.45,
+   "J": 40.896408201297135
+  },
+  {
+   "split": 0.5,
+   "J": 40.260372852844235
+  },
+  {
+   "split": 0.55,
+   "J": 43.158706530391264
+  },
+  {
+   "split": 0.6,
+   "J": 50.56744370512492
+  },
+  {
+   "split": 0.65,
+   "J": 65.08634333195548
+  }
+ ],
+ "reference_unsolved": [],
+ "centreline_lengths": [
+  3.6854719455454585,
+  4.737177785264916
+ ],
+ "closed_lengths": [
+  3.3709438910909166,
+  4.0
+ ],
+ "s_murray": 0.5,
+ "s_length_corrected": 0.48427319018282405,
+ "inside_pinn_range": true,
+ "optimum": {
+  "angles": [
+   30.0,
+   90.0
+  ],
+  "share": 0.5,
+  "feasible": true,
+  "best_split": 0.48507380975964737,
+  "w1": 0.9701476195192947,
+  "w2": 1.0298523804807052,
+  "on_bound": false,
+  "total_pressure_drop": 40.08627251430067,
+  "total_pressure_drop_fine": 40.09461868188841,
+  "mesh_change": 0.00020816178983929353,
+  "steady_bracket": true,
+  "fine_bracket": [
+   {
+    "split": 0.45000000000000007,
+    "total_pressure_drop": 40.89599750107379
+   },
+   {
+    "split": 0.48507380975964737,
+    "total_pressure_drop": 40.09461868188841
+   },
+   {
+    "split": 0.55,
+    "total_pressure_drop": 43.15779084371833
+   }
+  ],
+  "minimum_survives_refinement": true,
+  "equal_widths_drop": 40.25142941200041,
+  "saving_vs_equal_widths": 0.004103131245582703,
+  "friction_law_split": 0.5,
+  "friction_law_drop": 40.25142941200041,
+  "outlet1_pressure_offset": -0.6291219566059478,
+  "flow_split": 0.4999999999999999,
+  "grid": [
+   {
+    "split": 0.1,
+    "total_pressure_drop": 1098.5346789269208
+   },
+   {
+    "split": 0.15000000000000002,
+    "total_pressure_drop": 369.2164602393618
+   },
+   {
+    "split": 0.2,
+    "total_pressure_drop": 177.7449587097868
+   },
+   {
+    "split": 0.25,
+    "total_pressure_drop": 105.12632981861364
+   },
+   {
+    "split": 0.30000000000000004,
+    "total_pressure_drop": 71.54707909637986
+   },
+   {
+    "split": 0.35,
+    "total_pressure_drop": 54.271699092886045
+   },
+   {
+    "split": 0.4,
+    "total_pressure_drop": 45.14820154550565
+   },
+   {
+    "split": 0.45000000000000007,
+    "total_pressure_drop": 40.88835320216298
+   },
+   {
+    "split": 0.5,
+    "total_pressure_drop": 40.25142941200041
+   },
+   {
+    "split": 0.55,
+    "total_pressure_drop": 43.14915180401208
+   },
+   {
+    "split": 0.6,
+    "total_pressure_drop": 50.557998131426444
+   },
+   {
+    "split": 0.65,
+    "total_pressure_drop": 65.06626729548123
+   },
+   {
+    "split": 0.7000000000000001,
+    "total_pressure_drop": 92.71397318559062
+   },
+   {
+    "split": 0.75,
+    "total_pressure_drop": 148.4169041733571
+   },
+   {
+    "split": 0.8,
+    "total_pressure_drop": 274.8760651793677
+   },
+   {
+    "split": 0.85,
+    "total_pressure_drop": 627.8845810305143
+   },
+   {
+    "split": 0.9,
+    "total_pressure_drop": 2057.8408840924785
+   }
+  ],
+  "refused": [],
+  "unsolved": [],
+  "solves": 25,
+  "seconds": 66.92016241
+ },
+ "seconds": 370.73534559999996
+}
