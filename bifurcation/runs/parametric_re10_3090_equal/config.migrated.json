@@ -22,5 +22,17 @@
         "reason": "before training.init_from existed every parametric run started from a random network"
       }
     ]
+  },
+  {
+    "migrated_by": "bifurcation/migrate.py",
+    "migrated_at": "2026-10-16T13:05:13.918761+00:00",
+    "why": "config keys became required after this run finished; values describe what the run actually computed, and no result changed",
+    "added": [
+      {
+        "key": "evaluation.continuation",
+        "value": [],
+        "reason": "before evaluation.continuation existed the reference was always solved by one Newton solve from Stokes, at Re_h = 10"
+      }
+    ]
   }
 ]

@@ -115,7 +115,8 @@ SCHEMA = {
         "init_from": str,     # 'random', or the name of a finished run beside this one
     },
     "evaluation": {"max_area": float, "corner_levels": int, "corner_radius": float,
-                   "n_line": int, "splits": list, "search_xatol": float, "curve_points": int},
+                   "n_line": int, "splits": list, "search_xatol": float, "curve_points": int,
+                   "continuation": list},   # Re solved first by the reference, [] = from Stokes
 }
 
 #: inlet.profile = network1 only
@@ -192,6 +193,7 @@ class Config:
     eval_splits: tuple
     search_xatol: float
     curve_points: int
+    fe_continuation: tuple
 
     def geometry(self, split) -> Geometry:
         return Geometry.from_split(float(split), self.angle1, self.angle2, self.parent_length,
@@ -270,6 +272,11 @@ def parse_config(document) -> Config:
             raise ConfigError(f"evaluation split {split} lies outside the design range")
     if e["curve_points"] < 3:
         raise ConfigError("evaluation.curve_points must be at least 3")
+    steps = list(e["continuation"]) + [document["physics"]["reynolds"]]
+    if any(isinstance(r, bool) or not isinstance(r, (int, float)) for r in steps) or any(
+            not 0.0 < lo < hi for lo, hi in zip(steps, steps[1:])):
+        raise ConfigError("evaluation.continuation must be increasing Reynolds numbers below "
+                          f"physics.reynolds, got {e['continuation']}")
     weights = dict(document["weights"])
     corner_weight_radius = float(weights.pop("corner_radius"))
     if corner_weight_radius < 0.0:
@@ -314,6 +321,7 @@ def parse_config(document) -> Config:
         fe_corner_radius=float(e["corner_radius"]), n_line=e["n_line"],
         eval_splits=tuple(float(v) for v in e["splits"]), search_xatol=float(e["search_xatol"]),
         curve_points=e["curve_points"],
+        fe_continuation=tuple(float(r) for r in e["continuation"]),
     )
     st = structure(config)          # refuses a range one construction cannot serve
     singular_modes(config, st)      # and a corner cutoff that reaches another edge
@@ -885,7 +893,7 @@ def evaluate(config: Config, params, verbose=True):
             solution = reference.solve_bifurcation(
                 config.geometry(s), config.reynolds, config.pressure_scaling, inlet,
                 config.outlet1_share, config.fe_max_area, config.fe_corner_levels,
-                config.fe_corner_radius, continuation=())
+                config.fe_corner_radius, continuation=config.fe_continuation)
             solves[key] = (solution, time.perf_counter() - start)
         return solves[key][0]
 

@@ -39,7 +39,8 @@ BASE = {
         "init_from": "random",
     },
     "evaluation": {"max_area": 0.05, "corner_levels": 2, "corner_radius": 0.4, "n_line": 64,
-                   "splits": [0.35, 0.45, 0.6], "search_xatol": 0.01, "curve_points": 5},
+                   "splits": [0.35, 0.45, 0.6], "search_xatol": 0.01, "curve_points": 5,
+                   "continuation": []},
 }
 
 #: the corner-mode network: four modes on BASE's 30/70 layout (C 210, B 250,

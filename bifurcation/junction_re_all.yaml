@@ -1,0 +1,10 @@
+# The junction effect against the Reynolds number, Re_h = 0.1 to 100, from the
+# closed-length maps (bifurcation/junction_re.py). Re_h <= 1 in viscous units.
+name: junction_closed_all
+maps:
+  - docs/bifurcation_closed-re0.1.json
+  - docs/bifurcation_closed-re1.json
+  - docs/bifurcation_closed-re10.json
+  - docs/bifurcation_closed-re25.json
+  - docs/bifurcation_closed-re50.json
+  - docs/bifurcation_closed-re100.json

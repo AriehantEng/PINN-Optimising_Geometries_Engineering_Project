@@ -76,3 +76,4 @@ evaluation:
   splits: [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
   search_xatol: 0.002         # Brent's tolerance on both optima
   curve_points: 61            # the PINN's drop curve over the range
+  continuation: []

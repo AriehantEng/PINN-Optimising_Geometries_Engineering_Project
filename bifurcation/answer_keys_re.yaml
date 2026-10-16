@@ -1,0 +1,32 @@
+# Finite-element answer keys for the parametric PINNs at several Reynolds
+# numbers (bifurcation/answer_key.py): the parametric runs' geometry (outer
+# walls 4 long, q = 0.5), layouts 30/90 and 30/120, Re_h = 0.1, 1, 10, 100.
+# Re_h <= 1 in viscous pressure units (mu U_c / h), as the PINNs there.
+name: answer_keys_re
+geometry:
+  parent_length: 3.0
+  daughter_length: 4.0
+  min_width: 0.2
+share: 0.5
+layouts: [[30.0, 90.0], [30.0, 120.0]]
+flows:
+  - {reynolds: 0.1, pressure_scaling: viscous, continuation: []}
+  - {reynolds: 1.0, pressure_scaling: viscous, continuation: []}
+  - {reynolds: 10.0, pressure_scaling: inertial, continuation: []}
+  - {reynolds: 100.0, pressure_scaling: inertial, continuation: [25.0, 50.0]}
+search:                     # the design study's procedure
+  grid: 17
+  xatol: 1.0e-3
+mesh:                       # search mesh
+  max_area: 0.02
+  corner_levels: 3
+  corner_radius: 0.4
+check:                      # check mesh, for the argmin bound
+  max_area: 0.005
+  corner_levels: 5
+reference:                  # the PINNs' reference mesh
+  max_area: 0.002
+  corner_levels: 6
+  n_line: 256
+  splits: [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
+workers: 4

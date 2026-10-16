@@ -18,6 +18,7 @@ ACTUALLY did:
     model.corner_modes = none               (parametric) psi = G + D^2 N, no corner modes
     model.corner_exponent_max = 1.0         (parametric, corner modes) the modes with z < 1
     training.init_from = random             (parametric) a random start
+    evaluation.continuation = []            (parametric) the reference solved from Stokes
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -70,6 +71,10 @@ PARAMETRIC_MIGRATIONS = (
     ("training.init_from", "random", r"^  check_every: .*$",
      lambda d: "init_from" not in d.get("training", {}),
      "before training.init_from existed every parametric run started from a random network"),
+    ("evaluation.continuation", [], r"^  curve_points: .*$",
+     lambda d: "continuation" not in d.get("evaluation", {}),
+     "before evaluation.continuation existed the reference was always solved by one Newton "
+     "solve from Stokes, at Re_h = 10"),
 )
 
 
