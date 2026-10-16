@@ -28,6 +28,7 @@ import argparse
 import copy
 import json
 import math
+import concurrent.futures
 import multiprocessing
 import pathlib
 import time
@@ -273,8 +274,12 @@ def run(config_path, out):
              for case in config["flows"] for pair in config["layouts"]]
     todo = [t for t in tasks if not (done_dir / f"{key(t[1], t[2]['reynolds'])}.json").is_file()]
     start = time.perf_counter()
-    with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
-        for r in pool.imap_unordered(answer, todo):
+    # a worker killed (out of memory) raises BrokenProcessPool here, where a
+    # multiprocessing.Pool would wait for its result forever
+    with concurrent.futures.ProcessPoolExecutor(
+            config["workers"], mp_context=multiprocessing.get_context("spawn")) as pool:
+        for future in concurrent.futures.as_completed([pool.submit(answer, t) for t in todo]):
+            r = future.result()
             (done_dir / f"{r['key']}.json").write_text(json.dumps(r, indent=1, default=str))
             if "failed" in r:
                 print(f"  {r['key']}: FAILED ({r['failed']})", flush=True)
@@ -282,8 +287,11 @@ def run(config_path, out):
                 print(f"  {r['key']}: s_FE {r['s_fe']:.4f} (bound {r['argmin_bound']}), "
                       f"J {r['J_fe_search']:.6g}, {r['seconds']:.0f} s", flush=True)
     paths = [done_dir / f"{key(t[1], t[2]['reynolds'])}.json" for t in tasks]
-    with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
-        for r in pool.imap_unordered(complete, [(config, str(p)) for p in paths]):
+    with concurrent.futures.ProcessPoolExecutor(
+            config["workers"], mp_context=multiprocessing.get_context("spawn")) as pool:
+        for future in concurrent.futures.as_completed(
+                [pool.submit(complete, (config, str(p))) for p in paths]):
+            r = future.result()
             if "in_range" in r:
                 print(f"  {r['key']}: inside the PINNs' range s* = {r['in_range']['s']:.4f}",
                       flush=True)
