@@ -196,20 +196,25 @@ def write_csvs(result, directory):
 
 def run(config_path, out):
     config = parse_config(yaml.safe_load(pathlib.Path(config_path).read_text()))
+    out = pathlib.Path(out)
+    # each case is kept as it finishes, so a restarted run solves only the rest
+    done_dir = out.parent / f"{out.name}_cases"
+    done_dir.mkdir(parents=True, exist_ok=True)
     tasks = [(config, [float(a) for a in pair], case)
              for case in config["flows"] for pair in config["layouts"]]
+    todo = [t for t in tasks if not (done_dir / f"{key(t[1], t[2]['reynolds'])}.json").is_file()]
     start = time.perf_counter()
-    cases = []
     with multiprocessing.get_context("spawn").Pool(config["workers"]) as pool:
-        for r in pool.imap(answer, tasks):
-            cases.append(r)
+        for r in pool.imap_unordered(answer, todo):
+            (done_dir / f"{r['key']}.json").write_text(json.dumps(r, indent=1, default=str))
             if "failed" in r:
                 print(f"  {r['key']}: FAILED ({r['failed']})", flush=True)
             else:
                 print(f"  {r['key']}: s_FE {r['s_fe']:.4f} (bound {r['argmin_bound']}), "
                       f"J {r['J_fe_search']:.6g}, {r['seconds']:.0f} s", flush=True)
+    cases = [json.loads((done_dir / f"{key(t[1], t[2]['reynolds'])}.json").read_text())
+             for t in tasks]
     result = {"config": config, "cases": cases, "seconds": time.perf_counter() - start}
-    out = pathlib.Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.with_suffix(".json").write_text(json.dumps(result, indent=1, default=str))
     out.with_suffix(".md").write_text(markdown(result))
