@@ -2,7 +2,7 @@
 
     python docs/re_study/figures.py
 
-    fig_re_objective.png   J(s) from each finished PINN against finite elements
+    fig_re_objective.png   J(s) from each finished PINN against the reference solution
     fig_re_drop_error.png  the PINNs' signed pressure-drop error against s
     fig_re_training.png    held-out loss against training time
 Redraw as runs finish: every finished run's files are picked up.
@@ -58,11 +58,11 @@ def objective(all_runs):
         ax.plot(x, [float(row["J_pinn"]) for row in r["rows"]], color=BLUE, lw=2,
                 label="PINN, J(s) over 61 splits")
         fe = [(float(row["s"]), float(row["J_fe"])) for row in r["rows"] if row["J_fe"]]
-        ax.plot(*zip(*fe), "o", color=INK, ms=6, label="finite elements (reference mesh)")
+        ax.plot(*zip(*fe), "o", color=INK, ms=6, label="reference solution")
         ax.axvline(s["s_star_pinn"], color=BLUE, ls="--", lw=1.2,
                    label=f"PINN optimum {s['s_star_pinn']:.4f}")
         ax.axvline(s["s_star_reference_mesh_brent"], color=INK, ls=":", lw=1.4,
-                   label=f"FE optimum {s['s_star_reference_mesh_brent']:.4f}")
+                   label=f"reference optimum {s['s_star_reference_mesh_brent']:.4f}")
         units = "μU_c/h" if s["pressure_scaling"] == "viscous" else "ρU_c²"
         ax.set_title(r["label"], fontsize=10, color=INK, loc="left")
         ax.set_xlabel("width split s = w₁/w₀", fontsize=9, color=INK)
@@ -84,7 +84,7 @@ def drop_error(all_runs):
               for row in r["rows"] if row["J_fe"]]
         ax.plot(*zip(*fe), "o-", color=colour, lw=2, ms=6, label=r["label"])
     ax.set_xlabel("width split s = w₁/w₀", fontsize=9, color=INK)
-    ax.set_ylabel("pressure-drop error of the PINN (%)", fontsize=9, color=INK)
+    ax.set_ylabel("pressure-drop error of the PINN against the reference solution (%)", fontsize=9, color=INK)
     ax.legend(fontsize=8, loc="lower left", framealpha=0.92, edgecolor="none")
     style(ax)
     fig.tight_layout()
