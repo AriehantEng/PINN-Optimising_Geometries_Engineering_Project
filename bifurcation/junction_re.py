@@ -224,8 +224,11 @@ def plot(summary, path):
     res = [m["reynolds"] for m in summary["maps"]]
     tables = [by_layout([r for r in m["records"] if r.get("trusted")]) for m in summary["maps"]]
     for ax, (total, layouts) in zip(axes.ravel(), sorted(roles.items())):
-        bounds = [r["bound"] for t in tables for a, _ in layouts for r in t.get(name(a), [])]
-        ax.axhspan(0.0, max(bounds) if bounds else 0.001, color=BAND, lw=0, zorder=0)
+        # the band is the panel's largest location bound AT EACH Re_h: one hard case at
+        # one Reynolds number (30/150, q = 0.05, Re_h = 50: 0.0082) must not cover the rest
+        band = [max([r["bound"] for a, _ in layouts for r in t.get(name(a), [])] or [0.0])
+                for t in tables]
+        ax.fill_between(res, 0.0, band, color=BAND, lw=0, zorder=0, step=None)
         top, ends = 0.0, []
         for angles, role in layouts:
             xs, ys, counts = [], [], []
@@ -272,7 +275,8 @@ def plot(summary, path):
                for k, c in ROLE_COLOURS.items()]
     handles.append(plt.Line2D([], [], color=MUTED, lw=2, ls="--", marker="o", ms=6,
                               markerfacecolor="white", label="fewer shares (no steady solution)"))
-    handles.append(plt.Rectangle((0, 0), 1, 1, color=BAND, label="largest location bound"))
+    handles.append(plt.Rectangle((0, 0), 1, 1, color=BAND,
+                                 label="largest location bound at each Re_h"))
     fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9)
     fig.suptitle("Departure of the optimal split from the Murray split, daughters of equal "
                  "closed length", fontsize=11, color=INK)

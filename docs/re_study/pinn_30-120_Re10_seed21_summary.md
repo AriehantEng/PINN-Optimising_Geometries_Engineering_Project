@@ -3,8 +3,9 @@
 Layout 30/120, Re_h = 10 (inertial pressure), seed 21.
 
 - PINN optimum s* = 0.3500 (scan, then Brent), J = 3.15109; on the range's bound: True
+- finite elements at the PINN's s*: J = 3.15661 (reference mesh)
 - loss at s*: 3.171e-03 (4 x 1024 interior points at s*, stream 2026)
-- reference-mesh optimum (Brent from the evaluation splits): 0.3500; argmin error +0.0000; regret +0.0000%
+- reference-mesh optimum (Brent from the evaluation splits): 0.3500 (J = 3.15661); argmin error +0.0000; regret +0.0000%
 
 | s | u | v | p | drop error |
 |---|---|---|---|---|

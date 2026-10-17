@@ -12,6 +12,7 @@
  "s_star_pinn_on_bound": false,
  "loss_at_s_star": 0.09662882968838915,
  "loss_at_s_star_points": "4 x 1024 interior points at s*, stream 2026",
+ "J_fe_at_s_star_pinn": 40.09616477345646,
  "s_star_reference_mesh_brent": 0.48433847748459746,
  "J_fe_at_reference_s_star": 40.091534444959315,
  "argmin_error": 0.0026341688408779707,

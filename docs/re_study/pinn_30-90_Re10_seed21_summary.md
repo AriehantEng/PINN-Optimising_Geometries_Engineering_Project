@@ -3,8 +3,9 @@
 Layout 30/90, Re_h = 10 (inertial pressure), seed 21.
 
 - PINN optimum s* = 0.4862 (scan, then Brent), J = 4.03557; on the range's bound: False
+- finite elements at the PINN's s*: J = 4.03597 (reference mesh)
 - loss at s*: 7.959e-04 (4 x 1024 interior points at s*, stream 2026)
-- reference-mesh optimum (Brent from the evaluation splits): 0.4848; argmin error +0.0014; regret +0.0035%
+- reference-mesh optimum (Brent from the evaluation splits): 0.4848 (J = 4.03583); argmin error +0.0014; regret +0.0035%
 
 | s | u | v | p | drop error |
 |---|---|---|---|---|
@@ -17,4 +18,4 @@ Layout 30/90, Re_h = 10 (inertial pressure), seed 21.
 | 0.65 | 4.01e-03 | 3.90e-03 | 1.21e-02 | -1.149% |
 | 0.4862 (s*) | 1.52e-03 | 1.42e-03 | 2.55e-03 | -0.010% |
 
-Training: 176 min, final training loss 8.170e-04, selected lm_average:147 with held-out loss 9.154e-04; converged: False (finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
+Training: 176 min, final training loss 8.170e-04, selected lm_average:147 with held-out loss 9.154e-04; converged: no: the held-out loss was still falling when the fixed schedule ended (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)

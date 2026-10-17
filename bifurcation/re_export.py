@@ -162,6 +162,7 @@ def export(run_directory, out_directory):
         "loss_at_s_star": loss_at_optimum,
         "loss_at_s_star_points": f"{LOSS_AT_OPTIMUM_DESIGNS} x {config.points_per_design} "
                                  f"interior points at s*, stream {LOSS_AT_OPTIMUM_SEED}",
+        "J_fe_at_s_star_pinn": theirs,
         "s_star_reference_mesh_brent": o["reference_split"],
         "J_fe_at_reference_s_star": o["reference_min_drop"],
         "argmin_error": o["argmin_error"], "regret": o["regret"],
@@ -183,9 +184,11 @@ def summary_markdown(name, s):
              f"({s['pressure_scaling']} pressure), seed {s['seed']}.", "",
              f"- PINN optimum s* = {s['s_star_pinn']:.4f} (scan, then Brent), J = "
              f"{s['J_pinn_at_s_star']:.6g}; on the range's bound: {s['s_star_pinn_on_bound']}",
+             f"- finite elements at the PINN's s*: J = {s['J_fe_at_s_star_pinn']:.6g} (reference mesh)",
              f"- loss at s*: {s['loss_at_s_star']:.3e} ({s['loss_at_s_star_points']})",
              f"- reference-mesh optimum (Brent from the evaluation splits): "
-             f"{s['s_star_reference_mesh_brent']:.4f}; argmin error {s['argmin_error']:+.4f}; "
+             f"{s['s_star_reference_mesh_brent']:.4f} (J = {s['J_fe_at_reference_s_star']:.6g}); "
+             f"argmin error {s['argmin_error']:+.4f}; "
              f"regret {100 * s['regret']:+.4f}%", "",
              "| s | u | v | p | drop error |", "|---|---|---|---|---|"]
     for f in s["fields"]:
