@@ -23,8 +23,8 @@ fe_step() {        # name, output stem, command...
 
 pinn_step() {      # config tag
     local tag=$1 config=bifurcation/p_$1.yaml run=bifurcation/runs/parametric_$1
-    if [ -f "$run/metrics.json" ] || [ -f "$run/FAILED" ]; then
-        echo "$(stamp) skip $tag (finished or failed before)"
+    if [ -f "$run/metrics.json" ] || [ -f "$run/FAILED" ] || [ -f "$run/SKIPPED" ]; then
+        echo "$(stamp) skip $tag (finished, failed or skipped before)"
     else
         local resume=""
         [ -f "$run/checkpoint.npz" ] && resume="--resume"
@@ -59,13 +59,13 @@ fe_step closed_re1 docs/bifurcation_closed-re1 \
     python -m bifurcation.design_study --config bifurcation/study_closed_re1.yaml --out docs/bifurcation_closed-re1
 junction
 pinn_step re10_30120_corners_s21        # run 7
-pinn_step re0.1_30120_corners_s21       # run 5
+pinn_step re0.1_30120_corners_s21       # run 5: SKIPPED (its in-range optimum is the range's bound)
 pinn_step re100_30120_corners_s21       # run 8
 pinn_step re1_3090_corners_s21          # run 2
-pinn_step re1_30120_corners_s21         # run 6
 for seed in 22 23; do
     pinn_step re0.1_3090_corners_s$seed
     pinn_step re100_3090_corners_s$seed
     pinn_step re10_3090_corners_s$seed
 done
+pinn_step re1_30120_corners_s21         # run 6, last: it has run 5's problem; skip it if asked
 echo "$(stamp) queue finished"

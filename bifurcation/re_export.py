@@ -98,9 +98,10 @@ def export(run_directory, out_directory):
     out.mkdir(parents=True, exist_ok=True)
     config = P.load_config(run_directory / "config.yaml")
     name = stem(config)
-    if (run_directory / "FAILED").is_file() or not (run_directory / "metrics.json").is_file():
-        reason = (run_directory / "FAILED").read_text() if (run_directory / "FAILED").is_file() \
-            else "no metrics.json: the run did not finish"
+    stopped = [run_directory / n for n in ("FAILED", "SKIPPED") if (run_directory / n).is_file()]
+    if stopped or not (run_directory / "metrics.json").is_file():
+        reason = (f"{stopped[0].name}: {stopped[0].read_text()}" if stopped
+                  else "no metrics.json: the run did not finish")
         summary = {"run": str(run_directory), "seed": config.seed, "reynolds": config.reynolds,
                    "layout": [config.angle1, config.angle2], "failed": reason}
         (out / f"{name}_summary.json").write_text(json.dumps(summary, indent=1))
@@ -212,7 +213,9 @@ def index(directory):
     for r in rows:
         head = f"| {r['layout'][0]:g}/{r['layout'][1]:g} | {r['reynolds']:g} | {r['seed']} |"
         if "failed" in r:
-            lines.append(f"{head} FAILED: {r['failed'].splitlines()[0]} | | | | | |")
+            kind = "SKIPPED" if r["failed"].startswith("SKIPPED") else "FAILED"
+            why = r["failed"].split(": ", 1)[-1] if kind == "SKIPPED" else r["failed"]
+            lines.append(f"{head} {kind}: {why.splitlines()[0]} | | | | | |")
             continue
         by = {round(f["split"], 6): f for f in r["fields"] if not f.get("at")}
         drops = " / ".join(f"{100 * by[k]['drop_error']:+.2f}%" for k in (0.35, 0.5, 0.65) if k in by)

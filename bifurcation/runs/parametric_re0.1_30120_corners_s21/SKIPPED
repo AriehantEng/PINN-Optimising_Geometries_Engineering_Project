@@ -1,0 +1,6 @@
+Stopped at LM step ~100 of 150 (2026-10-17), on the user's instruction: its answer key shows J
+rising across the whole design range [0.35, 0.65] at Re_h = 0.1, as at Re_h = 1 and 10, so the
+in-range optimum is the range's lower bound and the run cannot test where a PINN puts the
+optimum. Below 0.35, J keeps falling until s = 0.268, where the geometry refuses the split (the
+inner walls would meet beyond daughter 1's outlet): there is no interior optimum below the range
+either. See docs/re_study/answer_keys.md.

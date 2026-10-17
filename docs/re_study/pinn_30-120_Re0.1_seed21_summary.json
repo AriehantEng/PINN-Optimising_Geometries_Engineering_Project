@@ -1,0 +1,10 @@
+{
+ "run": "bifurcation/runs/parametric_re0.1_30120_corners_s21",
+ "seed": 21,
+ "reynolds": 0.1,
+ "layout": [
+  30.0,
+  120.0
+ ],
+ "failed": "SKIPPED: Stopped at LM step ~100 of 150 (2026-10-17), on the user's instruction: its answer key shows J\nrising across the whole design range [0.35, 0.65] at Re_h = 0.1, as at Re_h = 1 and 10, so the\nin-range optimum is the range's lower bound and the run cannot test where a PINN puts the\noptimum. Below 0.35, J keeps falling until s = 0.268, where the geometry refuses the split (the\ninner walls would meet beyond daughter 1's outlet): there is no interior optimum below the range\neither. See docs/re_study/answer_keys.md.\n"
+}
