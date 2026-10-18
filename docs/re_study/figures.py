@@ -40,7 +40,7 @@ def runs():
         rows = list(csv.DictReader((HERE / f"{stem}.csv").open()))
         loss = list(csv.DictReader((HERE / f"{stem}_loss.csv").open()))
         label = (f"{s['layout'][0]:g}/{s['layout'][1]:g}, Re_h = {s['reynolds']:g}"
-                 + ("" if s["seed"] == 21 else f", seed {s['seed']}"))
+                 + f", seed {s['seed']}")
         out.append({"summary": s, "rows": rows, "loss": loss, "label": label})
     out.sort(key=lambda r: (r["summary"]["layout"][1], r["summary"]["reynolds"],
                             r["summary"]["seed"]))
@@ -49,8 +49,8 @@ def runs():
 
 def objective(all_runs):
     n = len(all_runs)
-    cols = 2
-    fig, axes = plt.subplots((n + 1) // cols, cols, figsize=(11, 3.6 * ((n + 1) // cols)),
+    cols = 3
+    fig, axes = plt.subplots((n + cols - 1) // cols, cols, figsize=(14.5, 3.5 * ((n + cols - 1) // cols)),
                              squeeze=False)
     for ax, r in zip(axes.flat, all_runs):
         s = r["summary"]
