@@ -11,8 +11,10 @@ const {
 } = require("docx");
 
 const HERE = __dirname;
-const blocks = JSON.parse(fs.readFileSync(path.join(HERE, "content.json"), "utf8"));
-const OUT = path.join(HERE, "..", "re_study_results.docx");
+// optional arguments: the content file and the output file
+const SRC = process.argv[2] || path.join(HERE, "content.json");
+const blocks = JSON.parse(fs.readFileSync(SRC, "utf8"));
+const OUT = process.argv[3] || path.join(HERE, "..", "re_study_results.docx");
 
 const PAGE_W = 11906, PAGE_H = 16838, MARGIN = 1134;          // A4, 2 cm margins
 const CONTENT_W = PAGE_W - 2 * MARGIN;

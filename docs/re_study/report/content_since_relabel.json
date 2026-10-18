@@ -1,0 +1,1432 @@
+[
+ {
+  "title": "Reynolds-number study: results since the figure relabelling"
+ },
+ {
+  "p": "Everything produced from the request to relabel the study's figures to the end of the run queue, in the order it happened: the relabelled figures, runs 8, 2 and 6, the six seed runs, and the comparisons made as each finished. J is in μU_c/h at Re_h ≤ 1 and ρU_c² above. Argmin error = PINN s* − reference s*; regret = J_ref(s*_PINN)/J_ref* − 1; pressure-drop error = J_PINN/J_ref − 1 at the same split. 'Converged' = the schedule finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them."
+ },
+ {
+  "h1": "1. The relabelled figures"
+ },
+ {
+  "bullets": [
+   "Four-panel objective plot (docs/re_study/figures.py): legend 'finite elements (reference mesh)' → 'reference solution'; 'FE optimum' → 'reference optimum'.",
+   "Pressure-drop error plot: y-axis 'pressure-drop error of the PINN against the reference solution (%)'.",
+   "Every redraw since uses the new labels; the final versions, with all 13 runs, are in Section 7."
+  ]
+ },
+ {
+  "h1": "2. Run 8: 30/120, Re_h = 100, seed 21"
+ },
+ {
+  "h2": "Result"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.3998 (J_PINN = 0.428008); reference optimum 0.3859 (J_ref* = 0.425753); reference J at the PINN's s* = 0.426095.",
+   "Argmin error +0.0139; regret 0.0803%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: +0.57% / +0.66% / -3.24%.",
+   "Training 184 min; final training loss 7.754e-04; held-out loss 2.030e-04 (lm_average:141); converged: no.",
+   "The only 30/120 case with an interior optimum in the range, and the largest argmin error and regret of any run.",
+   "u error 0.8–1.9% and v error 1.2–3.1%: the largest field errors of any run.",
+   "The reference optimum depends on the mesh here: Brent on the reference mesh gives 0.3859, the answer key's search mesh 0.3797 ± 0.0013. J is very flat near it (0.2% between s = 0.35 and 0.40), so 0.3859 is the value to quote."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "1.27e-02",
+     "1.63e-02",
+     "7.49e-02",
+     "+0.574%"
+    ],
+    [
+     "0.40",
+     "8.74e-03",
+     "1.22e-02",
+     "1.19e-02",
+     "+0.450%"
+    ],
+    [
+     "0.45",
+     "7.74e-03",
+     "1.17e-02",
+     "1.92e-02",
+     "-0.018%"
+    ],
+    [
+     "0.50",
+     "8.14e-03",
+     "1.34e-02",
+     "1.19e-02",
+     "+0.661%"
+    ],
+    [
+     "0.55",
+     "9.48e-03",
+     "1.65e-02",
+     "3.48e-02",
+     "+2.458%"
+    ],
+    [
+     "0.60",
+     "1.24e-02",
+     "2.15e-02",
+     "2.95e-02",
+     "+2.675%"
+    ],
+    [
+     "0.65",
+     "1.94e-02",
+     "3.08e-02",
+     "3.63e-02",
+     "-3.240%"
+    ],
+    [
+     "0.3998 (PINN s*)",
+     "8.74e-03",
+     "1.22e-02",
+     "1.19e-02",
+     "+0.449%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "h1": "3. Run 2: 30/90, Re_h = 1, seed 21"
+ },
+ {
+  "h2": "Result"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4830 (J_PINN = 40.3011); reference optimum 0.4843 (J_ref* = 40.095); reference J at the PINN's s* = 40.0962.",
+   "Argmin error -0.0013; regret 0.0032%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: +0.22% / +0.54% / -3.14%.",
+   "Training 176 min; final training loss 1.748e-01; held-out loss 1.749e-01 (lm:147); converged: no.",
+   "Inside the ±0.002 search tolerance; the smallest regret of any run with an interior optimum at the time."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "5.40e-03",
+     "7.31e-03",
+     "1.26e-02",
+     "+0.218%"
+    ],
+    [
+     "0.40",
+     "2.29e-03",
+     "4.26e-03",
+     "5.42e-03",
+     "-0.041%"
+    ],
+    [
+     "0.45",
+     "2.46e-03",
+     "3.14e-03",
+     "1.48e-03",
+     "+0.194%"
+    ],
+    [
+     "0.50",
+     "3.32e-03",
+     "3.15e-03",
+     "4.06e-03",
+     "+0.535%"
+    ],
+    [
+     "0.55",
+     "4.46e-03",
+     "4.09e-03",
+     "1.34e-03",
+     "-0.193%"
+    ],
+    [
+     "0.60",
+     "4.47e-03",
+     "3.94e-03",
+     "2.90e-03",
+     "+0.288%"
+    ],
+    [
+     "0.65",
+     "6.81e-03",
+     "5.62e-03",
+     "3.04e-02",
+     "-3.140%"
+    ],
+    [
+     "0.4830 (PINN s*)",
+     "3.03e-03",
+     "3.01e-03",
+     "3.86e-03",
+     "+0.511%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "h2": "30/90, seed 21, across Reynolds numbers"
+ },
+ {
+  "table": {
+   "head": [
+    "Re_h",
+    "PINN s*",
+    "Reference s*",
+    "Argmin error",
+    "Regret"
+   ],
+   "rows": [
+    [
+     "0.1",
+     "0.4870",
+     "0.4843",
+     "+0.0026",
+     "0.0115%"
+    ],
+    [
+     "1",
+     "0.4830",
+     "0.4843",
+     "-0.0013",
+     "0.0032%"
+    ],
+    [
+     "10",
+     "0.4862",
+     "0.4848",
+     "+0.0014",
+     "0.0035%"
+    ],
+    [
+     "100",
+     "0.4838",
+     "0.4889",
+     "-0.0050",
+     "0.0421%"
+    ]
+   ],
+   "widths": [
+    1400,
+    1900,
+    1900,
+    1900,
+    2260
+   ]
+  }
+ },
+ {
+  "note": "Up to Re_h 10 the argmin errors scatter on both sides, within about ±0.003; at Re_h 100 seed 21 missed by 0.005 (Section 4 shows this was mostly seed scatter)."
+ },
+ {
+  "h1": "4. Seed runs: seed 22"
+ },
+ {
+  "h2": "30/90, Re_h = 0.1, seed 22"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4902 (J_PINN = 40.1215); reference optimum 0.4843 (J_ref* = 40.0915); reference J at the PINN's s* = 40.1141.",
+   "Argmin error +0.0058; regret 0.0563%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -0.93% / -0.18% / -4.57%.",
+   "Training 170 min; final training loss 9.121e-02; held-out loss 1.619e-01 (lm:150); converged: no."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "5.68e-03",
+     "6.15e-03",
+     "3.43e-02",
+     "-0.928%"
+    ],
+    [
+     "0.40",
+     "2.70e-03",
+     "3.88e-03",
+     "1.26e-02",
+     "-0.217%"
+    ],
+    [
+     "0.45",
+     "2.95e-03",
+     "3.19e-03",
+     "8.95e-03",
+     "+0.371%"
+    ],
+    [
+     "0.50",
+     "2.63e-03",
+     "3.04e-03",
+     "8.61e-03",
+     "-0.178%"
+    ],
+    [
+     "0.55",
+     "2.47e-03",
+     "2.90e-03",
+     "3.59e-03",
+     "-0.633%"
+    ],
+    [
+     "0.60",
+     "2.40e-03",
+     "2.58e-03",
+     "1.25e-02",
+     "+0.803%"
+    ],
+    [
+     "0.65",
+     "6.49e-03",
+     "5.90e-03",
+     "4.52e-02",
+     "-4.575%"
+    ],
+    [
+     "0.4902 (PINN s*)",
+     "2.73e-03",
+     "3.04e-03",
+     "6.42e-03",
+     "+0.018%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "p": "Seed 21 against seed 22 at Re_h = 0.1:"
+ },
+ {
+  "table": {
+   "head": [
+    "Seed",
+    "PINN s*",
+    "Argmin error (reference 0.4843)",
+    "Regret",
+    "Pressure-drop error at 0.35 / 0.50 / 0.65",
+    "u error at 0.50"
+   ],
+   "rows": [
+    [
+     "21",
+     "0.4870",
+     "+0.0026",
+     "0.0115%",
+     "-0.48% / +0.11% / -2.64%",
+     "2.54e-03"
+    ],
+    [
+     "22",
+     "0.4902",
+     "+0.0058",
+     "0.0563%",
+     "-0.93% / -0.18% / -4.57%",
+     "2.63e-03"
+    ]
+   ],
+   "widths": [
+    700,
+    1100,
+    1900,
+    1100,
+    2900,
+    1700
+   ]
+  }
+ },
+ {
+  "p": "The argmin error moves by about 0.003 between seeds, as large as the Re_h = 100 miss of seed 21: too early to attribute that miss to inertia."
+ },
+ {
+  "h2": "30/90, Re_h = 100, seed 22"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4876 (J_PINN = 0.44931); reference optimum 0.4889 (J_ref* = 0.454608); reference J at the PINN's s* = 0.454621.",
+   "Argmin error -0.0012; regret 0.0028%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -1.19% / -1.06% / -2.92%.",
+   "Training 166 min; final training loss 1.429e-04; held-out loss 1.464e-04 (lm_average:150); converged: no."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "5.65e-03",
+     "7.43e-03",
+     "1.56e-02",
+     "-1.186%"
+    ],
+    [
+     "0.40",
+     "4.93e-03",
+     "5.17e-03",
+     "1.35e-02",
+     "-0.236%"
+    ],
+    [
+     "0.45",
+     "5.00e-03",
+     "4.85e-03",
+     "2.17e-02",
+     "-0.986%"
+    ],
+    [
+     "0.50",
+     "4.56e-03",
+     "3.99e-03",
+     "8.73e-03",
+     "-1.059%"
+    ],
+    [
+     "0.55",
+     "5.36e-03",
+     "4.08e-03",
+     "1.13e-02",
+     "+0.205%"
+    ],
+    [
+     "0.60",
+     "6.82e-03",
+     "6.06e-03",
+     "1.28e-02",
+     "+1.167%"
+    ],
+    [
+     "0.65",
+     "1.03e-02",
+     "1.17e-02",
+     "2.72e-02",
+     "-2.920%"
+    ],
+    [
+     "0.4876 (PINN s*)",
+     "4.64e-03",
+     "4.21e-03",
+     "1.32e-02",
+     "-1.168%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "table": {
+   "head": [
+    "Seed",
+    "PINN s*",
+    "Argmin error (reference 0.4889)",
+    "Regret",
+    "Pressure-drop error at 0.35 / 0.50 / 0.65",
+    "u error at 0.50"
+   ],
+   "rows": [
+    [
+     "21",
+     "0.4838",
+     "-0.0050",
+     "0.0421%",
+     "+0.20% / -0.07% / -3.61%",
+     "3.69e-03"
+    ],
+    [
+     "22",
+     "0.4876",
+     "-0.0012",
+     "0.0028%",
+     "-1.19% / -1.06% / -2.92%",
+     "4.56e-03"
+    ]
+   ],
+   "widths": [
+    700,
+    1100,
+    1900,
+    1100,
+    2900,
+    1700
+   ]
+  }
+ },
+ {
+  "p": "With seed 22 the PINN lands within the ±0.002 tolerance at Re_h = 100: run 4's 0.005 miss was mostly seed scatter. Better optimum placement came with a larger drop error at s = 0.5 (−1.06% against −0.07%): drop accuracy and optimum location do not track each other."
+ },
+ {
+  "h2": "30/90, Re_h = 10, seed 22"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4852 (J_PINN = 4.03636); reference optimum 0.4848 (J_ref* = 4.03583); reference J at the PINN's s* = 4.03584.",
+   "Argmin error +0.0004; regret 0.0002%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -0.40% / +0.00% / -0.76%.",
+   "Training 163 min; final training loss 6.918e-04; held-out loss 9.310e-04 (lm_average:139); converged: no.",
+   "The most accurate run of the study: argmin error +0.0004, edge error −0.76%."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "3.34e-03",
+     "3.16e-03",
+     "7.62e-03",
+     "-0.403%"
+    ],
+    [
+     "0.40",
+     "2.27e-03",
+     "2.05e-03",
+     "3.90e-03",
+     "+0.109%"
+    ],
+    [
+     "0.45",
+     "2.40e-03",
+     "2.15e-03",
+     "2.16e-03",
+     "+0.029%"
+    ],
+    [
+     "0.50",
+     "2.41e-03",
+     "2.13e-03",
+     "3.29e-03",
+     "+0.004%"
+    ],
+    [
+     "0.55",
+     "2.33e-03",
+     "2.04e-03",
+     "1.37e-03",
+     "+0.016%"
+    ],
+    [
+     "0.60",
+     "2.54e-03",
+     "2.23e-03",
+     "4.14e-03",
+     "+0.281%"
+    ],
+    [
+     "0.65",
+     "4.24e-03",
+     "4.27e-03",
+     "1.29e-02",
+     "-0.760%"
+    ],
+    [
+     "0.4852 (PINN s*)",
+     "2.45e-03",
+     "2.19e-03",
+     "2.34e-03",
+     "+0.013%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "table": {
+   "head": [
+    "Re_h",
+    "Seed 21",
+    "Seed 22"
+   ],
+   "rows": [
+    [
+     "0.1",
+     "+0.0026",
+     "+0.0058"
+    ],
+    [
+     "10",
+     "+0.0014",
+     "+0.0004"
+    ],
+    [
+     "100",
+     "-0.0050",
+     "-0.0012"
+    ]
+   ],
+   "widths": [
+    3000,
+    3180,
+    3180
+   ]
+  }
+ },
+ {
+  "note": "Argmin error with two seeds per Reynolds number. Re_h 10 is tightest; both Re_h 0.1 seeds land above the optimum and both Re_h 100 seeds below it, which the third seed tests."
+ },
+ {
+  "h1": "5. Seed runs: seed 23"
+ },
+ {
+  "h2": "30/90, Re_h = 0.1, seed 23"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4862 (J_PINN = 40.2507); reference optimum 0.4843 (J_ref* = 40.0915); reference J at the PINN's s* = 40.0938.",
+   "Argmin error +0.0018; regret 0.0058%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -0.12% / +0.26% / -3.88%.",
+   "Training 162 min; final training loss 1.108e-01; held-out loss 1.504e-01 (lm:144); converged: no."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "4.90e-03",
+     "5.78e-03",
+     "1.76e-02",
+     "-0.118%"
+    ],
+    [
+     "0.40",
+     "3.47e-03",
+     "3.13e-03",
+     "2.47e-03",
+     "-0.062%"
+    ],
+    [
+     "0.45",
+     "3.53e-03",
+     "2.96e-03",
+     "2.36e-03",
+     "+0.331%"
+    ],
+    [
+     "0.50",
+     "3.12e-03",
+     "2.58e-03",
+     "1.70e-03",
+     "+0.255%"
+    ],
+    [
+     "0.55",
+     "3.75e-03",
+     "2.87e-03",
+     "2.49e-03",
+     "-0.538%"
+    ],
+    [
+     "0.60",
+     "4.60e-03",
+     "3.59e-03",
+     "8.05e-03",
+     "+0.546%"
+    ],
+    [
+     "0.65",
+     "6.82e-03",
+     "5.96e-03",
+     "4.33e-02",
+     "-3.884%"
+    ],
+    [
+     "0.4862 (PINN s*)",
+     "3.18e-03",
+     "2.61e-03",
+     "2.07e-03",
+     "+0.391%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "table": {
+   "head": [
+    "Seed",
+    "PINN s*",
+    "Argmin error (reference 0.4843)",
+    "Regret",
+    "Pressure-drop error at 0.35 / 0.50 / 0.65",
+    "u error at 0.50"
+   ],
+   "rows": [
+    [
+     "21",
+     "0.4870",
+     "+0.0026",
+     "0.0115%",
+     "-0.48% / +0.11% / -2.64%",
+     "2.54e-03"
+    ],
+    [
+     "22",
+     "0.4902",
+     "+0.0058",
+     "0.0563%",
+     "-0.93% / -0.18% / -4.57%",
+     "2.63e-03"
+    ],
+    [
+     "23",
+     "0.4862",
+     "+0.0018",
+     "0.0058%",
+     "-0.12% / +0.26% / -3.88%",
+     "3.12e-03"
+    ]
+   ],
+   "widths": [
+    700,
+    1100,
+    1900,
+    1100,
+    2900,
+    1700
+   ]
+  }
+ },
+ {
+  "p": "All three seeds place the optimum above the reference value: at Re_h = 0.1 the PINN has a systematic bias, not just scatter."
+ },
+ {
+  "h2": "30/90, Re_h = 100, seed 23"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4895 (J_PINN = 0.449906); reference optimum 0.4889 (J_ref* = 0.454608); reference J at the PINN's s* = 0.454613.",
+   "Argmin error +0.0006; regret 0.0011%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: +1.89% / -1.01% / -4.00%.",
+   "Training 173 min; final training loss 1.408e-04; held-out loss 2.423e-04 (lm_average:131); converged: yes.",
+   "The first run that meets the convergence definition, yet it has the largest velocity error of the 30/90 runs (9.4 × 10⁻³) and a +1.9% drop error at s = 0.35."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "1.71e-02",
+     "2.32e-02",
+     "3.84e-02",
+     "+1.890%"
+    ],
+    [
+     "0.40",
+     "1.23e-02",
+     "1.74e-02",
+     "3.51e-02",
+     "+1.083%"
+    ],
+    [
+     "0.45",
+     "1.02e-02",
+     "1.43e-02",
+     "3.97e-02",
+     "-0.489%"
+    ],
+    [
+     "0.50",
+     "9.40e-03",
+     "1.21e-02",
+     "1.56e-02",
+     "-1.011%"
+    ],
+    [
+     "0.55",
+     "9.06e-03",
+     "1.04e-02",
+     "1.48e-02",
+     "-0.031%"
+    ],
+    [
+     "0.60",
+     "9.56e-03",
+     "1.03e-02",
+     "1.79e-02",
+     "+0.642%"
+    ],
+    [
+     "0.65",
+     "1.36e-02",
+     "1.41e-02",
+     "2.92e-02",
+     "-3.997%"
+    ],
+    [
+     "0.4895 (PINN s*)",
+     "9.51e-03",
+     "1.25e-02",
+     "2.18e-02",
+     "-1.035%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "table": {
+   "head": [
+    "Seed",
+    "PINN s*",
+    "Argmin error (reference 0.4889)",
+    "Regret",
+    "Pressure-drop error at 0.35 / 0.50 / 0.65",
+    "u error at 0.50"
+   ],
+   "rows": [
+    [
+     "21",
+     "0.4838",
+     "-0.0050",
+     "0.0421%",
+     "+0.20% / -0.07% / -3.61%",
+     "3.69e-03"
+    ],
+    [
+     "22",
+     "0.4876",
+     "-0.0012",
+     "0.0028%",
+     "-1.19% / -1.06% / -2.92%",
+     "4.56e-03"
+    ],
+    [
+     "23",
+     "0.4895",
+     "+0.0006",
+     "0.0011%",
+     "+1.89% / -1.01% / -4.00%",
+     "9.40e-03"
+    ]
+   ],
+   "widths": [
+    700,
+    1100,
+    1900,
+    1100,
+    2900,
+    1700
+   ]
+  }
+ },
+ {
+  "p": "No consistent bias at Re_h = 100: the three argmin errors span −0.005 to +0.0006, mostly seed scatter. The reading that the PINN misses the inertial shift of the optimum does not hold up."
+ },
+ {
+  "h2": "30/90, Re_h = 10, seed 23"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.4855 (J_PINN = 4.03543); reference optimum 0.4848 (J_ref* = 4.03583); reference J at the PINN's s* = 4.03588.",
+   "Argmin error +0.0008; regret 0.0011%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -0.75% / -0.06% / -0.93%.",
+   "Training 175 min; final training loss 7.259e-04; held-out loss 9.154e-04 (lm_average:150); converged: no."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "2.87e-03",
+     "4.03e-03",
+     "9.65e-03",
+     "-0.746%"
+    ],
+    [
+     "0.40",
+     "1.78e-03",
+     "2.88e-03",
+     "3.33e-03",
+     "+0.103%"
+    ],
+    [
+     "0.45",
+     "1.67e-03",
+     "2.98e-03",
+     "2.94e-03",
+     "+0.081%"
+    ],
+    [
+     "0.50",
+     "1.91e-03",
+     "3.08e-03",
+     "3.41e-03",
+     "-0.057%"
+    ],
+    [
+     "0.55",
+     "2.17e-03",
+     "3.09e-03",
+     "2.89e-03",
+     "-0.068%"
+    ],
+    [
+     "0.60",
+     "2.77e-03",
+     "3.30e-03",
+     "4.15e-03",
+     "+0.436%"
+    ],
+    [
+     "0.65",
+     "3.80e-03",
+     "4.14e-03",
+     "1.13e-02",
+     "-0.931%"
+    ],
+    [
+     "0.4855 (PINN s*)",
+     "1.84e-03",
+     "3.06e-03",
+     "2.02e-03",
+     "-0.011%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "h1": "6. Run 6: 30/120, Re_h = 1, seed 21"
+ },
+ {
+  "h2": "Result"
+ },
+ {
+  "bullets": [
+   "PINN optimum s* = 0.3500 (J_PINN = 30.6225); reference optimum 0.3500 (J_ref* = 31.1968); reference J at the PINN's s* = 31.1968.",
+   "Argmin error +0.0000; regret 0.0000%.",
+   "Pressure-drop error at s = 0.35 / 0.50 / 0.65: -1.84% / -0.08% / -7.58%.",
+   "Training 180 min; final training loss 3.632e-01; held-out loss 4.113e-01 (lm_average:150); converged: no.",
+   "Optimum on the range's bound at s = 0.35, as the reference: J rises across the whole range, so the run tests pressure-drop and field accuracy only.",
+   "The −7.6% drop error at s = 0.65, with a 12% pressure error there, is the largest edge error of the study."
+  ]
+ },
+ {
+  "table": {
+   "head": [
+    "s",
+    "u error",
+    "v error",
+    "p error",
+    "Pressure-drop error"
+   ],
+   "rows": [
+    [
+     "0.35",
+     "1.34e-02",
+     "1.58e-02",
+     "2.55e-02",
+     "-1.841%"
+    ],
+    [
+     "0.40",
+     "9.20e-03",
+     "9.78e-03",
+     "1.86e-02",
+     "+0.525%"
+    ],
+    [
+     "0.45",
+     "8.51e-03",
+     "1.01e-02",
+     "7.27e-03",
+     "+1.555%"
+    ],
+    [
+     "0.50",
+     "8.24e-03",
+     "1.01e-02",
+     "2.22e-03",
+     "-0.083%"
+    ],
+    [
+     "0.55",
+     "7.86e-03",
+     "9.18e-03",
+     "2.02e-02",
+     "-0.103%"
+    ],
+    [
+     "0.60",
+     "7.25e-03",
+     "8.13e-03",
+     "1.09e-02",
+     "+1.405%"
+    ],
+    [
+     "0.65",
+     "9.37e-03",
+     "1.26e-02",
+     "1.24e-01",
+     "-7.581%"
+    ],
+    [
+     "0.3500 (PINN s*)",
+     "1.34e-02",
+     "1.58e-02",
+     "2.55e-02",
+     "-1.841%"
+    ]
+   ],
+   "widths": [
+    1900,
+    1800,
+    1800,
+    1800,
+    2100
+   ]
+  }
+ },
+ {
+  "note": "Relative L2 errors against the reference solution, integrated on the reference mesh."
+ },
+ {
+  "h1": "7. Final results"
+ },
+ {
+  "table": {
+   "head": [
+    "Layout",
+    "Re_h",
+    "Seed",
+    "PINN s*",
+    "Ref. s*",
+    "Argmin error",
+    "Regret",
+    "Pressure-drop error at 0.35 / 0.50 / 0.65",
+    "u error at 0.50",
+    "Min",
+    "Converged"
+   ],
+   "rows": [
+    [
+     "30/90",
+     "0.1",
+     "21",
+     "0.4870",
+     "0.4843",
+     "+0.0026",
+     "0.0115%",
+     "-0.48% / +0.11% / -2.64%",
+     "2.54e-03",
+     "160",
+     "no"
+    ],
+    [
+     "30/90",
+     "0.1",
+     "22",
+     "0.4902",
+     "0.4843",
+     "+0.0058",
+     "0.0563%",
+     "-0.93% / -0.18% / -4.57%",
+     "2.63e-03",
+     "170",
+     "no"
+    ],
+    [
+     "30/90",
+     "0.1",
+     "23",
+     "0.4862",
+     "0.4843",
+     "+0.0018",
+     "0.0058%",
+     "-0.12% / +0.26% / -3.88%",
+     "3.12e-03",
+     "162",
+     "no"
+    ],
+    [
+     "30/90",
+     "1",
+     "21",
+     "0.4830",
+     "0.4843",
+     "-0.0013",
+     "0.0032%",
+     "+0.22% / +0.54% / -3.14%",
+     "3.32e-03",
+     "176",
+     "no"
+    ],
+    [
+     "30/90",
+     "10",
+     "21",
+     "0.4862",
+     "0.4848",
+     "+0.0014",
+     "0.0035%",
+     "-0.58% / -0.08% / -1.15%",
+     "1.59e-03",
+     "176",
+     "no"
+    ],
+    [
+     "30/90",
+     "10",
+     "22",
+     "0.4852",
+     "0.4848",
+     "+0.0004",
+     "0.0002%",
+     "-0.40% / +0.00% / -0.76%",
+     "2.41e-03",
+     "163",
+     "no"
+    ],
+    [
+     "30/90",
+     "10",
+     "23",
+     "0.4855",
+     "0.4848",
+     "+0.0008",
+     "0.0011%",
+     "-0.75% / -0.06% / -0.93%",
+     "1.91e-03",
+     "175",
+     "no"
+    ],
+    [
+     "30/90",
+     "100",
+     "21",
+     "0.4838",
+     "0.4889",
+     "-0.0050",
+     "0.0421%",
+     "+0.20% / -0.07% / -3.61%",
+     "3.69e-03",
+     "160",
+     "no"
+    ],
+    [
+     "30/90",
+     "100",
+     "22",
+     "0.4876",
+     "0.4889",
+     "-0.0012",
+     "0.0028%",
+     "-1.19% / -1.06% / -2.92%",
+     "4.56e-03",
+     "166",
+     "no"
+    ],
+    [
+     "30/90",
+     "100",
+     "23",
+     "0.4895",
+     "0.4889",
+     "+0.0006",
+     "0.0011%",
+     "+1.89% / -1.01% / -4.00%",
+     "9.40e-03",
+     "173",
+     "yes"
+    ],
+    [
+     "30/120",
+     "1",
+     "21",
+     "0.3500",
+     "0.3500",
+     "+0.0000",
+     "0.0000%",
+     "-1.84% / -0.08% / -7.58%",
+     "8.24e-03",
+     "180",
+     "no"
+    ],
+    [
+     "30/120",
+     "10",
+     "21",
+     "0.3500",
+     "0.3500",
+     "+0.0000",
+     "0.0000%",
+     "-0.17% / -0.11% / -1.28%",
+     "8.01e-03",
+     "167",
+     "no"
+    ],
+    [
+     "30/120",
+     "100",
+     "21",
+     "0.3998",
+     "0.3859",
+     "+0.0139",
+     "0.0803%",
+     "+0.57% / +0.66% / -3.24%",
+     "8.14e-03",
+     "184",
+     "no"
+    ],
+    [
+     "30/120",
+     "0.1",
+     "21",
+     "skipped: optimum on the range's bound",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     ""
+    ]
+   ],
+   "widths": [
+    750,
+    550,
+    500,
+    800,
+    800,
+    850,
+    850,
+    1950,
+    950,
+    500,
+    860
+   ]
+  }
+ },
+ {
+  "note": "All 13 runs (docs/re_study/pinn_runs.md)."
+ },
+ {
+  "table": {
+   "head": [
+    "Re_h",
+    "Seeds",
+    "Reference s*",
+    "PINN s* by seed",
+    "Argmin error, mean ± sd",
+    "Regret, mean (max)",
+    "Drop error at 0.65, mean ± sd"
+   ],
+   "rows": [
+    [
+     "0.1",
+     "21, 22, 23",
+     "0.4843",
+     "0.4870, 0.4902, 0.4862",
+     "+0.0034 ± 0.0021",
+     "0.0245% (0.0563%)",
+     "-3.70% ± 0.98%"
+    ],
+    [
+     "1",
+     "21",
+     "0.4843",
+     "0.4830",
+     "-0.0013",
+     "0.0032% (0.0032%)",
+     "-3.14%"
+    ],
+    [
+     "10",
+     "21, 22, 23",
+     "0.4848",
+     "0.4862, 0.4852, 0.4855",
+     "+0.0009 ± 0.0005",
+     "0.0016% (0.0035%)",
+     "-0.95% ± 0.19%"
+    ],
+    [
+     "100",
+     "21, 22, 23",
+     "0.4889",
+     "0.4838, 0.4876, 0.4895",
+     "-0.0019 ± 0.0029",
+     "0.0154% (0.0421%)",
+     "-3.51% ± 0.55%"
+    ]
+   ],
+   "widths": [
+    650,
+    1100,
+    1100,
+    2000,
+    1600,
+    1500,
+    1410
+   ]
+  }
+ },
+ {
+  "note": "30/90 over seeds 21–23; Re_h 1 has seed 21 only (docs/re_study/seeds_30-90.md)."
+ },
+ {
+  "bullets": [
+   "H3, 30/90: the PINN locates the optimum within the ±0.002 search tolerance on average at Re_h 10 (+0.0009 ± 0.0005); it is biased at Re_h 0.1 (+0.0034 ± 0.0021) and scattered at Re_h 100 (−0.0019 ± 0.0029). Regret stays below 0.06% in every 30/90 run.",
+   "30/120: only at Re_h 100 is there an interior optimum in the range; the PINN misses it by 0.014 (regret 0.08%). At Re_h 0.1, 1 and 10 the optimum sits on the range's bound (run 5 was stopped for that reason).",
+   "Accuracy against Reynolds number: the drop error at the range's edge is about 1% at Re_h 10 and grows toward both ends, to 2.6–4.6% at Re_h 0.1 and 2.9–4.0% at Re_h 100 for 30/90, and 7.6% for 30/120 at Re_h 1.",
+   "Convergence: only one run (30/90, Re_h 100, seed 23) met the definition within the fixed schedule; all others were still improving at the end.",
+   "Code check after the last run: the fast test suite passed (805 passed, 5 skipped, 2 expected failures)."
+  ]
+ },
+ {
+  "img": "/home/user/PINN-Optimising_Geometries_Engineering_Project/docs/re_study/fig_re_objective.png",
+  "w": 605,
+  "h": 730,
+  "caption": "Figure 1. J(s) from each PINN (blue line, 61 splits) against the reference solution (black dots); dashed: the PINN's optimum, dotted: the reference optimum. J in μU_c/h at Re_h ≤ 1 and ρU_c² above, so only shapes compare across panels."
+ },
+ {
+  "img": "/home/user/PINN-Optimising_Geometries_Engineering_Project/docs/re_study/fig_re_drop_error.png",
+  "w": 605,
+  "h": 339,
+  "caption": "Figure 2. Pressure-drop error of each PINN against the reference solution at the seven evaluation splits; zero is a perfect prediction."
+ },
+ {
+  "img": "/home/user/PINN-Optimising_Geometries_Engineering_Project/docs/re_study/fig_re_training.png",
+  "w": 605,
+  "h": 339,
+  "caption": "Figure 3. Held-out loss against training time for every run; squares mark the start of L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale differs between the viscous (Re_h ≤ 1) and inertial runs."
+ }
+]
