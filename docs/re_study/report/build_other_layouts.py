@@ -17,6 +17,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from bifurcation.answer_key import feasibility_limit  # noqa: E402
+from bifurcation.sensitivity import murray_split  # noqa: E402
 
 DOCS = ROOT / "docs"
 OUT = DOCS / "re_study" / "report" / "content_other_layouts.json"
@@ -48,7 +49,7 @@ p("The PINNs (Networks 1 and 2, and the parametric Network 2) were trained only 
   "30/120, so every result below for other layouts is finite-element data, plus Network 3's "
   "predictions on its held-out layouts. A layout a1/a2 names the two daughters' angles from the "
   "parent's axis; s = w1/w0 is the width split and q daughter 1's share of the flow. J is the "
-  "total-pressure drop in ρU_c². s_M is the Murray split, q^(1/3)/(q^(1/3) + (1 − q)^(1/3)).")
+  "total-pressure drop in ρU_c². s_M is the planar Murray split, √q/(√q + √(1 − q)): a channel's resistance goes as 1/w³, so the widths go as the square root of the flow, not the cube root of a pipe.")
 table(["Data set", "Layouts", "What it holds", "File"], [
     ["Re_h = 10 optimum map", "15 (13 besides 30/90 and 30/120)",
      "Optimal split s* and J for 11 shares each (165 optima), daughters' outer walls 8 long",
@@ -76,7 +77,7 @@ for r in S["rows"]:
 shares = S["config"]["shares"]
 layouts = [name(a) for a in S["config"]["angles"]]
 order = sorted(layouts, key=lambda k: (sum(map(float, k.split("/"))), k))
-murray = {q: q ** (1 / 3) / (q ** (1 / 3) + (1 - q) ** (1 / 3)) for q in shares}
+murray = {q: murray_split(q) for q in shares}
 
 
 def cell(r):

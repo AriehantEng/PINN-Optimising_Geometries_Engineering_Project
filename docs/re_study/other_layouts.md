@@ -1,6 +1,6 @@
 # Results for the other layouts
 
-The PINNs (Networks 1 and 2, and the parametric Network 2) were trained only on 30/90 and 30/120, so every result below for other layouts is finite-element data, plus Network 3's predictions on its held-out layouts. A layout a1/a2 names the two daughters' angles from the parent's axis; s = w1/w0 is the width split and q daughter 1's share of the flow. J is the total-pressure drop in ρU_c². s_M is the Murray split, q^(1/3)/(q^(1/3) + (1 − q)^(1/3)).
+The PINNs (Networks 1 and 2, and the parametric Network 2) were trained only on 30/90 and 30/120, so every result below for other layouts is finite-element data, plus Network 3's predictions on its held-out layouts. A layout a1/a2 names the two daughters' angles from the parent's axis; s = w1/w0 is the width split and q daughter 1's share of the flow. J is the total-pressure drop in ρU_c². s_M is the planar Murray split, √q/(√q + √(1 − q)): a channel's resistance goes as 1/w³, so the widths go as the square root of the flow, not the cube root of a pipe.
 
 | Data set | Layouts | What it holds | File |
 |---|---|---|---|
@@ -14,7 +14,7 @@ Parent 3 long, daughters' outer walls 8 long, minimum width 0.2; each optimum lo
 
 | Layout \ q | 0.05 | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 | 0.95 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| s_M (Murray) | 0.273 | 0.325 | 0.386 | 0.430 | 0.466 | 0.500 | 0.534 | 0.570 | 0.614 | 0.675 | 0.727 |
+| s_M (Murray) | 0.187 | 0.250 | 0.333 | 0.396 | 0.449 | 0.500 | 0.551 | 0.604 | 0.667 | 0.750 | 0.813 |
 | 0/30 | 0.183 | 0.246 | 0.330 | 0.392 | 0.447 | 0.498 | 0.549 | 0.604 | 0.667 | 0.751 | 0.814 |
 | 15/15 | 0.185 | 0.248 | 0.331 | 0.394 | 0.449 | 0.500 | 0.551 | 0.605 | 0.668 | 0.752 | 0.816 |
 | 0/60 | 0.181 | 0.243 | 0.326 | 0.389 | 0.443 | 0.495 | 0.547 | 0.602 | 0.665 | 0.750 | 0.814 |
