@@ -1,0 +1,43 @@
+{
+ "length": 10.0,
+ "heights": 1001,
+ "reference_against_analytical": {
+  "analytical": 4.4560430620179314e-08,
+  "analytical_max_abs": 4.456289126597568e-08,
+  "shape": 2.1592703534697373e-12,
+  "reference": 0.0,
+  "flux_error": -4.4559922640630134e-08
+ },
+ "runs": [
+  {
+   "analytical": 2.996760240941778e-06,
+   "analytical_max_abs": 3.394531860489991e-06,
+   "shape": 9.927819801943885e-07,
+   "reference": 3.038858982307034e-06,
+   "flux_error": 2.9142161974693437e-06,
+   "run": "developing_flow/runs/developing_re10_polish_g5_points",
+   "seed": 1,
+   "outlet_max_abs_v": 2.0238457665242628e-06
+  },
+  {
+   "analytical": 3.817634784907598e-06,
+   "analytical_max_abs": 4.506145995453181e-06,
+   "shape": 1.1094040803248228e-06,
+   "reference": 3.860304516281736e-06,
+   "flux_error": 3.7359173479245555e-06,
+   "run": "developing_flow/runs/developing_re10_polish_g5_points_seed2",
+   "seed": 2,
+   "outlet_max_abs_v": 2.402444228017304e-06
+  },
+  {
+   "analytical": 1.4324412307300402e-06,
+   "analytical_max_abs": 2.107543906060272e-06,
+   "shape": 1.3146135298420549e-06,
+   "reference": 1.4152611693828175e-06,
+   "flux_error": -5.200902561952603e-07,
+   "run": "developing_flow/runs/developing_re10_polish_g5_points_seed3",
+   "seed": 3,
+   "outlet_max_abs_v": 1.165519925398407e-06
+  }
+ ]
+}

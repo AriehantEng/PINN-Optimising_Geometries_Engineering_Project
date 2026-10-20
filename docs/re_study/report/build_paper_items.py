@@ -45,7 +45,8 @@ def image(path, caption):
 
 def sci(x, digits=1):
     m, e = f"{x:.{digits}e}".split("e")
-    return f"{m} × 10^{int(e)}".replace("^-", "⁻").translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
+    sup = str(int(e)).replace("-", "⁻").translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
+    return f"{m} × 10{sup}"
 
 
 # --------------------------------------------------------------------------- #
@@ -247,8 +248,9 @@ bullets([
     "cannot be built, and a range starting at 0.27 would put the answer on its own lower edge "
     "again, which tests nothing. It was not run.",
     "At Re_h ≤ 10 the 30/120 runs test pressure-drop and field accuracy only. At Re_h = 100 the "
-    "split 0.386 is a genuine local minimum inside the range, and the PINN located it to 0.014 "
-    "(regret 0.08%), but J at the limit is lower still (0.3996 against 0.4258).",
+    "range holds a genuine local minimum (0.3797 on the search mesh, 0.3859 on the reference "
+    "mesh), which the PINN located to 0.014 (regret 0.08%), but J at the limit is lower still "
+    "(0.3984 against 0.4247 on the search mesh).",
     "The 165 optima behind Table 3 were checked for the same failure and none has it. The only "
     "optimum at a geometry limit in those maps is the equal-outlet-pressure row for 30/150 "
     "(s = 0.8987 against a closed entrance at 0.8992), which is not one of the 165.",

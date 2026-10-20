@@ -7,7 +7,7 @@
 
 At the outlet, x* = L, the flow should be the developed parabola. Three
 comparisons of u there, each a relative L2 norm across the channel on the
-reference's own heights (uniform, trapezoidal weights):
+reference's own heights (uniform, Simpson weights):
 
     analytical   u = 1 - y^2, the parabola at the PRESCRIBED flux 4/3
     shape        (3Q/4)(1 - y^2) at the network's OWN outlet flux Q, so a flux
@@ -31,12 +31,18 @@ import numpy as np
 from developing_flow import pinn, reference
 
 
-def trapezoid_weights(y):
-    w = np.zeros_like(y)
-    dy = np.diff(y)
-    w[:-1] += 0.5 * dy
-    w[1:] += 0.5 * dy
-    return w
+def simpson_weights(y):
+    """Composite Simpson weights on uniform heights: exact for the parabola, so
+    the reference's own flux and shape come out exact, where the trapezoidal
+    rule's 1e-6 error on 1001 heights would sit at the networks' error level."""
+    n = len(y)
+    h = (y[-1] - y[0]) / (n - 1)
+    if n % 2 == 0 or not np.allclose(np.diff(y), h, rtol=0, atol=1e-12):
+        raise ValueError("Simpson's rule needs an odd number of uniformly spaced heights")
+    w = np.full(n, 2.0)
+    w[1::2] = 4.0
+    w[0] = w[-1] = 1.0
+    return w * h / 3.0
 
 
 def relative_l2(u, exact, w):
@@ -59,7 +65,7 @@ def measure(solution, runs):
     x, y, ref_u, _, _ = reference.load(solution)
     i = int(np.argmin(np.abs(x - x[-1])))
     length = float(x[i])
-    w = trapezoid_weights(y)
+    w = simpson_weights(y)
     analytical = pinn.developed_profile(y, pinn.INLET_FLUX)
     out = {"length": length, "heights": len(y),
            "reference_against_analytical": outlet_profile(ref_u[i], y, w, analytical, ref_u[i]),
@@ -82,7 +88,7 @@ def markdown(result):
             "against the reference at the outlet", "outlet flux error", "max \\|v\\|")
     lines = [f"## Network 1's outlet profile at x* = {result['length']:g} against the Poiseuille parabola",
              "", f"Relative L2 norms across the channel on the reference's {result['heights']} heights "
-             "(trapezoidal weights). Analytical profile: u = 1 − y², v = 0 (flux 4/3).", "",
+             "(Simpson weights). Analytical profile: u = 1 − y², v = 0 (flux 4/3).", "",
              "| | " + " | ".join(head) + " |", "|---|" + "---|" * len(head)]
     for r in result["runs"]:
         lines.append(f"| seed {r['seed']} | " + " | ".join(f"{r[k]:.2e}" for k in keys) + " |")
