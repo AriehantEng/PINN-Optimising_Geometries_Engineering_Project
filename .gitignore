@@ -29,3 +29,4 @@ package-lock.json
 
 # The study queue writes its logs while it runs; a failure is recorded beside its run.
 docs/re_study/logs/
+docs/re_study/tierA/logs/
