@@ -151,3 +151,14 @@ def test_a_case_at_the_geometry_limit_or_outside_the_range_fails_screening(monke
              "fine_bracket": [{"split": 0.45, "total_pressure_drop": None}] + interior["fine_bracket"][1:]}
     r = fake(limit)
     assert not r["passes"] and "geometry's limit" in r["reasons"][0]
+
+
+def test_answer_key_files_name_the_share_away_from_half(tmp_path):
+    """Four 30/90 shares in one directory once overwrote each other's files: the
+    share was missing from the CSV names, and with_suffix cut 'q0.2' at its dot."""
+    rows = [{"split": 0.3, "J": 1.0}]
+    result = {"cases": [{"key": "30-90_Re10", "share": q, "reference": rows} for q in (0.2, 0.8, 0.5)]}
+    A.write_csvs(result, tmp_path)
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "fe_30-90_Re10_q0.2_reference.csv", "fe_30-90_Re10_q0.8_reference.csv",
+        "fe_30-90_Re10_reference.csv"]

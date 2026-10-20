@@ -298,7 +298,9 @@ def write_csvs(result, directory):
             continue
         rows = ["s,J_fe_reference"] + [f"{x['split']:.6f},{'' if x['J'] is None else repr(x['J'])}"
                                        for x in r["reference"]]
-        (directory / f"fe_{r['key']}_reference.csv").write_text("\n".join(rows) + "\n")
+        # the share joins the name away from 0.5, where several shares share a directory
+        share = "" if r["share"] == 0.5 else f"_q{r['share']:g}"
+        (directory / f"fe_{r['key']}{share}_reference.csv").write_text("\n".join(rows) + "\n")
 
 
 def run(config_path, out):
@@ -335,8 +337,9 @@ def run(config_path, out):
     cases = [json.loads(p.read_text()) for p in paths]
     result = {"config": config, "cases": cases, "seconds": time.perf_counter() - start}
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.with_suffix(".json").write_text(json.dumps(result, indent=1, default=str))
-    out.with_suffix(".md").write_text(markdown(result))
+    # not with_suffix: a stem like answer_keys_30-90_q0.2 has a dot that is not an extension
+    out.parent.joinpath(out.name + ".json").write_text(json.dumps(result, indent=1, default=str))
+    out.parent.joinpath(out.name + ".md").write_text(markdown(result))
     write_csvs(result, out.parent)
     return result
 
