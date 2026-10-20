@@ -101,3 +101,53 @@ def test_an_interior_minimum_is_not_a_geometry_limit():
     # a refused split elsewhere does not make an interior minimum a limit
     assert A.feasibility_limit(_optimum(0.4848, [(0.45, 4.1), (0.4848, 4.03), (0.5, 4.05)],
                                         [0.1])) is None
+
+
+# --------------------------------------------------------------------------- #
+# Tier A (bifurcation/tier_a.py; docs/re_study/tierA/preregistration.md)
+# --------------------------------------------------------------------------- #
+
+def test_the_trained_range_is_s_L_plus_minus_015_inside_the_limits():
+    from bifurcation import tier_a as T
+    assert T.split_range(0.4843) == (0.3343, 0.6343)
+    assert T.split_range(0.2) == (0.1, 0.35)              # clipped below
+    assert T.split_range(0.82) == (0.67, 0.9)             # and above
+    splits = T.evaluation_splits(0.1616, 0.4616)
+    assert len(splits) == 7 and splits[0] == 0.1616 and splits[-1] == 0.4616
+
+
+def test_s_L_needs_no_flow_solve_and_matches_the_answer_key():
+    from bifurcation import tier_a as T
+    s_l, l1, l2 = T.length_split((30.0, 90.0), 0.5)
+    assert abs(s_l - 0.4843) < 5e-5                       # the answer key's s_L for 30/90
+    assert s_l / (1 - s_l) == pytest.approx((l1 / l2) ** 0.25, rel=1e-9)
+
+
+def test_a_share_away_from_half_joins_the_run_name_only_there():
+    import types
+    config = types.SimpleNamespace(angle1=30.0, angle2=90.0, reynolds=10.0, seed=21,
+                                   outlet1_share=0.5)
+    assert R.stem(config) == "pinn_30-90_Re10_seed21"     # the earlier runs keep their names
+    config.outlet1_share = 0.2
+    assert R.stem(config) == "pinn_30-90_q0.2_Re10_seed21"
+
+
+def test_a_case_at_the_geometry_limit_or_outside_the_range_fails_screening(monkeypatch):
+    from bifurcation import tier_a as T, design_study
+
+    def fake(row):
+        monkeypatch.setattr(design_study, "optimise", lambda task: row)
+        return T.screen_case(((30.0, 90.0), 0.5, T.FLOWS[1]))
+
+    interior = {"feasible": True, "best_split": 0.4848, "on_bound": False, "refused": [],
+                "minimum_survives_refinement": True, "steady_bracket": True,
+                "fine_bracket": [{"split": 0.45, "total_pressure_drop": 4.1},
+                                 {"split": 0.4848, "total_pressure_drop": 4.03},
+                                 {"split": 0.5, "total_pressure_drop": 4.05}]}
+    assert fake(interior)["passes"]
+    near_edge = {**interior, "best_split": 0.36}           # range [0.3343, 0.6343]
+    assert not fake(near_edge)["passes"]
+    limit = {**interior, "refused": [{"split": 0.45, "reason": "walls"}],
+             "fine_bracket": [{"split": 0.45, "total_pressure_drop": None}] + interior["fine_bracket"][1:]}
+    r = fake(limit)
+    assert not r["passes"] and "geometry's limit" in r["reasons"][0]

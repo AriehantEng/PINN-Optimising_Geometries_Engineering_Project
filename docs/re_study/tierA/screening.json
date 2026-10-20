@@ -1,0 +1,1550 @@
+[
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.2,
+  "reynolds": 0.1,
+  "s_L": 0.3116240417631526,
+  "L1": 3.3850481348151984,
+  "L2": 5.037601595995175,
+  "range": [
+   0.1616,
+   0.4616
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.2,
+   "feasible": true,
+   "best_split": 0.3067462336834576,
+   "w1": 0.6134924673669152,
+   "w2": 1.3865075326330847,
+   "on_bound": false,
+   "total_pressure_drop": 33.58302876439474,
+   "total_pressure_drop_fine": 33.591641158529484,
+   "mesh_change": 0.0002563850362088356,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.25,
+     "total_pressure_drop": 36.07711242121403
+    },
+    {
+     "split": 0.3067462336834576,
+     "total_pressure_drop": 33.591641158529484
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 34.716275287322496
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 55.433663760738504,
+   "saving_vs_equal_widths": 0.3941762732958617,
+   "friction_law_split": 0.3333333333333333,
+   "friction_law_drop": 34.02611981650752,
+   "outlet1_pressure_offset": -21.167685397663003,
+   "flow_split": 0.2,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 189.64930506600058
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 74.34148365916354
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 45.45152694777848
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 36.069359403153065
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 33.60731193959688
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 34.7063031477058
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 38.48988156274571
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 45.08899408548011
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 55.433663760738504
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 71.43120724422155
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 96.7614143623182
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 138.73595494616217
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 213.23637973645535
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 358.71150993884754
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 684.6345873840911
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 1589.8910863857263
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 5251.335294452173
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 24,
+   "seconds": 47.492694201999996
+  },
+  "s_fe": 0.3067462336834576,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.2,
+  "reynolds": 10.0,
+  "s_L": 0.3116240417631526,
+  "L1": 3.3850481348151984,
+  "L2": 5.037601595995175,
+  "range": [
+   0.1616,
+   0.4616
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.2,
+   "feasible": true,
+   "best_split": 0.3057814708644936,
+   "w1": 0.6115629417289872,
+   "w2": 1.3884370582710128,
+   "on_bound": false,
+   "total_pressure_drop": 3.411964965396347,
+   "total_pressure_drop_fine": 3.4132551911121687,
+   "mesh_change": 0.0003780044689249261,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.25,
+     "total_pressure_drop": 3.6595194980790415
+    },
+    {
+     "split": 0.3057814708644936,
+     "total_pressure_drop": 3.4132551911121687
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 3.528251214515707
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 5.616903918137152,
+   "saving_vs_equal_widths": 0.3925541516957395,
+   "friction_law_split": 0.3333333333333333,
+   "friction_law_drop": 3.4579336549192203,
+   "outlet1_pressure_offset": -1.8144147495391882,
+   "flow_split": 0.20000000000000004,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 19.017112038705516
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 7.4844412235928734
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 4.595597592086929
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 3.6585875545840936
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 3.414288800023803
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 3.52699199792603
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.909435258556999
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 4.5746264676127115
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 5.616903918137152
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 7.22814519521252
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 9.777919173994214
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 14.00012296254077
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 21.49065876618869
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 36.10844006673963
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 68.83193163319106
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 159.64096833567285
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 526.4983292813849
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 27,
+   "seconds": 68.81380354999999
+  },
+  "s_fe": 0.3057814708644936,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.35,
+  "reynolds": 0.1,
+  "s_L": 0.40388095898996346,
+  "L1": 3.5448418028024133,
+  "L2": 4.877807928007961,
+  "range": [
+   0.2539,
+   0.5539
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.35,
+   "feasible": true,
+   "best_split": 0.40165724591338364,
+   "w1": 0.8033144918267673,
+   "w2": 1.1966855081732328,
+   "on_bound": false,
+   "total_pressure_drop": 38.338315620154745,
+   "total_pressure_drop_fine": 38.348336117709415,
+   "mesh_change": 0.00026130201643984144,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.35,
+     "total_pressure_drop": 40.21498799487384
+    },
+    {
+     "split": 0.40165724591338364,
+     "total_pressure_drop": 38.348336117709415
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 39.890288339765256
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 44.77247750416057,
+   "saving_vs_equal_widths": 0.14370797067032792,
+   "friction_law_split": 0.42323200236157604,
+   "friction_law_drop": 38.66072710833131,
+   "outlet1_pressure_offset": -10.442019209805348,
+   "flow_split": 0.34999999999999987,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 545.8586302871494
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 189.18288229532908
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 96.22976907815924
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 61.75804641017138
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 46.750632998669914
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 40.20611850854345
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 38.34360486853366
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 39.8801094505161
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 44.77247750416057
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 53.93903836117987
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 69.62142580268257
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 96.53827714954662
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 145.1085086451831
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 240.67398568850948
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 455.48149982188534
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 1052.8548600851245
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 3469.9036725994038
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 27,
+   "seconds": 45.617326770999966
+  },
+  "s_fe": 0.40165724591338364,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.35,
+  "reynolds": 10.0,
+  "s_L": 0.40388095898996346,
+  "L1": 3.5448418028024133,
+  "L2": 4.877807928007961,
+  "range": [
+   0.2539,
+   0.5539
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.35,
+   "feasible": true,
+   "best_split": 0.4011029228556976,
+   "w1": 0.8022058457113952,
+   "w2": 1.1977941542886048,
+   "on_bound": false,
+   "total_pressure_drop": 3.8714349092308153,
+   "total_pressure_drop_fine": 3.872462610345389,
+   "mesh_change": 0.00026538696896080775,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.35,
+     "total_pressure_drop": 4.05915823394178
+    },
+    {
+     "split": 0.4011029228556976,
+     "total_pressure_drop": 3.872462610345389
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 4.027423717835805
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 4.517363281545083,
+   "saving_vs_equal_widths": 0.1429879184065399,
+   "friction_law_split": 0.42323200236157604,
+   "friction_law_drop": 3.903887871430974,
+   "outlet1_pressure_offset": -0.8887795558419245,
+   "flow_split": 0.35,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 54.65907076925228
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 18.968710938801156
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 9.665450461606934
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 6.215193457302195
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 4.713100016974461
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 4.05811711383744
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.871975177219002
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 4.026231685812709
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 4.517363281545083
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 5.43795152526753
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 7.012967931468955
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 9.715439825982221
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 14.590628882659887
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 24.17910205382694
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 45.7208234944896
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 105.59345356558171
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 347.64360532761253
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 26,
+   "seconds": 64.34917361500004
+  },
+  "s_fe": 0.4011029228556976,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.65,
+  "reynolds": 0.1,
+  "s_L": 0.5654952159467851,
+  "L1": 3.8247659070785565,
+  "L2": 4.597883823731818,
+  "range": [
+   0.4155,
+   0.7155
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.65,
+   "feasible": true,
+   "best_split": 0.5681357365109214,
+   "w1": 1.1362714730218428,
+   "w2": 0.8637285269781572,
+   "on_bound": false,
+   "total_pressure_drop": 38.8303663205339,
+   "total_pressure_drop_fine": 38.83696326984741,
+   "mesh_change": 0.00016986264522471562,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.5,
+     "total_pressure_drop": 41.867063221853094
+    },
+    {
+     "split": 0.5681357365109214,
+     "total_pressure_drop": 38.83696326984741
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 39.56733056516133
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 41.8607461385297,
+   "saving_vs_equal_widths": 0.07239192077387657,
+   "friction_law_split": 0.5767679976384239,
+   "friction_law_drop": 38.880225902594745,
+   "outlet1_pressure_offset": 9.474507956116106,
+   "flow_split": 0.6500000000000001,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 1847.6131834077637
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 614.4082923941562
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 289.97457041518794
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 166.1558373380033
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 107.98101706246652
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 76.88933267519008
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 58.89139202194262
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 48.10281545120601
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 41.8607461385297
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 39.05236387160638
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 39.56186035065836
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 44.309807743543736
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 56.04057072761669
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 81.92411496065975
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 142.79375245746607
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 314.9347330801241
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 1015.0427109227195
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 26,
+   "seconds": 45.612526517999925
+  },
+  "s_fe": 0.5681357365109214,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.65,
+  "reynolds": 10.0,
+  "s_L": 0.5654952159467851,
+  "L1": 3.8247659070785565,
+  "L2": 4.597883823731818,
+  "range": [
+   0.4155,
+   0.7155
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.65,
+   "feasible": true,
+   "best_split": 0.5694683463339251,
+   "w1": 1.1389366926678501,
+   "w2": 0.8610633073321499,
+   "on_bound": false,
+   "total_pressure_drop": 3.901199160754743,
+   "total_pressure_drop_fine": 3.9019142127863726,
+   "mesh_change": 0.0001832567280148046,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.5,
+     "total_pressure_drop": 4.2132883842251525
+    },
+    {
+     "split": 0.5694683463339251,
+     "total_pressure_drop": 3.9019142127863726
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 3.9726197318707874
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 4.212610229439859,
+   "saving_vs_equal_widths": 0.07392354187169214,
+   "friction_law_split": 0.5767679976384239,
+   "friction_law_drop": 3.905480968606007,
+   "outlet1_pressure_offset": 0.87192411243418,
+   "flow_split": 0.65,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 185.19324537535968
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 61.64581785420967
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 29.12203306788702
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 16.705015577272725
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 10.868192306517694
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 7.745374465448352
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 5.934387661352131
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 4.845498996875101
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 4.212610229439859
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 3.9252127845247164
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 3.972051243562848
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 4.445019295103001
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 5.618253228153265
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 8.208633632209017
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 14.300653922284196
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 31.527946298754607
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 101.57619155227134
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 27,
+   "seconds": 56.777740257999994
+  },
+  "s_fe": 0.5694683463339251,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.8,
+  "reynolds": 0.1,
+  "s_L": 0.6607917921002514,
+  "L1": 3.9898244187630776,
+  "L2": 4.432825312047298,
+  "range": [
+   0.5108,
+   0.8108
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.8,
+   "feasible": true,
+   "best_split": 0.6651267354728743,
+   "w1": 1.3302534709457485,
+   "w2": 0.6697465290542515,
+   "on_bound": false,
+   "total_pressure_drop": 34.13796940004444,
+   "total_pressure_drop_fine": 34.14253773650775,
+   "mesh_change": 0.00013380190126942383,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.6,
+     "total_pressure_drop": 36.64631599948303
+    },
+    {
+     "split": 0.6651267354728743,
+     "total_pressure_drop": 34.14253773650775
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 35.10502076476568
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 49.6101932208816,
+   "saving_vs_equal_widths": 0.3118759032433014,
+   "friction_law_split": 0.6666666666666667,
+   "friction_law_drop": 34.140091497782436,
+   "outlet1_pressure_offset": 22.73225106997496,
+   "flow_split": 0.8000000000000003,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 2793.158656069625
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 924.7924225437592
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 432.94119102170123
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 244.86498452206305
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 156.0681055697
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 108.07274452519084
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 79.58546153436434
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 61.53440511699906
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 49.6101932208816
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 41.6578430559478
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 36.64225955598666
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 34.27898077201496
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 35.100450615015255
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 41.211687978745644
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 59.25896546899963
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 114.05060350448372
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 341.61288752137835
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 27,
+   "seconds": 43.71215424600007
+  },
+  "s_fe": 0.6651267354728743,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   30.0,
+   90.0
+  ],
+  "share": 0.8,
+  "reynolds": 10.0,
+  "s_L": 0.6607917921002514,
+  "L1": 3.9898244187630776,
+  "L2": 4.432825312047298,
+  "range": [
+   0.5108,
+   0.8108
+  ],
+  "optimum": {
+   "angles": [
+    30.0,
+    90.0
+   ],
+   "share": 0.8,
+   "feasible": true,
+   "best_split": 0.6651317212224094,
+   "w1": 1.3302634424448188,
+   "w2": 0.6697365575551812,
+   "on_bound": false,
+   "total_pressure_drop": 3.4253354242630816,
+   "total_pressure_drop_fine": 3.4257895158753393,
+   "mesh_change": 0.0001325509375732056,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.6,
+     "total_pressure_drop": 3.6826881049872906
+    },
+    {
+     "split": 0.6651317212224094,
+     "total_pressure_drop": 3.4257895158753393
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 3.5202319525554975
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 5.000343270595114,
+   "saving_vs_equal_widths": 0.3149799445958005,
+   "friction_law_split": 0.6666666666666667,
+   "friction_law_drop": 3.4254411662155775,
+   "outlet1_pressure_offset": 2.047160788200624,
+   "flow_split": 0.8,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 280.2136279560561
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 92.89663252209087
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 43.53922181208682
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 24.65517148898316
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 15.733322928915548
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 10.90471934532958
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 8.033332670056186
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 6.20900831729956
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 5.000343270595114
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 4.192560479690183
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 3.682272444135161
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 3.4405347599734046
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 3.5197716647331534
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 4.129598469255054
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 5.9340671366691975
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 11.414222914642204
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 34.17481144925088
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 25,
+   "seconds": 56.26053317399999
+  },
+  "s_fe": 0.6651317212224094,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   15.0,
+   15.0
+  ],
+  "share": 0.2,
+  "reynolds": 0.1,
+  "s_L": 0.3321050028711929,
+  "L1": 4.020838919899814,
+  "L2": 4.11081357768758,
+  "range": [
+   0.1821,
+   0.4821
+  ],
+  "optimum": {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.2,
+   "feasible": true,
+   "best_split": 0.3302875815098413,
+   "w1": 0.6605751630196826,
+   "w2": 1.3394248369803174,
+   "on_bound": false,
+   "total_pressure_drop": 33.40141890236633,
+   "total_pressure_drop_fine": 33.400891688605505,
+   "mesh_change": 1.5784421737630695e-05,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 34.14709633903561
+    },
+    {
+     "split": 0.3302875815098413,
+     "total_pressure_drop": 33.400891688605505
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 36.71866660378211
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 53.12272140989337,
+   "saving_vs_equal_widths": 0.3712404407025395,
+   "friction_law_split": 0.3333333333333333,
+   "friction_law_drop": 33.41010403960158,
+   "outlet1_pressure_offset": -22.490663112438668,
+   "flow_split": 0.2,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 335.2494105977513
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 111.44823087379594
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 57.675786385494256
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 39.996043067356716
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 34.14792590909652
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 33.69286604551834
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 36.717276893058404
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 42.95370837573997
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 53.12272140989337
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 69.00463745892861
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 94.15801776825376
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 135.8020131279634
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 209.43228041267386
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 352.8892678945868
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 673.6290257360623
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 1562.8831477733527
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 5166.850568139453
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 25,
+   "seconds": 44.171269585000005
+  },
+  "s_fe": 0.3302875815098413,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   15.0,
+   15.0
+  ],
+  "share": 0.2,
+  "reynolds": 10.0,
+  "s_L": 0.3321050028711929,
+  "L1": 4.020838919899814,
+  "L2": 4.11081357768758,
+  "range": [
+   0.1821,
+   0.4821
+  ],
+  "optimum": {
+   "angles": [
+    15.0,
+    15.0
+   ],
+   "share": 0.2,
+   "feasible": true,
+   "best_split": 0.3297091675028542,
+   "w1": 0.6594183350057083,
+   "w2": 1.3405816649942917,
+   "on_bound": false,
+   "total_pressure_drop": 3.3484168181374603,
+   "total_pressure_drop_fine": 3.348313480665687,
+   "mesh_change": 3.0862543895631445e-05,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 3.4221613385421845
+    },
+    {
+     "split": 0.3297091675028542,
+     "total_pressure_drop": 3.348313480665687
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.6841460068142293
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 5.339266772531864,
+   "saving_vs_equal_widths": 0.3728695416824712,
+   "friction_law_split": 0.3333333333333333,
+   "friction_law_drop": 3.3493648570603938,
+   "outlet1_pressure_offset": -2.0698445485759316,
+   "flow_split": 0.20000000000000004,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 33.54931312644715
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 11.157206845406664
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 5.776044186279806
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 4.006795922410413
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 3.4222316978989844
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 3.3783486889257737
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.6840259404863582
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 4.3132312027045545
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 5.339266772531864
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 6.942359794466334
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 9.48151128659988
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 13.68647310993273
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 21.116737820709606
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 35.589518471001924
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 67.90946051826647
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 157.41032243148783
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 519.5527710996809
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 24,
+   "seconds": 51.69991806799999
+  },
+  "s_fe": 0.3297091675028542,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   0.0,
+   120.0
+  ],
+  "share": 0.5,
+  "reynolds": 0.1,
+  "s_L": 0.4708757696262097,
+  "L1": 3.0835299494771142,
+  "L2": 4.916470050522887,
+  "range": [
+   0.3209,
+   0.6209
+  ],
+  "optimum": {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.5,
+   "feasible": true,
+   "best_split": 0.45341585584245103,
+   "w1": 0.9068317116849021,
+   "w2": 1.093168288315098,
+   "on_bound": false,
+   "total_pressure_drop": 35.75776405228787,
+   "total_pressure_drop_fine": 35.77275304778687,
+   "mesh_change": 0.0004190059255148752,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.4,
+     "total_pressure_drop": 37.255675094296784
+    },
+    {
+     "split": 0.45341585584245103,
+     "total_pressure_drop": 35.77275304778687
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 36.96149485875176
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 36.94600412062206,
+   "saving_vs_equal_widths": 0.03216153131079613,
+   "friction_law_split": 0.5,
+   "friction_law_drop": 36.94600412062206,
+   "outlet1_pressure_offset": -0.01103466132097462,
+   "flow_split": 0.5,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 522.0469501991142
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 198.94950857051626
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 106.47578415422527
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 69.10961690517057
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 51.146191953541916
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 41.84580404907822
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 37.242929819278785
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 35.7645448283083
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 36.94600412062206
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 41.0939301926503
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 49.38178546178263
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 64.51434687212692
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 92.58456194038224
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 148.5340609674423
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 275.21899090587186
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 629.0288222306651
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 2069.7619530835223
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 25,
+   "seconds": 45.00465881800005
+  },
+  "s_fe": 0.45341585584245103,
+  "passes": true,
+  "reasons": []
+ },
+ {
+  "layout": [
+   0.0,
+   120.0
+  ],
+  "share": 0.5,
+  "reynolds": 10.0,
+  "s_L": 0.4708757696262097,
+  "L1": 3.0835299494771142,
+  "L2": 4.916470050522887,
+  "range": [
+   0.3209,
+   0.6209
+  ],
+  "optimum": {
+   "angles": [
+    0.0,
+    120.0
+   ],
+   "share": 0.5,
+   "feasible": true,
+   "best_split": 0.4528331796462469,
+   "w1": 0.9056663592924938,
+   "w2": 1.0943336407075062,
+   "on_bound": false,
+   "total_pressure_drop": 3.620743031623919,
+   "total_pressure_drop_fine": 3.622649316238071,
+   "mesh_change": 0.0005262128480410963,
+   "steady_bracket": true,
+   "fine_bracket": [
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.7721975791844624
+    },
+    {
+     "split": 0.4528331796462469,
+     "total_pressure_drop": 3.622649316238071
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 3.741377789671831
+    }
+   ],
+   "minimum_survives_refinement": true,
+   "equal_widths_drop": 3.739604281052549,
+   "saving_vs_equal_widths": 0.031784445758302415,
+   "friction_law_split": 0.5,
+   "friction_law_drop": 3.739604281052549,
+   "outlet1_pressure_offset": 0.037868474727041766,
+   "flow_split": 0.5000000000000001,
+   "grid": [
+    {
+     "split": 0.1,
+     "total_pressure_drop": 52.39856558501573
+    },
+    {
+     "split": 0.15000000000000002,
+     "total_pressure_drop": 19.999684198377214
+    },
+    {
+     "split": 0.2,
+     "total_pressure_drop": 10.721912868586607
+    },
+    {
+     "split": 0.25,
+     "total_pressure_drop": 6.971090935385869
+    },
+    {
+     "split": 0.30000000000000004,
+     "total_pressure_drop": 5.167590241922064
+    },
+    {
+     "split": 0.35,
+     "total_pressure_drop": 4.233427551161155
+    },
+    {
+     "split": 0.4,
+     "total_pressure_drop": 3.770754862217511
+    },
+    {
+     "split": 0.45000000000000007,
+     "total_pressure_drop": 3.6216490225546814
+    },
+    {
+     "split": 0.5,
+     "total_pressure_drop": 3.739604281052549
+    },
+    {
+     "split": 0.55,
+     "total_pressure_drop": 4.15552567563372
+    },
+    {
+     "split": 0.6,
+     "total_pressure_drop": 4.987339866110232
+    },
+    {
+     "split": 0.65,
+     "total_pressure_drop": 6.506513769601263
+    },
+    {
+     "split": 0.7000000000000001,
+     "total_pressure_drop": 9.324116105027908
+    },
+    {
+     "split": 0.75,
+     "total_pressure_drop": 14.93751038176399
+    },
+    {
+     "split": 0.8,
+     "total_pressure_drop": 27.64142948142521
+    },
+    {
+     "split": 0.85,
+     "total_pressure_drop": 63.10031090544099
+    },
+    {
+     "split": 0.9,
+     "total_pressure_drop": 207.40290446514945
+    }
+   ],
+   "refused": [],
+   "unsolved": [],
+   "solves": 25,
+   "seconds": 61.57525057099997
+  },
+  "s_fe": 0.4528331796462469,
+  "passes": true,
+  "reasons": []
+ }
+]

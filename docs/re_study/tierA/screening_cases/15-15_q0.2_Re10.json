@@ -1,0 +1,129 @@
+{
+ "layout": [
+  15.0,
+  15.0
+ ],
+ "share": 0.2,
+ "reynolds": 10.0,
+ "s_L": 0.3321050028711929,
+ "L1": 4.020838919899814,
+ "L2": 4.11081357768758,
+ "range": [
+  0.1821,
+  0.4821
+ ],
+ "optimum": {
+  "angles": [
+   15.0,
+   15.0
+  ],
+  "share": 0.2,
+  "feasible": true,
+  "best_split": 0.3297091675028542,
+  "w1": 0.6594183350057083,
+  "w2": 1.3405816649942917,
+  "on_bound": false,
+  "total_pressure_drop": 3.3484168181374603,
+  "total_pressure_drop_fine": 3.348313480665687,
+  "mesh_change": 3.0862543895631445e-05,
+  "steady_bracket": true,
+  "fine_bracket": [
+   {
+    "split": 0.30000000000000004,
+    "total_pressure_drop": 3.4221613385421845
+   },
+   {
+    "split": 0.3297091675028542,
+    "total_pressure_drop": 3.348313480665687
+   },
+   {
+    "split": 0.4,
+    "total_pressure_drop": 3.6841460068142293
+   }
+  ],
+  "minimum_survives_refinement": true,
+  "equal_widths_drop": 5.339266772531864,
+  "saving_vs_equal_widths": 0.3728695416824712,
+  "friction_law_split": 0.3333333333333333,
+  "friction_law_drop": 3.3493648570603938,
+  "outlet1_pressure_offset": -2.0698445485759316,
+  "flow_split": 0.20000000000000004,
+  "grid": [
+   {
+    "split": 0.1,
+    "total_pressure_drop": 33.54931312644715
+   },
+   {
+    "split": 0.15000000000000002,
+    "total_pressure_drop": 11.157206845406664
+   },
+   {
+    "split": 0.2,
+    "total_pressure_drop": 5.776044186279806
+   },
+   {
+    "split": 0.25,
+    "total_pressure_drop": 4.006795922410413
+   },
+   {
+    "split": 0.30000000000000004,
+    "total_pressure_drop": 3.4222316978989844
+   },
+   {
+    "split": 0.35,
+    "total_pressure_drop": 3.3783486889257737
+   },
+   {
+    "split": 0.4,
+    "total_pressure_drop": 3.6840259404863582
+   },
+   {
+    "split": 0.45000000000000007,
+    "total_pressure_drop": 4.3132312027045545
+   },
+   {
+    "split": 0.5,
+    "total_pressure_drop": 5.339266772531864
+   },
+   {
+    "split": 0.55,
+    "total_pressure_drop": 6.942359794466334
+   },
+   {
+    "split": 0.6,
+    "total_pressure_drop": 9.48151128659988
+   },
+   {
+    "split": 0.65,
+    "total_pressure_drop": 13.68647310993273
+   },
+   {
+    "split": 0.7000000000000001,
+    "total_pressure_drop": 21.116737820709606
+   },
+   {
+    "split": 0.75,
+    "total_pressure_drop": 35.589518471001924
+   },
+   {
+    "split": 0.8,
+    "total_pressure_drop": 67.90946051826647
+   },
+   {
+    "split": 0.85,
+    "total_pressure_drop": 157.41032243148783
+   },
+   {
+    "split": 0.9,
+    "total_pressure_drop": 519.5527710996809
+   }
+  ],
+  "refused": [],
+  "unsolved": [],
+  "solves": 24,
+  "seconds": 51.69991806799999
+ },
+ "s_fe": 0.3297091675028542,
+ "passes": true,
+ "reasons": []
+}

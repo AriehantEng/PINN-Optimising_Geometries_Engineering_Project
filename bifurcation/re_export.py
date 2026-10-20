@@ -43,7 +43,9 @@ LOSS_AT_OPTIMUM_SEED = 2026
 
 
 def stem(config):
-    return (f"pinn_{config.angle1:g}-{config.angle2:g}_Re{config.reynolds:g}"
+    # the share joins the name only away from 0.5, so the earlier runs keep theirs
+    share = "" if config.outlet1_share == 0.5 else f"_q{config.outlet1_share:g}"
+    return (f"pinn_{config.angle1:g}-{config.angle2:g}{share}_Re{config.reynolds:g}"
             f"_seed{config.seed}")
 
 
@@ -103,7 +105,8 @@ def export(run_directory, out_directory):
         reason = (f"{stopped[0].name}: {stopped[0].read_text()}" if stopped
                   else "no metrics.json: the run did not finish")
         summary = {"run": str(run_directory), "seed": config.seed, "reynolds": config.reynolds,
-                   "layout": [config.angle1, config.angle2], "failed": reason}
+                   "layout": [config.angle1, config.angle2], "share": config.outlet1_share,
+                   "failed": reason}
         (out / f"{name}_summary.json").write_text(json.dumps(summary, indent=1))
         (out / f"{name}_summary.md").write_text(f"## {name}\n\nFAILED: {reason}\n")
         return summary
@@ -155,6 +158,7 @@ def export(run_directory, out_directory):
     lm = [e for e in history if e["phase"] == "lm"]
     summary = {
         "run": str(run_directory), "layout": [config.angle1, config.angle2],
+        "share": config.outlet1_share, "split_range": [config.split_min, config.split_max],
         "reynolds": config.reynolds, "pressure_scaling": config.pressure_scaling,
         "seed": config.seed,
         "s_star_pinn": s_star, "J_pinn_at_s_star": o["pinn_min_drop"],
@@ -180,8 +184,10 @@ def export(run_directory, out_directory):
 def summary_markdown(name, s):
     t = s["training"]
     lines = [f"## {name}", "",
-             f"Layout {s['layout'][0]:g}/{s['layout'][1]:g}, Re_h = {s['reynolds']:g} "
-             f"({s['pressure_scaling']} pressure), seed {s['seed']}.", "",
+             f"Layout {s['layout'][0]:g}/{s['layout'][1]:g}, share q = {s.get('share', 0.5):g}, "
+             f"Re_h = {s['reynolds']:g} ({s['pressure_scaling']} pressure), seed {s['seed']}"
+             + (f"; trained over s = {s['split_range'][0]:.4f} to {s['split_range'][1]:.4f}"
+                if "split_range" in s else "") + ".", "",
              f"- PINN optimum s* = {s['s_star_pinn']:.4f} (scan, then Brent), J = "
              f"{s['J_pinn_at_s_star']:.6g}; on the range's bound: {s['s_star_pinn_on_bound']}",
              f"- finite elements at the PINN's s*: J = {s['J_fe_at_s_star_pinn']:.6g} (reference mesh)",
@@ -209,22 +215,25 @@ def summary_markdown(name, s):
 def index(directory):
     directory = pathlib.Path(directory)
     rows = [json.loads(p.read_text()) for p in sorted(directory.glob("pinn_*_summary.json"))]
-    rows.sort(key=lambda r: (r["layout"][1], r["reynolds"], r["seed"]))
+    rows.sort(key=lambda r: (r["layout"][1], r["layout"][0], r.get("share", 0.5), r["reynolds"],
+                             r["seed"]))
     lines = ["## PINN runs of the Reynolds-number study", "",
-             "| layout | Re_h | seed | s* (PINN) | regret | drop error at 0.35 / 0.50 / 0.65 | "
-             "u error at 0.50 | training (min) | converged |", "|---|---|---|---|---|---|---|---|---|"]
+             "| layout | q | Re_h | seed | s* (PINN) | regret | drop error at the range's low end "
+             "/ middle / high end | u error at the middle | training (min) | converged |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        head = f"| {r['layout'][0]:g}/{r['layout'][1]:g} | {r['reynolds']:g} | {r['seed']} |"
+        head = (f"| {r['layout'][0]:g}/{r['layout'][1]:g} | {r.get('share', 0.5):g} | "
+                f"{r['reynolds']:g} | {r['seed']} |")
         if "failed" in r:
             kind = "SKIPPED" if r["failed"].startswith("SKIPPED") else "FAILED"
             why = r["failed"].split(": ", 1)[-1] if kind == "SKIPPED" else r["failed"]
             lines.append(f"{head} {kind}: {why.splitlines()[0]} | | | | | |")
             continue
-        by = {round(f["split"], 6): f for f in r["fields"] if not f.get("at")}
-        drops = " / ".join(f"{100 * by[k]['drop_error']:+.2f}%" for k in (0.35, 0.5, 0.65) if k in by)
-        u50 = by.get(0.5, {}).get("u")
+        grid = sorted((f for f in r["fields"] if not f.get("at")), key=lambda f: f["split"])
+        ends = (grid[0], grid[len(grid) // 2], grid[-1])
+        drops = " / ".join(f"{100 * f['drop_error']:+.2f}% ({f['split']:.2f})" for f in ends)
         lines.append(f"{head} {r['s_star_pinn']:.4f} | {100 * r['regret']:+.4f}% | {drops} | "
-                     f"{'—' if u50 is None else f'{u50:.2e}'} | "
+                     f"{ends[1]['u']:.2e} | "
                      f"{r['training']['wall_seconds'] / 60:.0f} | {r['training']['converged']} |")
     (directory / "pinn_runs.md").write_text("\n".join(lines) + "\n")
     return rows

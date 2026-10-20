@@ -1,0 +1,40 @@
+# Tier A answer keys for the cases that passed screening.
+name: answer_keys_tierA_0-120_q0.5
+geometry:
+  parent_length: 3.0
+  daughter_length: 4.0
+  min_width: 0.2
+share: 0.5
+layouts:
+- - 0.0
+  - 120.0
+flows:
+- reynolds: 0.1
+  pressure_scaling: viscous
+  continuation: []
+- reynolds: 10.0
+  pressure_scaling: inertial
+  continuation: []
+search:
+  grid: 17
+  xatol: 0.001
+mesh:
+  max_area: 0.02
+  corner_levels: 3
+  corner_radius: 0.4
+check:
+  max_area: 0.005
+  corner_levels: 5
+reference:
+  max_area: 0.002
+  corner_levels: 6
+  n_line: 256
+  splits:
+  - 0.3209
+  - 0.3709
+  - 0.4209
+  - 0.4709
+  - 0.5209
+  - 0.5709
+  - 0.6209
+workers: 2
