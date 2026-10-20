@@ -1,0 +1,6 @@
+{
+  "python": "3.11.15 (main, Mar  3 2026, 09:26:23) [GCC 13.3.0]",
+  "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+  "jax": "0.10.2",
+  "x64": true
+}

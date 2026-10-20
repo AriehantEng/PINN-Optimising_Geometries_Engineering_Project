@@ -1,0 +1,22 @@
+[
+  {
+    "cycle": 0,
+    "iterations": 500,
+    "message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT"
+  },
+  {
+    "cycle": 1,
+    "iterations": 500,
+    "message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT"
+  },
+  {
+    "cycle": 2,
+    "iterations": 500,
+    "message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT"
+  },
+  {
+    "cycle": 3,
+    "iterations": 500,
+    "message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT"
+  }
+]
