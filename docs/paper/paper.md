@@ -348,7 +348,7 @@ Sun, L., Gao, H., Pan, S., & Wang, J.-X. (2020). Surrogate modeling for fluid fl
 
 Sun, Y., Sengupta, U., & Juniper, M. (2023). Physics-informed deep learning for simultaneous surrogate modeling and PDE-constrained optimization of an airfoil geometry. *Computer Methods in Applied Mechanics and Engineering, 411*, Article 116042. https://doi.org/10.1016/j.cma.2023.116042
 
-† Taylor, C., & Hood, P. (1973). A numerical solution of the Navier–Stokes equations using the finite element technique. *Computers & Fluids, 1*(1), 73–100. https://doi.org/10.1016/0045-7930(73)90027-3 ⚠
+† Taylor, C., & Hood, P. (1973). A numerical solution of the Navier–Stokes equations using the finite element technique. *Computers & Fluids, 1*(1), 73–100. https://doi.org/10.1016/0045-7930(73)90027-3
 
 † Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy, T., Cournapeau, D., Burovski, E., Peterson, P., Weckesser, W., Bright, J., van der Walt, S. J., Brett, M., Wilson, J., Millman, K. J., Mayorov, N., Nelson, A. R. J., Jones, E., Kern, R., Larson, E., . . . SciPy 1.0 Contributors. (2020). SciPy 1.0: Fundamental algorithms for scientific computing in Python. *Nature Methods, 17*(3), 261–272. https://doi.org/10.1038/s41592-019-0686-2
 
