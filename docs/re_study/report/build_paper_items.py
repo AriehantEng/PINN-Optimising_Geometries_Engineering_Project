@@ -181,7 +181,9 @@ bullets([
     "scikit-fem's solve, which calls SciPy's spsolve; UMFPACK (scikits.umfpack) is not installed, "
     "so spsolve uses SuperLU (checked on this machine: SciPy 1.17.1, scikit-fem 12.0.2). Its "
     "reference is Li, X. S. (2005). An overview of SuperLU: Algorithms, implementation, and user "
-    "interface. ACM Transactions on Mathematical Software, 31(3), 302–325.",
+    "interface. ACM Transactions on Mathematical Software, 31(3), 302–325. "
+    "https://doi.org/10.1145/1089014.1089017 (DOI confirmed against the ACM Digital Library's "
+    "listing).",
     f"L-BFGS iterations per cycle (Section 3.3): {g5['training']['lbfgs']['iterations_per_cycle']}, "
     f"in {g5['training']['lbfgs']['cycles']} cycles (gtol {g5['training']['lbfgs']['gtol']:g}), "
     "from developing_flow/re10_lm_fresh_inputmap.yaml. Network 1's final 100-step polish uses no "

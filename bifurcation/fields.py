@@ -313,16 +313,21 @@ def fig_pinn(config, quantity, out_path):
     plt.close(fig)
 
 
+def ideal_study(pconfig):
+    """The design-study config the friction law needs, for the parametric network's geometry."""
+    return {"geometry": {"parent_length": pconfig.parent_length,
+                         "daughter_length": pconfig.daughter_length,
+                         "min_width": pconfig.min_width},
+            "physics": {"reynolds": pconfig.reynolds,
+                        "pressure_scaling": pconfig.pressure_scaling}}
+
+
 def ideal_drops(pconfig, splits):
     """The friction law ('ideal') for the parametric network's geometry, with
     the daughters' outer-wall length (Murray, equal lengths) and with their own
     centreline lengths; the parent's fixed friction included."""
     from bifurcation import sensitivity
-    study = {"geometry": {"parent_length": pconfig.parent_length,
-                          "daughter_length": pconfig.daughter_length,
-                          "min_width": pconfig.min_width},
-             "physics": {"reynolds": pconfig.reynolds,
-                         "pressure_scaling": pconfig.pressure_scaling}}
+    study = ideal_study(pconfig)
     _, nu = pinn.scaling_coefficients(pconfig.reynolds, pconfig.pressure_scaling)
     q0, w0, q = 4.0 / 3.0, 2.0, pconfig.outlet1_share
     parent = 12.0 * nu * q0 * pconfig.parent_length / w0**3
@@ -334,14 +339,18 @@ def ideal_drops(pconfig, splits):
 
 
 def fig_comparison(config, out_path):
-    """The parametric PINN against finite elements and the ideal friction law:
-    pressure drop against split, the PINN's errors by split, and the optimum
-    each route finds."""
+    """The parametric PINN against the reference solution and the ideal friction
+    law: pressure drop against split, the PINN's errors by split, and the
+    optimum each route finds.
+
+    The centreline-length route is the paper's s_L, the fixed point with the
+    lengths measured at s_L itself (sensitivity.length_corrected_split), not
+    the argmin of the dotted curve, whose lengths change with the split: at
+    30/90 those are 0.4843 and 0.4834."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from scipy.optimize import minimize_scalar
-    from bifurcation import parametric
+    from bifurcation import parametric, sensitivity
     _style(plt)
     run = ROOT / config["pinn"]["run"]
     pconfig = parametric.load_config(run / "config.yaml")
@@ -351,9 +360,8 @@ def fig_comparison(config, out_path):
     j_fe = np.array([r["reference_drop"] for r in rows])
     fine = np.linspace(pconfig.split_min, pconfig.split_max, 121)
     equal, lengths = ideal_drops(pconfig, fine)
-    s_len = float(minimize_scalar(lambda s: ideal_drops(pconfig, [s])[1][0],
-                                  bounds=(pconfig.split_min, pconfig.split_max), method="bounded",
-                                  options={"xatol": 1e-6}).x)
+    s_len, _, _ = sensitivity.length_corrected_split(
+        ideal_study(pconfig), [pconfig.angle1, pconfig.angle2], pconfig.outlet1_share, 1e-10)
     blue = "#2a78d6"
     fig, (a1, a2, a3) = plt.subplots(1, 3, figsize=(15, 4.9),
                                      gridspec_kw={"width_ratios": [1.25, 1.1, 0.9]})
@@ -365,10 +373,10 @@ def fig_comparison(config, out_path):
     a1.plot(o["curve"]["split"], o["curve"]["pinn_drop"], color=blue, lw=2.2,
             label="parametric PINN")
     a1.plot(s_fe, j_fe, "o", ms=7, mfc="none", mec=INK, mew=1.6,
-            label="finite elements (reference)")
+            label="reference solution")
     k = int(np.argmin(np.abs(s_fe - 0.5)))
     gap = 100 * (equal[np.argmin(np.abs(fine - 0.5))] / j_fe[k] - 1)
-    a1.annotate(f"ideal {gap:.1f}% below\nfinite elements", (0.5, equal.min()),
+    a1.annotate(f"ideal {gap:.1f}% below\nthe reference", (0.5, equal.min()),
                 xytext=(0.535, 3.72), fontsize=8.5, color=INK,
                 arrowprops={"arrowstyle": "-", "color": MUTED, "lw": 0.8})
     a1.set_xlabel("width split s = w₁/w₀")
@@ -392,14 +400,14 @@ def fig_comparison(config, out_path):
     a2.axhline(0, color=MUTED, lw=0.8)
     a2.set_xticks(s_fe)
     a2.set_xlabel("width split s = w₁/w₀")
-    a2.set_ylabel("PINN against finite elements (%)")
+    a2.set_ylabel("PINN against the reference solution (%)")
     a2.set_title("The PINN's error at each split", loc="left", fontsize=10)
     a2.legend(fontsize=8, frameon=False, loc="lower left")
     a2.set_ylim(-2.6, 3.2)
     # 3. optimum by route
     routes = [("Ideal: Murray, equal lengths", o["murray_split"], 0.0, MUTED, "none"),
-              ("Ideal: centreline lengths", s_len, 0.0, MUTED, "none"),
-              ("Finite elements", o["reference_split"], pconfig.search_xatol, INK, INK),
+              ("Ideal: centreline lengths, s_L", s_len, 0.0, MUTED, "none"),
+              ("Reference solution", o["reference_split"], pconfig.search_xatol, INK, INK),
               ("Parametric PINN", o["pinn_split"], pconfig.search_xatol, blue, blue)]
     for i, (name, s, tol, edge, face) in enumerate(routes):
         y = len(routes) - 1 - i
@@ -418,7 +426,7 @@ def fig_comparison(config, out_path):
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
-    fig.suptitle(f"Parametric PINN against finite elements and the ideal friction law: "
+    fig.suptitle(f"Parametric PINN against the reference solution and the ideal friction law: "
                  f"{pconfig.angle1:g}°/{pconfig.angle2:g}°, q = {pconfig.outlet1_share:g}, "
                  f"daughters {pconfig.daughter_length:g} long, Re_h = {pconfig.reynolds:g}",
                  x=0.01, ha="left", fontsize=11)

@@ -626,7 +626,7 @@
  },
  {
   "bullets": [
-   "Sparse direct solver (Section 3.2): SuperLU. Each Newton step's linear system is solved by scikit-fem's solve, which calls SciPy's spsolve; UMFPACK (scikits.umfpack) is not installed, so spsolve uses SuperLU (checked on this machine: SciPy 1.17.1, scikit-fem 12.0.2). Its reference is Li, X. S. (2005). An overview of SuperLU: Algorithms, implementation, and user interface. ACM Transactions on Mathematical Software, 31(3), 302–325.",
+   "Sparse direct solver (Section 3.2): SuperLU. Each Newton step's linear system is solved by scikit-fem's solve, which calls SciPy's spsolve; UMFPACK (scikits.umfpack) is not installed, so spsolve uses SuperLU (checked on this machine: SciPy 1.17.1, scikit-fem 12.0.2). Its reference is Li, X. S. (2005). An overview of SuperLU: Algorithms, implementation, and user interface. ACM Transactions on Mathematical Software, 31(3), 302–325. https://doi.org/10.1145/1089014.1089017 (DOI confirmed against the ACM Digital Library's listing).",
    "L-BFGS iterations per cycle (Section 3.3): 500, in 4 cycles (gtol 1e-14), from developing_flow/re10_lm_fresh_inputmap.yaml. Network 1's final 100-step polish uses no L-BFGS."
   ]
  },

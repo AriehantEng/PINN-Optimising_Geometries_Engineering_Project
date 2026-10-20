@@ -107,7 +107,7 @@ def per_reynolds(all_runs, draw, ylabel, path, log=False, markers=True, units=Tr
             title += ("  (J in μU_c/h)" if group[0]["summary"]["pressure_scaling"] == "viscous"
                       else "  (J in ρU_c²)")
         if not any(r["network"][0] == "30/120" for r in group):
-            title += "\n30/120 not trained here: its optimum lies outside the range"
+            title += "\n30/120 not trained here: its J has no interior minimum"
         ax.set_title(title, fontsize=10, color=INK, loc="left")
         ax.set_ylabel(ylabel, fontsize=9, color=INK)
         if log:
