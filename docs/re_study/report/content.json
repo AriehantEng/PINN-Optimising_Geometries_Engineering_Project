@@ -2118,14 +2118,14 @@
  {
   "img": "/home/user/PINN-Optimising_Geometries_Engineering_Project/docs/re_study/fig_re_drop_error.png",
   "w": 605,
-  "h": 339,
-  "caption": "Figure 3. The PINNs' pressure-drop error against the reference solution at the seven evaluation splits, one line per run; zero is a perfect prediction."
+  "h": 442,
+  "caption": "Figure 3. The PINNs' pressure-drop error against the reference solution at the seven evaluation splits, a panel per Re_h, all 13 runs: the 30/90 seeds as solid lines, 30/120 dashed (not trained at Re_h 0.1). Zero is a perfect prediction."
  },
  {
   "img": "/home/user/PINN-Optimising_Geometries_Engineering_Project/docs/re_study/fig_re_training.png",
   "w": 605,
-  "h": 339,
-  "caption": "Figure 4. Held-out loss against training time, one line per run; squares mark the start of L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale differs between the viscous (Re_h ≤ 1) and inertial runs."
+  "h": 442,
+  "caption": "Figure 4. Held-out loss against training time, a panel per Re_h, all 13 runs; squares mark the start of L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale differs between the viscous (Re_h ≤ 1) and inertial runs."
  },
  {
   "h1": "5. Small items"

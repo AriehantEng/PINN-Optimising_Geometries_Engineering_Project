@@ -257,11 +257,12 @@ image(STUDY / "fig_re_objective.png",
       "ρU_c² above, so only shapes compare across panels.")
 image(STUDY / "fig_re_drop_error.png",
       "Figure 3. The PINNs' pressure-drop error against the reference solution at the seven "
-      "evaluation splits, one line per run; zero is a perfect prediction.")
+      "evaluation splits, a panel per Re_h, all 13 runs: the 30/90 seeds as solid lines, 30/120 "
+      "dashed (not trained at Re_h 0.1). Zero is a perfect prediction.")
 image(STUDY / "fig_re_training.png",
-      "Figure 4. Held-out loss against training time, one line per run; squares mark the start of "
-      "L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale differs between the "
-      "viscous (Re_h ≤ 1) and inertial runs.")
+      "Figure 4. Held-out loss against training time, a panel per Re_h, all 13 runs; squares mark "
+      "the start of L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale "
+      "differs between the viscous (Re_h ≤ 1) and inertial runs.")
 
 # --------------------------------------------------------------------------- #
 h1("5. Small items")

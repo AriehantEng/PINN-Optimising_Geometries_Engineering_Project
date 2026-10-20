@@ -230,12 +230,13 @@ image(STUDY / "fig_re_objective.png",
       "dots); dashed: the PINN's optimum, dotted: the reference optimum. J in μU_c/h at Re_h ≤ 1 and "
       "ρU_c² above, so only shapes compare across panels.")
 image(STUDY / "fig_re_drop_error.png",
-      "Figure 2. Pressure-drop error of each PINN against the reference solution at the seven "
-      "evaluation splits; zero is a perfect prediction.")
+      "Figure 2. The PINNs' pressure-drop error against the reference solution at the seven "
+      "evaluation splits, a panel per Re_h, all 13 runs: the 30/90 seeds as solid lines, 30/120 "
+      "dashed (not trained at Re_h 0.1). Zero is a perfect prediction.")
 image(STUDY / "fig_re_training.png",
-      "Figure 3. Held-out loss against training time for every run; squares mark the start of "
-      "L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale differs between the "
-      "viscous (Re_h ≤ 1) and inertial runs.")
+      "Figure 3. Held-out loss against training time, a panel per Re_h, all 13 runs; squares mark "
+      "the start of L-BFGS, triangles of Levenberg–Marquardt. A diagnostic only: its scale "
+      "differs between the viscous (Re_h ≤ 1) and inertial runs.")
 
 OUT.write_text(json.dumps(blocks, indent=1, ensure_ascii=False))
 print(f"{len(blocks)} blocks -> {OUT}")
