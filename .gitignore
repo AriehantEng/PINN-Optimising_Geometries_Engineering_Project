@@ -8,6 +8,14 @@ runs/
 !bifurcation/runs/
 bifurcation/runs/*/checkpoint.npz
 bifurcation/runs/*/checkpoint.tmp.npz
+# Network 1's retrained networks too (developing_flow/network1_queue.sh); its
+# finite-element reference is ~50 MB and is rebuilt by the queue in minutes.
+!developing_flow/runs/
+developing_flow/runs/*
+!developing_flow/runs/developing_re10_lm_fresh_inputmap/
+!developing_flow/runs/developing_re10_polish_g5_points*/
+developing_flow/runs/*/checkpoint.npz
+developing_flow/runs/*/checkpoint.tmp.npz
 
 __pycache__/
 *.py[cod]

@@ -134,6 +134,28 @@ def in_range(config, angles, case):
             "grid": list(zip(grid.tolist(), values.tolist()))}
 
 
+def feasibility_limit(optimum):
+    """The largest refused split below the optimum (or smallest above) when the
+    search ran into the geometry's limit, else None.
+
+    A refused split scores inf in the search, so where J still falls toward the
+    split at which the walls stop meeting inside the domain, Brent converges on
+    that edge and reports it as the optimum, with an infeasible bracket point
+    beside it. That is a bound set by the geometry, not a minimum of J: 30/120's
+    s_FE = 0.2680 at every Re_h is one.
+    """
+    best = optimum["best_split"]
+    beside = [b["split"] for b in optimum.get("fine_bracket", [])
+              if b["total_pressure_drop"] is None and b["split"] != best]
+    refused = {round(x["split"], 12) for x in optimum.get("refused", [])}
+    if not any(round(s, 12) in refused for s in beside):
+        return None
+    below = [s for s in refused if s < best]
+    above = [s for s in refused if s > best]
+    side = below if any(s < best for s in beside) else above
+    return max(side) if side is below else min(side)
+
+
 def complete(task):
     """A finished case whose optimum lies outside the PINNs' range gets in_range."""
     config, path = task
@@ -192,7 +214,8 @@ def answer(task):
     c1, c2 = sensitivity.closed_lengths(g_star)
     s_l, _, _ = sensitivity.length_corrected_split(study, angles, config["share"], 1e-10)
     return {**out,
-            "s_fe": s_star, "J_fe_search": row["total_pressure_drop"],
+            "s_fe": s_star, "feasibility_limit": feasibility_limit(row),
+            "J_fe_search": row["total_pressure_drop"],
             "J_fe_check": row["total_pressure_drop_fine"], "on_bound": row["on_bound"],
             "minimum_survives_refinement": row["minimum_survives_refinement"],
             "steady_bracket": row["steady_bracket"],
@@ -223,11 +246,23 @@ def markdown(result):
             continue
         bound = "—" if r["argmin_bound"] is None else f"{r['argmin_bound']:.4f}"
         ref = r["J_fe_reference_at_s_fe"]
-        lines.append(f"| {r['key']} | {r['s_fe']:.4f} | {bound} | {r['J_fe_search']:.6g} | "
+        limit = feasibility_limit(r["optimum"])
+        s_fe = f"{r['s_fe']:.4f}" + ("" if limit is None else " (geometry limit)")
+        survives = ("n/a: a limit, not a minimum" if limit is not None
+                    else "yes" if r["minimum_survives_refinement"] else "NO")
+        lines.append(f"| {r['key']} | {s_fe} | {bound} | {r['J_fe_search']:.6g} | "
                      f"{r['J_fe_check']:.6g} | {'—' if ref is None else f'{ref:.6g}'} | "
                      f"{r['centreline_lengths'][0]:.4f}, {r['centreline_lengths'][1]:.4f} | "
                      f"{r['s_murray']:.4f} | {r['s_length_corrected']:.4f} | "
-                     f"{'yes' if r['minimum_survives_refinement'] else 'NO'} |")
+                     f"{survives} |")
+    limited = [r for r in result["cases"]
+               if "failed" not in r and feasibility_limit(r["optimum"]) is not None]
+    if limited:
+        lines += ["", "'Geometry limit': J still falls at s_FE, and the next split the search tried ("
+                  + ", ".join(sorted({f"{feasibility_limit(r['optimum']):.5f}" for r in limited}))
+                  + ") is refused by the geometry, so s_FE is the edge of the feasible splits, "
+                  "not a minimum of J, and no argmin bound applies. Its L1, L2 are those of the "
+                  "limiting geometry."]
     outside = [r for r in result["cases"] if "in_range" in r]
     if outside:
         lines += ["", "### Cases whose optimum lies outside the PINNs' range: the optimum inside it",
@@ -238,7 +273,9 @@ def markdown(result):
             refused = [x["split"] for x in r["optimum"].get("refused", [])]
             why = (f"splits below {max(x for x in refused if x < r['s_fe'] + 1e-3):.4f} refused "
                    "by the geometry" if refused and min(refused) < r["s_fe"] else "flow")
-            lines.append(f"| {r['key']} | {r['s_fe']:.4f} | {why} | {g['s']:.4f} | "
+            limit = feasibility_limit(r["optimum"])
+            global_s = f"{r['s_fe']:.4f}" + ("" if limit is None else " (geometry limit)")
+            lines.append(f"| {r['key']} | {global_s} | {why} | {g['s']:.4f} | "
                          f"{g.get('argmin_bound', float('nan')):.4f} | {g['J_search']:.6g} | "
                          f"{g.get('J_check', float('nan')):.6g} | {g['on_range_bound']} |")
     splits = c["reference"]["splits"]

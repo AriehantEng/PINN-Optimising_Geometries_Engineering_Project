@@ -63,3 +63,41 @@ def test_a_plateau_counts_as_converged_and_a_late_fall_does_not():
     verdict = R.converged(_history(falling), {})
     assert not verdict["converged"] and verdict["still_falling"]
     assert not R.converged(_history([1e-3, float("nan")] * 20), {})["converged"]
+
+
+def test_the_study_figures_draw_every_finished_run(tmp_path, monkeypatch):
+    """The drop-error and training figures once cycled a six-colour list with
+    zip and silently drew 6 of 13 runs; now each draws every run or refuses."""
+    import importlib.util
+    import pathlib
+    path = pathlib.Path(__file__).resolve().parents[1] / "docs" / "re_study" / "figures.py"
+    spec = importlib.util.spec_from_file_location("re_study_figures", path)
+    F = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(F)
+    finished = F.runs()
+    assert len(finished) == len(list(F.HERE.glob("pinn_*.csv"))) - len(list(F.HERE.glob("pinn_*_loss.csv")))
+    monkeypatch.setattr(F, "HERE", tmp_path)
+    assert F.drop_error(finished) == len(finished)
+    assert F.training(finished) == len(finished)
+
+
+def _optimum(best, bracket, refused):
+    return {"best_split": best, "refused": [{"split": s, "reason": "walls"} for s in refused],
+            "fine_bracket": [{"split": s, "total_pressure_drop": j} for s, j in bracket]}
+
+
+def test_an_optimum_against_a_refused_split_is_a_geometry_limit():
+    # 30/120: J still falls at 0.2680 and 0.25, the bracket's left point, is refused
+    o = _optimum(0.26803, [(0.25, None), (0.26803, 2.79), (0.35, 3.16)],
+                 [0.1, 0.25, 0.26459, 0.26753])
+    assert A.feasibility_limit(o) == 0.26753
+    o = _optimum(0.7, [(0.65, 3.0), (0.7, 2.9), (0.75, None)], [0.75, 0.8])
+    assert A.feasibility_limit(o) == 0.75
+
+
+def test_an_interior_minimum_is_not_a_geometry_limit():
+    assert A.feasibility_limit(_optimum(0.4848, [(0.45, 4.1), (0.4848, 4.03), (0.5, 4.05)],
+                                        [])) is None
+    # a refused split elsewhere does not make an interior minimum a limit
+    assert A.feasibility_limit(_optimum(0.4848, [(0.45, 4.1), (0.4848, 4.03), (0.5, 4.05)],
+                                        [0.1])) is None

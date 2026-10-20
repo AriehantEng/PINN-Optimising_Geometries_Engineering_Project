@@ -5,22 +5,24 @@ Geometry: parent 3 long, outer walls 4, share q = 0.5. Search mesh 0.02/3, check
 | case | s_FE | argmin bound ε_s | J_FE (search) | J_FE (check) | J_FE (reference, at s_FE) | L1, L2 (centreline at s_FE) | s_M | s_L | survives refinement |
 |---|---|---|---|---|---|---|---|---|---|
 | 30-90_Re0.1 | 0.4844 | 0.0010 | 40.0827 | 40.0909 | 40.0916 | 3.6843, 4.7383 | 0.5000 | 0.4843 | yes |
-| 30-120_Re0.1 | 0.2680 | — | 27.5138 | 27.5235 | 27.5261 | 2.0003, 6.4638 | 0.5000 | 0.4523 | yes |
+| 30-120_Re0.1 | 0.2680 (geometry limit) | — | 27.5138 | 27.5235 | 27.5261 | 2.0003, 6.4638 | 0.5000 | 0.4523 | n/a: a limit, not a minimum |
 | 30-90_Re1 | 0.4851 | 0.0010 | 40.0863 | 40.0946 | 40.0953 | 3.6855, 4.7372 | 0.5000 | 0.4843 | yes |
-| 30-120_Re1 | 0.2680 | — | 27.5156 | 27.5255 | 27.5283 | 2.0003, 6.4638 | 0.5000 | 0.4523 | yes |
+| 30-120_Re1 | 0.2680 (geometry limit) | — | 27.5156 | 27.5255 | 27.5283 | 2.0003, 6.4638 | 0.5000 | 0.4523 | n/a: a limit, not a minimum |
 | 30-90_Re10 | 0.4848 | 0.0010 | 4.03491 | 4.03576 | 4.03583 | 3.6850, 4.7376 | 0.5000 | 0.4843 | yes |
-| 30-120_Re10 | 0.2680 | — | 2.78893 | 2.7902 | 2.79074 | 2.0003, 6.4638 | 0.5000 | 0.4523 | yes |
+| 30-120_Re10 | 0.2680 (geometry limit) | — | 2.78893 | 2.7902 | 2.79074 | 2.0003, 6.4638 | 0.5000 | 0.4523 | n/a: a limit, not a minimum |
 | 30-90_Re100 | 0.4888 | 0.0010 | 0.454244 | 0.454589 | 0.454609 | 3.6920, 4.7307 | 0.5000 | 0.4843 | yes |
-| 30-120_Re100 | 0.2680 | — | 0.398366 | 0.399564 | 0.400403 | 2.0003, 6.4638 | 0.5000 | 0.4523 | yes |
+| 30-120_Re100 | 0.2680 (geometry limit) | — | 0.398366 | 0.399564 | 0.400403 | 2.0003, 6.4638 | 0.5000 | 0.4523 | n/a: a limit, not a minimum |
+
+'Geometry limit': J still falls at s_FE, and the next split the search tried (0.26753) is refused by the geometry, so s_FE is the edge of the feasible splits, not a minimum of J, and no argmin bound applies. Its L1, L2 are those of the limiting geometry.
 
 ### Cases whose optimum lies outside the PINNs' range: the optimum inside it
 
 | case | global s_FE | why outside | s* in range | argmin bound | J (search) | J (check) | on the range's bound |
 |---|---|---|---|---|---|---|---|
-| 30-120_Re0.1 | 0.2680 | splits below 0.2675 refused by the geometry | 0.3500 | nan | 31.1819 | nan | True |
-| 30-120_Re1 | 0.2680 | splits below 0.2675 refused by the geometry | 0.3500 | nan | 31.186 | nan | True |
-| 30-120_Re10 | 0.2680 | splits below 0.2675 refused by the geometry | 0.3500 | nan | 3.15536 | nan | True |
-| 30-120_Re100 | 0.2680 | splits below 0.2675 refused by the geometry | 0.3797 | 0.0013 | 0.424742 | 0.425851 | False |
+| 30-120_Re0.1 | 0.2680 (geometry limit) | splits below 0.2675 refused by the geometry | 0.3500 | nan | 31.1819 | nan | True |
+| 30-120_Re1 | 0.2680 (geometry limit) | splits below 0.2675 refused by the geometry | 0.3500 | nan | 31.186 | nan | True |
+| 30-120_Re10 | 0.2680 (geometry limit) | splits below 0.2675 refused by the geometry | 0.3500 | nan | 3.15536 | nan | True |
+| 30-120_Re100 | 0.2680 (geometry limit) | splits below 0.2675 refused by the geometry | 0.3797 | 0.0013 | 0.424742 | 0.425851 | False |
 
 ### J on the reference mesh
 
