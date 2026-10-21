@@ -39,7 +39,7 @@ pinn_step() {      # config tag
             echo "$(stamp) FAILED $tag"
         fi
     fi
-    if [ -d "$run" ] && ! ls $OUT/pinn_*"_summary.json" 2>/dev/null | xargs -r grep -l "\"run\": \"$run\"" >/dev/null; then
+    if [ -d "$run" ] && ! grep -qs "\"run\": \"$run\"" $OUT/pinn_*_summary.json; then  # grep -s: no summary yet means not exported
         python -m bifurcation.re_export --run "$run" --out $OUT --index $OUT >> "$LOGS/$tag.export.log" 2>&1 \
             && echo "$(stamp) exported $tag" || echo "$(stamp) export FAILED $tag"
     fi
