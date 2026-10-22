@@ -105,6 +105,32 @@ n2 = sum(1 for r in in_scope if verdicts(r)[1])
 p(f"Of the {len(done)} runs reported, {n1} pass P1. Of the {len(in_scope)} in P2's scope, "
   f"{n2} pass P2. Verdicts are on the unrounded values; nothing was rerun.")
 
+h1("What Tier A shows")
+bullets([
+    "P1 passes only at q = 0.5: 0/120 at both Reynolds numbers, to within 0.0001. Every run at "
+    "another share fails it, at both Reynolds numbers, including the symmetric 15/15 null test.",
+    "At Re_h = 10 the misses are moderate and grow with the share's distance from 0.5: −0.0049 "
+    "at q = 0.35, +0.0020 at 0.65 (failing by 0.00002), −0.0064 at 0.8, −0.0078 at 0.2, and "
+    "−0.0068 for 15/15 at 0.2. The regret stays below 0.13%, and the pressure-drop error within "
+    "±2.6% over each off-centre range (±3.2% for 0/120).",
+    "At Re_h = 0.1 every off-centre run fails, by +0.006 to +0.156 (regret up to 40%; the PINN's "
+    "optimum always lies above the reference's). Every Tier A run there, 0/120 included, ends at "
+    "a held-out loss of 1.1 to 22, against 0.12 to 0.16 for the three earlier 30/90 runs at "
+    "q = 0.5, and with largest drop errors of 8 to 30%; 0/120 (1.1, −8.1% at its range's top) still "
+    "placed its optimum to 0.0001, because its error was flat near the optimum.",
+    "The 15/15 null test misses by as much as 30/90 at the same share (−0.0068 against −0.0078 "
+    "at Re_h = 10), so the miss belongs to the share, not to the layout's length asymmetry.",
+    "Confound: every off-centre case also had a smaller corner-mode cutoff (0.10 to 0.35, by the "
+    "pre-registered rule, because its narrow daughter is narrow) than 0/120 (0.40) or the "
+    "earlier runs (0.5). Tier A cannot separate the share from the cutoff; a run at an "
+    "off-centre share with the cutoff held at 0.40 or more would, where the geometry admits it "
+    "(it does not at q = 0.2 or 0.8 with this range).",
+    "P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 "
+    "and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and "
+    "0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction "
+    "loses accuracy as the share moves from 0.5 in a layout with unequal lengths.",
+])
+
 h1("1. Every run against the pass marks")
 rows = []
 for r in R:
@@ -134,15 +160,19 @@ for r in done:
     g = edges(s)
     star = next(f for f in s["fields"] if f.get("at"))
     t = s["training"]
+    cutoff = __import__("yaml").safe_load(
+        (ROOT / "bifurcation" / f"p_{T.run_tag(r['angles'], r['share'], r['re'])}.yaml").read_text()
+    )["model"]["corner_cutoff"]
     rows.append([f"{r['angles'][0]:g}/{r['angles'][1]:g}", f"{r['share']:g}", f"{r['re']:g}",
+                 f"{cutoff:g}",
                  f"{100 * g[0]['drop_error']:+.2f}% / {100 * g[3]['drop_error']:+.2f}% / "
                  f"{100 * g[-1]['drop_error']:+.2f}%",
                  f"{100 * max(abs(f['drop_error']) for f in g):.2f}%",
                  f"{star['u']:.2e}", f"{t['selected_heldout_loss']:.3g}",
                  f"{t['wall_seconds'] / 60:.0f}", "yes" if t["converged"] else "no"])
-table(["Layout", "q", "Re_h", "Drop error: low end / middle / high end", "Largest |drop error|",
-       "u error at s*", "Held-out loss", "Min", "Converged"], rows,
-      [800, 500, 550, 2600, 1100, 1000, 1000, 600, 900],
+table(["Layout", "q", "Re_h", "Corner cutoff", "Drop error: low end / middle / high end",
+       "Largest |drop error|", "u error at s*", "Held-out loss", "Min", "Converged"], rows,
+      [800, 500, 550, 700, 2500, 1000, 950, 950, 550, 850],
       "Drop error = J_PINN/J_ref − 1 at the seven evaluation splits. Held-out loss is a "
       "diagnostic only, in each run's pressure units (μU_c/h at Re_h 0.1, ρU_c² at 10).")
 
