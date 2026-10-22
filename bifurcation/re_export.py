@@ -18,7 +18,8 @@ named pinn_<a1>-<a2>_Re<Re>_seed<seed>:
                   the signed drop error against the reference at the
                   evaluation splits and at s* (one more reference solve);
                   training: wall time, final training loss, selected held-out
-                  loss, seed, and whether it converged (defined in the file).
+                  loss, seed, and whether its held-out loss had plateaued (defined in
+                  the file; a plateau says nothing about how low the loss is).
 
 A run with no params.npz is exported as failed, with the reason given.
 J is in the run's pressure units: rho U_c^2 (inertial) or mu U_c / h (viscous).
@@ -72,17 +73,20 @@ def history_rows(history, config):
     return rows
 
 
-def converged(history, metrics_training):
+def plateaued(history, metrics_training):
+    """Whether the held-out loss had stopped falling by the end of the fixed
+    schedule. Named 'converged' until Tier A, where a run plateaued at a loss of
+    22 against 0.12-0.16 for a working one: a plateau is not a low loss."""
     lm = [e for e in history if e["phase"] == "lm"]
     finite = all(math.isfinite(e["heldout_loss"]) for e in history)
     if len(lm) <= STILL_FALLING_STEPS or not finite:
-        return {"converged": False, "finite": finite,
+        return {"plateaued": False, "finite": finite,
                 "why": "too few LM steps to judge" if finite else "a loss became non-finite"}
     held = [min(e["heldout_loss"], e.get("heldout_average") or math.inf) for e in lm]
     before = min(held[:-STILL_FALLING_STEPS])
     last = min(held[-STILL_FALLING_STEPS:])
     falling = last < (1.0 - STILL_FALLING_DROP) * before
-    return {"converged": not falling, "finite": True, "still_falling": falling,
+    return {"plateaued": not falling, "finite": True, "still_falling": falling,
             "best_heldout_before_last_steps": before, "best_heldout_last_steps": last,
             "definition": f"finished, every loss finite, and the best held-out loss of the "
                           f"last {STILL_FALLING_STEPS} LM steps not more than "
@@ -174,7 +178,7 @@ def export(run_directory, out_directory):
         "training": {"wall_seconds": t["total_seconds"],
                      "final_training_loss": lm[-1]["train_loss"] if lm else history[-1]["train_loss"],
                      "selected": t["selected"], "selected_heldout_loss": t["selected_heldout_loss"],
-                     "parameters": t["parameter_count"], **converged(history, t)},
+                     "parameters": t["parameter_count"], **plateaued(history, t)},
     }
     (out / f"{name}_summary.json").write_text(json.dumps(flow._json_safe(summary), indent=1))
     (out / f"{name}_summary.md").write_text(summary_markdown(name, summary))
@@ -203,8 +207,8 @@ def summary_markdown(name, s):
                      f"{100 * f['drop_error']:+.3f}% |")
     lines += ["", f"Training: {t['wall_seconds'] / 60:.0f} min, final training loss "
                   f"{t['final_training_loss']:.3e}, selected {t['selected']} with held-out loss "
-                  f"{t['selected_heldout_loss']:.3e}; converged: "
-                  + ("yes" if t["converged"] else "no")
+                  f"{t['selected_heldout_loss']:.3e}; plateaued: "
+                  + ("yes" if t["plateaued"] else "no")
                   + (": the held-out loss was still falling when the fixed schedule ended"
                      if t.get("still_falling") else "")
                   + (f" (definition: {t['definition']})" if "definition" in t
@@ -219,7 +223,7 @@ def index(directory):
                              r["seed"]))
     lines = ["## PINN runs of the Reynolds-number study", "",
              "| layout | q | Re_h | seed | s* (PINN) | regret | drop error at the range's low end "
-             "/ middle / high end | u error at the middle | training (min) | converged |",
+             "/ middle / high end | u error at the middle | training (min) | plateaued |",
              "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         head = (f"| {r['layout'][0]:g}/{r['layout'][1]:g} | {r.get('share', 0.5):g} | "
@@ -234,7 +238,7 @@ def index(directory):
         drops = " / ".join(f"{100 * f['drop_error']:+.2f}% ({f['split']:.2f})" for f in ends)
         lines.append(f"{head} {r['s_star_pinn']:.4f} | {100 * r['regret']:+.4f}% | {drops} | "
                      f"{ends[1]['u']:.2e} | "
-                     f"{r['training']['wall_seconds'] / 60:.0f} | {r['training']['converged']} |")
+                     f"{r['training']['wall_seconds'] / 60:.0f} | {r['training']['plateaued']} |")
     (directory / "pinn_runs.md").write_text("\n".join(lines) + "\n")
     return rows
 

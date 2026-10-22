@@ -71,7 +71,7 @@ def run_section(title, s, notes):
         f"Pressure-drop error at s = 0.35 / 0.50 / 0.65: {drops(s)}.",
         f"Training {t['wall_seconds'] / 60:.0f} min; final training loss "
         f"{t['final_training_loss']:.3e}; held-out loss {t['selected_heldout_loss']:.3e} "
-        f"({t['selected']}); converged: {'yes' if t['converged'] else 'no'}.",
+        f"({t['selected']}); plateaued: {'yes' if t['plateaued'] else 'no'}.",
     ] + notes)
     rows = [[(f"{f['split']:.4f} (PINN s*)" if f.get("at") else f"{f['split']:.2f}"),
              f"{f['u']:.2e}", f"{f['v']:.2e}", f"{f['p']:.2e}", f"{100 * f['drop_error']:+.3f}%"]
@@ -98,7 +98,7 @@ p("Everything produced from the request to relabel the study's figures to the en
   "queue, in the order it happened: the relabelled figures, runs 8, 2 and 6, the six seed runs, "
   "and the comparisons made as each finished. J is in μU_c/h at Re_h ≤ 1 and ρU_c² above. "
   "Argmin error = PINN s* − reference s*; regret = J_ref(s*_PINN)/J_ref* − 1; pressure-drop error "
-  "= J_PINN/J_ref − 1 at the same split. 'Converged' = the schedule finished, every loss finite, "
+  "= J_PINN/J_ref − 1 at the same split. 'Plateaued' = the schedule finished, every loss finite, "
   "and the best held-out loss of the last 25 LM steps not more than 10% below the best before "
   "them.")
 
@@ -163,7 +163,7 @@ seed_table(0.1, (21, 22, 23), run("30/90", 0.1, 21)["s_star_reference_mesh_brent
 p("All three seeds place the optimum above the reference value: at Re_h = 0.1 the PINN has a "
   "systematic bias, not just scatter.")
 run_section("30/90, Re_h = 100, seed 23", run("30/90", 100, 23), [
-    "The first run that meets the convergence definition, yet it has the largest velocity error of "
+    "The first run whose held-out loss had plateaued, yet it has the largest velocity error of "
     "the 30/90 runs (9.4 × 10⁻³) and a +1.9% drop error at s = 0.35."])
 seed_table(100, (21, 22, 23), run("30/90", 100, 21)["s_star_reference_mesh_brent"])
 p("No consistent bias at Re_h = 100: the three argmin errors span −0.005 to +0.0006, mostly seed "
@@ -185,10 +185,10 @@ for (lay, re_, seed), s in sorted(S.items(), key=lambda kv: (kv[0][0] == "30/120
     rows.append([lay, f"{re_:g}", str(seed), f"{s['s_star_pinn']:.4f}",
                  f"{s['s_star_reference_mesh_brent']:.4f}", f"{s['argmin_error']:+.4f}",
                  f"{100 * s['regret']:.4f}%", drops(s), f"{by(s, 0.5)['u']:.2e}",
-                 f"{t['wall_seconds'] / 60:.0f}", "yes" if t["converged"] else "no"])
+                 f"{t['wall_seconds'] / 60:.0f}", "yes" if t["plateaued"] else "no"])
 rows.append(["30/120", "0.1", "21", "skipped: optimum on the range's bound", "", "", "", "", "", "", ""])
 table(["Layout", "Re_h", "Seed", "PINN s*", "Ref. s*", "Argmin error", "Regret",
-       "Pressure-drop error at 0.35 / 0.50 / 0.65", "u error at 0.50", "Min", "Converged"], rows,
+       "Pressure-drop error at 0.35 / 0.50 / 0.65", "u error at 0.50", "Min", "Plateaued"], rows,
       [750, 550, 500, 800, 800, 850, 850, 1950, 950, 500, 860],
       "All 13 runs (docs/re_study/pinn_runs.md).")
 rows = []
@@ -220,7 +220,7 @@ bullets([
     "Accuracy against Reynolds number: the drop error at the range's edge is about 1% at Re_h 10 and "
     "grows toward both ends, to 2.6–4.6% at Re_h 0.1 and 2.9–4.0% at Re_h 100 for 30/90, and "
     "7.6% for 30/120 at Re_h 1.",
-    "Convergence: only one run (30/90, Re_h 100, seed 23) met the definition within the fixed "
+    "Plateau: only one run (30/90, Re_h 100, seed 23) had a held-out loss that stopped falling within the fixed "
     "schedule; all others were still improving at the end.",
     "Code check after the last run: the fast test suite passed (805 passed, 5 skipped, 2 expected "
     "failures).",

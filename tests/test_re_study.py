@@ -56,13 +56,13 @@ def test_history_steps_follow_the_schedule():
     assert steps == [250, 3000 + 2 * 500, 3000 + 4 * 500 + 1]
 
 
-def test_a_plateau_counts_as_converged_and_a_late_fall_does_not():
+def test_a_plateau_counts_as_plateaued_and_a_late_fall_does_not():
     flat = [1e-3] * 100 + [0.95e-3] * 50
     falling = [1e-3 * 0.99**k for k in range(150)]           # 22% lower over the last 25
-    assert R.converged(_history(flat), {})["converged"]
-    verdict = R.converged(_history(falling), {})
-    assert not verdict["converged"] and verdict["still_falling"]
-    assert not R.converged(_history([1e-3, float("nan")] * 20), {})["converged"]
+    assert R.plateaued(_history(flat), {})["plateaued"]
+    verdict = R.plateaued(_history(falling), {})
+    assert not verdict["plateaued"] and verdict["still_falling"]
+    assert not R.plateaued(_history([1e-3, float("nan")] * 20), {})["plateaued"]
 
 
 def test_the_study_figures_draw_every_finished_run(tmp_path, monkeypatch):

@@ -1,6 +1,6 @@
 ## PINN runs of the Reynolds-number study
 
-| layout | q | Re_h | seed | s* (PINN) | regret | drop error at the range's low end / middle / high end | u error at the middle | training (min) | converged |
+| layout | q | Re_h | seed | s* (PINN) | regret | drop error at the range's low end / middle / high end | u error at the middle | training (min) | plateaued |
 |---|---|---|---|---|---|---|---|---|---|
 | 30/90 | 0.5 | 0.1 | 21 | 0.4870 | +0.0115% | -0.48% (0.35) / +0.11% (0.50) / -2.64% (0.65) | 2.54e-03 | 160 | False |
 | 30/90 | 0.5 | 0.1 | 22 | 0.4902 | +0.0563% | -0.93% (0.35) / -0.18% (0.50) / -4.57% (0.65) | 2.63e-03 | 170 | False |

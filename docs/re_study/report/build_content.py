@@ -77,7 +77,7 @@ for n, (lay, re_) in enumerate(order, 1):
 table(["#", "Layout", "Re_h", "PINN runs"], status, [600, 1400, 1000, 6360])
 p("Definitions. Argmin error = PINN s* − reference s*. Regret = J_ref(s*_PINN)/J_ref* − 1, both "
   "values from the reference solution. Drop error = J_PINN/J_ref − 1 at the same split. Field "
-  "errors are relative L2 errors integrated on the reference mesh. Converged = the schedule "
+  "errors are relative L2 errors integrated on the reference mesh. Plateaued = the schedule "
   "finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than "
   "10% below the best before them. Loss is a diagnostic only, never an accuracy measure.")
 
@@ -88,17 +88,35 @@ p("Procedure for each case: a 17-point scan over every split the width bounds al
   "neighbours on the check mesh (0.005, 5 levels). The argmin bound ε_s is the shift the check "
   "mesh's error slope implies plus 0.001. J on the reference mesh (0.002, 6 levels) is measured "
   "by the same function that measures the PINNs.")
+def reference_mesh_optimum(c):
+    """Brent's optimum on the reference mesh, from the seed-21 run's evaluation:
+    the value quoted everywhere else."""
+    f = STUDY / f"pinn_{c['key'].split('_')[0]}_{c['key'].split('_')[1]}_seed21_summary.json"
+    s = json.loads(f.read_text()) if f.is_file() else {}
+    return s.get("s_star_reference_mesh_brent")
+
+
 rows = []
 for c in keys["cases"]:
+    ref = reference_mesh_optimum(c)
+    search = c["in_range"]["s"] if "in_range" in c else c["s_fe"]
+    bound = c["in_range"].get("argmin_bound") if "in_range" in c else c["argmin_bound"]
+    gap = "—" if ref is None else (
+        f"{ref:.4f} ({ref - search:+.4f}" + (", within ε_s)" if bound and abs(ref - search) <= bound
+                                             else ")"))
     rows.append([c["key"].replace("_", ", ").replace("-", "/"), num(c["s_fe"]),
-                 "—" if c["argmin_bound"] is None else num(c["argmin_bound"]),
+                 "—" if c["argmin_bound"] is None else num(c["argmin_bound"]), gap,
                  f"{c['J_fe_search']:.6g}", f"{c['J_fe_check']:.6g}",
                  f"{c['J_fe_reference_at_s_fe']:.6g}",
                  f"{c['centreline_lengths'][0]:.4f}, {c['centreline_lengths'][1]:.4f}",
                  num(c["s_murray"]), num(c["s_length_corrected"])])
-table(["Case", "s_FE", "ε_s", "J (search)", "J (check)", "J (reference)", "L₁, L₂ at s_FE", "s_M",
-       "s_L"], rows, [1500, 800, 750, 1050, 1050, 1150, 1400, 750, 850],
-      "Source: docs/re_study/answer_keys.json. J in μU_c/h at Re_h ≤ 1, ρU_c² above.")
+table(["Case", "s_FE (search mesh)", "ε_s", "Reference-mesh s* (− search-mesh s* in range)",
+       "J (search)", "J (check)", "J (reference)", "L₁, L₂ at s_FE", "s_M", "s_L"], rows,
+      [1300, 800, 650, 1700, 950, 950, 1000, 1250, 650, 750],
+      "Source: docs/re_study/answer_keys.json and the seed-21 run summaries. J in μU_c/h at "
+      "Re_h ≤ 1, ρU_c² above. Every optimum quoted elsewhere in this document and in the paper "
+      "is the reference-mesh one (Brent from the evaluation splits); the search-mesh s_FE "
+      "differs from it by no more than its bound ε_s except at 30/120, Re_h = 100.")
 p("For 30/120 every split below s = 0.268 is refused by the geometry (the inner walls would meet "
   "beyond daughter 1's outlet), and J falls toward that limit at every Re_h: the global s_FE = "
   "0.2680 is the geometric limit, not a flow optimum, and has no argmin bound. Inside the PINNs' "
@@ -196,9 +214,9 @@ for name, s in sorted(summaries.items(), key=lambda kv: (kv[1]["layout"][1], kv[
                  num(s["s_star_reference_mesh_brent"]), f"{s['argmin_error']:+.4f}",
                  f"{100 * s['regret']:.4f}%",
                  " / ".join(f"{100 * by[k]['drop_error']:+.2f}" for k in (0.35, 0.5, 0.65)),
-                 f"{by[0.5]['u']:.2e}", f"{t['wall_seconds'] / 60:.0f}, {'yes' if t['converged'] else 'no'}"])
+                 f"{by[0.5]['u']:.2e}", f"{t['wall_seconds'] / 60:.0f}, {'yes' if t['plateaued'] else 'no'}"])
 table(["Layout", "Re_h", "Seed", "PINN s*", "Ref. s*", "Argmin error", "Regret",
-       "Drop error % at 0.35 / 0.50 / 0.65", "u error at 0.50", "Min, converged"], rows,
+       "Drop error % at 0.35 / 0.50 / 0.65", "u error at 0.50", "Min, plateaued"], rows,
       [800, 600, 550, 850, 850, 950, 900, 1700, 1000, 1160],
       "Source: docs/re_study/pinn_runs.md and the run summaries.")
 h2("4.1 30/90 across seeds")
@@ -246,7 +264,7 @@ for name, s in sorted(summaries.items(), key=lambda kv: (kv[1]["layout"][1], kv[
       f"reference s* = {s['s_star_reference_mesh_brent']:.4f}, J_ref* = "
       f"{s['J_fe_at_reference_s_star']:.6g}. Loss at s* {s['loss_at_s_star']:.3e}. Training "
       f"{t['wall_seconds'] / 60:.0f} min, final training loss {t['final_training_loss']:.3e}, "
-      f"held-out {t['selected_heldout_loss']:.3e}, converged: {'yes' if t['converged'] else 'no'}.")
+      f"held-out {t['selected_heldout_loss']:.3e}, plateaued: {'yes' if t['plateaued'] else 'no'}.")
     rows = [[(f"{f['split']:.4f} (s*)" if f.get("at") else f"{f['split']:.2f}"),
              f"{f['u']:.2e}", f"{f['v']:.2e}", f"{f['p']:.2e}", pct(f["drop_error"])]
             for f in s["fields"]]
@@ -292,7 +310,7 @@ table(["Mesh level", "nx", "ny", "Unknowns", "Total-pressure drop", "Dissipation
 h1("6. Notes")
 h2("6.1 Loss is not accuracy")
 p("The Re_h = 100 run of seed 21 had the lowest held-out loss of the 30/90 runs and the largest "
-  "argmin error; the only run that met the convergence definition (30/90, Re_h 100, seed 23) has "
+  "argmin error; the only run whose held-out loss had plateaued (30/90, Re_h 100, seed 23) has "
   "the largest velocity error of the 30/90 runs. Every other run was still improving when the "
   "fixed schedule ended.")
 h2("6.2 30/120 and run 5")

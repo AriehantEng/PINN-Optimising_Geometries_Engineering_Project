@@ -169,9 +169,9 @@ for r in done:
                  f"{100 * g[-1]['drop_error']:+.2f}%",
                  f"{100 * max(abs(f['drop_error']) for f in g):.2f}%",
                  f"{star['u']:.2e}", f"{t['selected_heldout_loss']:.3g}",
-                 f"{t['wall_seconds'] / 60:.0f}", "yes" if t["converged"] else "no"])
+                 f"{t['wall_seconds'] / 60:.0f}", "yes" if t["plateaued"] else "no"])
 table(["Layout", "q", "Re_h", "Corner cutoff", "Drop error: low end / middle / high end",
-       "Largest |drop error|", "u error at s*", "Held-out loss", "Min", "Converged"], rows,
+       "Largest |drop error|", "u error at s*", "Held-out loss", "Min", "Plateaued"], rows,
       [800, 500, 550, 700, 2500, 1000, 950, 950, 550, 850],
       "Drop error = J_PINN/J_ref − 1 at the seven evaluation splits. Held-out loss is a "
       "diagnostic only, in each run's pressure units (μU_c/h at Re_h 0.1, ρU_c² at 10).")

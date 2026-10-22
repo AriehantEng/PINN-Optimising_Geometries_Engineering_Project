@@ -87,12 +87,12 @@
   "selected": "lm_average:150",
   "selected_heldout_loss": 6.030585036978924,
   "parameters": 5507,
-  "converged": false,
   "finite": true,
   "still_falling": true,
   "best_heldout_before_last_steps": 7.004588225977094,
   "best_heldout_last_steps": 6.030585036978924,
   "definition": "finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them",
-  "lm_stalled": 0
+  "lm_stalled": 0,
+  "plateaued": false
  }
 }

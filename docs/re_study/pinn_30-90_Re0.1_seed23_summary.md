@@ -1,6 +1,6 @@
 ## pinn_30-90_Re0.1_seed23
 
-Layout 30/90, Re_h = 0.1 (viscous pressure), seed 23.
+Layout 30/90, share q = 0.5, Re_h = 0.1 (viscous pressure), seed 23.
 
 - PINN optimum s* = 0.4862 (scan, then Brent), J = 40.2507; on the range's bound: False
 - finite elements at the PINN's s*: J = 40.0938 (reference mesh)
@@ -18,4 +18,4 @@ Layout 30/90, Re_h = 0.1 (viscous pressure), seed 23.
 | 0.65 | 6.82e-03 | 5.96e-03 | 4.33e-02 | -3.884% |
 | 0.4862 (s*) | 3.18e-03 | 2.61e-03 | 2.07e-03 | +0.391% |
 
-Training: 162 min, final training loss 1.108e-01, selected lm:144 with held-out loss 1.504e-01; converged: no: the held-out loss was still falling when the fixed schedule ended (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
+Training: 162 min, final training loss 1.108e-01, selected lm:144 with held-out loss 1.504e-01; plateaued: no: the held-out loss was still falling when the fixed schedule ended (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)

@@ -18,4 +18,4 @@ Layout 0/120, share q = 0.5, Re_h = 10 (inertial pressure), seed 21; trained ove
 | 0.62 | 1.50e-02 | 3.03e-02 | 3.24e-02 | -3.193% |
 | 0.4527 (s*) | 1.17e-02 | 2.15e-02 | 9.53e-03 | -0.277% |
 
-Training: 153 min, final training loss 2.777e-02, selected lm_average:119 with held-out loss 5.355e-03; converged: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
+Training: 153 min, final training loss 2.777e-02, selected lm_average:119 with held-out loss 5.355e-03; plateaued: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)

@@ -97,3 +97,10 @@ Tier A rerun. If q = 0.5 passes at 0.15 and q = 0.35 still fails at 0.40, the
 share itself is the limit. Mixed outcomes are reported as such. The seed-22
 run is compared with seed 21's argmin error (-0.0078); the q = 0.5 seed
 spread at Re_h = 10 was 0.0005. Tier A's own verdicts are not revised.
+
+## Amendment 2 (2026-10-22): "converged" renamed "plateaued"
+
+The verdict defined above is renamed, not changed: it says whether the
+held-out loss had stopped falling, not whether it is low (30/90, q = 0.2,
+Re_h = 0.1 plateaued at 22 against 0.12-0.16 for the earlier q = 0.5 runs).
+Held-out losses are reported beside it, as a diagnostic only.

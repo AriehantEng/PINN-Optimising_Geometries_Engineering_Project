@@ -1,6 +1,6 @@
 ## pinn_30-90_Re100_seed23
 
-Layout 30/90, Re_h = 100 (inertial pressure), seed 23.
+Layout 30/90, share q = 0.5, Re_h = 100 (inertial pressure), seed 23.
 
 - PINN optimum s* = 0.4895 (scan, then Brent), J = 0.449906; on the range's bound: False
 - finite elements at the PINN's s*: J = 0.454613 (reference mesh)
@@ -18,4 +18,4 @@ Layout 30/90, Re_h = 100 (inertial pressure), seed 23.
 | 0.65 | 1.36e-02 | 1.41e-02 | 2.92e-02 | -3.997% |
 | 0.4895 (s*) | 9.51e-03 | 1.25e-02 | 2.18e-02 | -1.035% |
 
-Training: 173 min, final training loss 1.408e-04, selected lm_average:131 with held-out loss 2.423e-04; converged: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
+Training: 173 min, final training loss 1.408e-04, selected lm_average:131 with held-out loss 2.423e-04; plateaued: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)

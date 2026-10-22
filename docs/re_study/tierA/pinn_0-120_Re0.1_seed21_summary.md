@@ -18,4 +18,4 @@ Layout 0/120, share q = 0.5, Re_h = 0.1 (viscous pressure), seed 21; trained ove
 | 0.62 | 1.71e-02 | 2.93e-02 | 2.06e-01 | -8.119% |
 | 0.4527 (s*) | 1.25e-02 | 2.40e-02 | 6.05e-03 | +0.052% |
 
-Training: 170 min, final training loss 1.338e+00, selected lm_average:131 with held-out loss 1.114e+00; converged: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
+Training: 170 min, final training loss 1.338e+00, selected lm_average:131 with held-out loss 1.114e+00; plateaued: yes (definition: finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them)
