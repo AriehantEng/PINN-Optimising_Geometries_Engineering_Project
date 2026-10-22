@@ -2132,10 +2132,10 @@
  },
  {
   "bullets": [
-   "L-BFGS iterations per cycle: 500 for Network 1 (4 cycles, developing_flow/re10_lm_fresh_inletgrid.yaml) and for Network 2, fixed-geometry and parametric (4 cycles).",
+   "L-BFGS iterations per cycle: 500 for Network 1 (4 cycles, developing_flow/re10_lm_fresh_inputmap.yaml, G5; its final polish uses none) and for Network 2, fixed-geometry and parametric (4 cycles).",
    "Sparse direct solver: SuperLU, through SciPy's spsolve, which scikit-fem's solve calls (UMFPACK is not installed).",
-   "Network 1's velocity error at x = 10 against Poiseuille: not computed. No trained Network 1 is stored on this branch; retraining it takes about 4.4 h.",
-   "Reference first pages (Gammaidoni et al.; Taylor & Hood): not retrievable from here."
+   "Network 1's velocity error at x = 10 against Poiseuille: measured after retraining Network 1 (docs/developing_re10-outlet.md): 2.7 × 10⁻⁶ relative L2, mean of three seeds.",
+   "References: confirmed from the publishers' listings (the first pages themselves could not be opened here); see the paper items."
   ]
  },
  {

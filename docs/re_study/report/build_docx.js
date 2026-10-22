@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType,
-  ShadingType, AlignmentType, ImageRun, LevelFormat, BorderStyle, Footer, PageNumber,
+  ShadingType, AlignmentType, ImageRun, LevelFormat, BorderStyle, Footer, PageNumber, PageBreak,
 } = require("docx");
 
 const HERE = __dirname;
@@ -52,6 +52,8 @@ for (const b of blocks) {
   if (b.title) children.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(b.title)] }));
   else if (b.h1) children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(b.h1)] }));
   else if (b.h2) children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(b.h2)] }));
+  else if (b.h3) children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun(b.h3)] }));
+  else if (b.pagebreak) children.push(new Paragraph({ children: [new PageBreak()] }));
   else if (b.p) children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun(b.p)] }));
   else if (b.note) children.push(new Paragraph({ spacing: { before: 60, after: 200 },
     children: [new TextRun({ text: b.note, italics: true, size: 17, color: "52514E" })] }));
@@ -85,6 +87,9 @@ const doc = new Document({
       { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
         run: { size: 25, bold: true, font: "Calibri", color: "1F3864" },
         paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1 } },
+      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 22, bold: true, font: "Calibri", color: "1F3864" },
+        paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 2 } },
     ],
   },
   numbering: { config: [{ reference: "bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "•",
