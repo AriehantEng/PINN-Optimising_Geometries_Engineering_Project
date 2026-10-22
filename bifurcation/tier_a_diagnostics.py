@@ -283,3 +283,20 @@ def local_main():
         path.write_text(json.dumps(cache, indent=1))
         print(f"{label(s)}: e' {100 * r['e_slope']:+.2f}%/s, J''/J {r['curvature']:.1f}, "
               f"predicted {r['predicted']:+.5f}, measured {r['measured']:+.5f}", flush=True)
+
+
+def local_markdown():
+    """Section 3b, from the cached local solves."""
+    cache = json.loads((OUT / "diagnostics_local_slope.json").read_text())
+    by_run = {s["run"]: s for s in summaries()}
+    L = ["", "### 3b. The error slope measured at the optimum (reference solves at s*_ref ± 0.01)",
+         "", "| run | group | e′ (per unit s) | J″/J | predicted δs | measured | measured / predicted |",
+         "|---|---|---|---|---|---|---|"]
+    for run, r in cache.items():
+        s = by_run[run]
+        ratio = r["measured"] / r["predicted"] if abs(r["predicted"]) > 1e-12 else math.nan
+        L.append(f"| {label(s)} | {s['group']} | {100 * r['e_slope']:+.2f}% | {r['curvature']:.1f} | "
+                 f"{r['predicted']:+.5f} | {r['measured']:+.5f} | {ratio:.2f} |")
+    L += ["", "The three-point estimate of section 3 uses evaluation splits 0.05 apart; this one "
+          "takes e′ by central difference over ±0.01, where e is close to linear."]
+    return "\n".join(L) + "\n"
