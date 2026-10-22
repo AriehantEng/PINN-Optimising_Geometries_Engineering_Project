@@ -76,3 +76,24 @@ corner-mode cutoff: min(0.5, R − 0.2), rounded down to 0.05, where R is the
 largest cutoff the geometry admits across the trained range (as the original
 0.5 was 0.2 short of the nearest other edge). A failed run is recorded, not
 rerun until it works.
+
+## Amendment 1 (2026-10-22, after all twelve Tier A runs): controls
+
+Added after the results, to resolve a confound they exposed: every off-centre
+case also had a smaller corner-mode cutoff (0.10 to 0.35) than the q = 0.5
+cases (0.40 at 0/120, 0.5 in the earlier runs). Same network, schedule, range
+rule (s_L ± 0.15), pass marks (P1 ±0.002, P2 0.003) and reporting as Tier A;
+only the cutoff is set by hand.
+
+| run | q | Re_h | cutoff | seed | purpose |
+|---|---|---|---|---|---|
+| 30/90 | 0.5 | 0.1, 10 | 0.15 | 21 | q = 0.5 at an off-centre case's cutoff |
+| 30/90 | 0.35 | 0.1, 10 | 0.40 | 21 | an off-centre share at a q = 0.5 case's cutoff |
+| 30/90 | 0.2 | 10 | 0.10 (the rule's) | 22 | a second seed of a Tier A case |
+
+Decision rule, fixed now: if q = 0.5 fails P1 at cutoff 0.15 while q = 0.35
+passes at 0.40, the cutoff rule caused Tier A's failures; it is replaced and
+Tier A rerun. If q = 0.5 passes at 0.15 and q = 0.35 still fails at 0.40, the
+share itself is the limit. Mixed outcomes are reported as such. The seed-22
+run is compared with seed 21's argmin error (-0.0078); the q = 0.5 seed
+spread at Re_h = 10 was 0.0005. Tier A's own verdicts are not revised.

@@ -262,3 +262,43 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# --------------------------------------------------------------------------- #
+# Controls (preregistration amendment 1): the share against the corner cutoff,
+# and a second seed
+# --------------------------------------------------------------------------- #
+
+CONTROLS = [  # (angles, share, Re_h, cutoff, seed): run in this order
+    ((30.0, 90.0), 0.5, 0.1, 0.15, SEED),    # q = 0.5 at a small cutoff
+    ((30.0, 90.0), 0.35, 0.1, 0.40, SEED),   # off-centre at a large cutoff
+    ((30.0, 90.0), 0.5, 10.0, 0.15, SEED),
+    ((30.0, 90.0), 0.35, 10.0, 0.40, SEED),
+    ((30.0, 90.0), 0.2, 10.0, None, 22),     # Tier A's own rule, another seed
+]
+
+
+def control_tag(angles, share, reynolds, cutoff, seed):
+    cut = "" if cutoff is None else f"_cut{cutoff:g}"
+    return f"re{reynolds:g}_{angles[0]:g}{angles[1]:g}_q{share:g}{cut}_corners_s{seed}"
+
+
+def write_control_configs():
+    written = []
+    for angles, share, reynolds, cutoff, seed in CONTROLS:
+        flow = next(f for f in FLOWS if f["reynolds"] == reynolds)
+        rule, admitted = corner_cutoff(angles, share)
+        used = rule if cutoff is None else cutoff
+        doc = parametric_document(angles, share, flow, used)
+        tag = control_tag(angles, share, reynolds, cutoff, seed)
+        doc["name"], doc["seed"] = f"parametric_{tag}", seed
+        if not _loads(doc):
+            raise RuntimeError(f"{tag}: the geometry does not admit cutoff {used}")
+        path = HERE / f"p_{tag}.yaml"
+        path.write_text(
+            "# Tier A control (docs/re_study/tierA/preregistration.md, amendment 1): layout "
+            f"{angles[0]:g}/{angles[1]:g},\n# share {share:g}, Re_h {reynolds:g}, seed {seed}; "
+            f"corner cutoff {used:g} (the rule gives {rule:g};\n# the geometry admits "
+            f"{admitted:.3f} across the range).\n" + yaml.safe_dump(doc, sort_keys=False))
+        written.append(path)
+    return written
