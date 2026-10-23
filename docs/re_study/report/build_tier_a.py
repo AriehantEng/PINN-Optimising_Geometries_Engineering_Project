@@ -120,11 +120,15 @@ bullets([
     "placed its optimum to 0.0001, because its error was flat near the optimum.",
     "The 15/15 null test misses by as much as 30/90 at the same share (−0.0068 against −0.0078 "
     "at Re_h = 10), so the miss belongs to the share, not to the layout's length asymmetry.",
-    "Confound: every off-centre case also had a smaller corner-mode cutoff (0.10 to 0.35, by the "
-    "pre-registered rule, because its narrow daughter is narrow) than 0/120 (0.40) or the "
-    "earlier runs (0.5). Tier A cannot separate the share from the cutoff; a run at an "
-    "off-centre share with the cutoff held at 0.40 or more would, where the geometry admits it "
-    "(it does not at q = 0.2 or 0.8 with this range).",
+    "The share, not the corner-mode cutoff, is the limit (section 5, amendment 1): every "
+    "off-centre case also had a smaller cutoff, but 30/90 at q = 0.5 passes P1 with its cutoff "
+    "forced to 0.15 at both Reynolds numbers, and q = 0.35 still fails with it raised to 0.40. "
+    "The small cutoff costs field accuracy (held-out loss and u error several times higher) "
+    "without moving the optimum.",
+    "Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference "
+    "optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) to within "
+    "a factor 0.8–1.4 in 16 of 18 runs; off-centre slopes are 17–35% per unit s against "
+    "0.5–5% at q = 0.5. The one large failure is the collapsed run (30/90, q = 0.2, Re_h = 0.1).",
     "P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 "
     "and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and "
     "0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction "
@@ -245,6 +249,85 @@ for angles, share in T.CASES:
 table(["Layout", "q", "s_M", "s_L", "s*_ref at Re_h 0.1 (− s_L)", "s*_ref at Re_h 10 (− s_L)"],
       rows, [900, 600, 1000, 1000, 2400, 2400],
       "s_M is the planar Murray split √q/(√q + √(1 − q)). P2 passes where |s*_ref − s_L| ≤ 0.003.")
+
+# ---- 5. controls (amendment 1) -------------------------------------------- #
+CONTROLS = STUDY / "tierA_controls"
+h1("5. Controls: the share against the corner cutoff, and a second seed")
+p("Pre-registered as amendment 1 after the twelve runs, with the decision rule fixed before "
+  "any control ran: if q = 0.5 fails P1 at cutoff 0.15 while q = 0.35 passes at 0.40, the "
+  "cutoff rule caused the failures; if q = 0.5 passes at 0.15 and q = 0.35 still fails at "
+  "0.40, the share itself is the limit.")
+rows = []
+for angles, share, re_, cutoff, seed in T.CONTROLS:
+    stem = (f"pinn_{angles[0]:g}-{angles[1]:g}" + ("" if share == 0.5 else f"_q{share:g}")
+            + f"_Re{re_:g}_seed{seed}")
+    f = CONTROLS / f"{stem}_summary.json"
+    if not f.is_file():
+        rows.append([f"{angles[0]:g}/{angles[1]:g}", f"{share:g}", f"{re_:g}",
+                     "rule" if cutoff is None else f"{cutoff:g}", str(seed), "not finished",
+                     "", "", "", ""])
+        continue
+    s = json.loads(f.read_text())
+    used = __import__("yaml").safe_load((ROOT / s["run"] / "config.yaml").read_text())["model"]["corner_cutoff"]
+    tier = next((r["s"] for r in R if tuple(r["angles"]) == tuple(angles) and r["share"] == share
+                 and r["re"] == re_ and "argmin_error" in r["s"]), None)
+    star = next(x for x in s["fields"] if x.get("at"))
+    rows.append([f"{angles[0]:g}/{angles[1]:g}", f"{share:g}", f"{re_:g}", f"{used:g}", str(seed),
+                 f"{s['argmin_error']:+.4f}", "pass" if abs(s["argmin_error"]) <= P1 else "FAIL",
+                 f"{100 * s['regret']:.4f}%", f"{s['training']['selected_heldout_loss']:.3g}",
+                 "—" if tier is None else f"{tier['argmin_error']:+.4f}"])
+table(["Layout", "q", "Re_h", "Cutoff", "Seed", "Argmin error", "P1", "Regret", "Held-out loss",
+       "Tier A run's argmin error"], rows, [800, 500, 550, 650, 550, 1050, 550, 950, 1050, 1350],
+      "The Tier A column is the same case under the pre-registered cutoff rule (seed 21). For "
+      "q = 0.5 there was no Tier A 30/90 run; the earlier q = 0.5 runs (cutoff 0.5, range "
+      "[0.35, 0.65]) are in section 2's baseline.")
+
+# ---- 6. diagnostics ------------------------------------------------------- #
+D = json.loads((TIER / "diagnostics.json").read_text())
+LS = json.loads((TIER / "diagnostics_local_slope.json").read_text())
+h1("6. Why the optimum moves, and why Re_h = 0.1 collapses")
+h2("The error slope at the optimum predicts each argmin error")
+p("If J_PINN = J_ref (1 + e(s)), the PINN's optimum lies at δs ≈ −e′(s*)/(J″/J) from the "
+  "reference's (supplement S1.3). e′ is measured here by central difference from two extra "
+  "reference-mesh solves at s*_ref ± 0.01, J″/J by the central second difference of J_ref.")
+from bifurcation import tier_a_diagnostics as TD  # noqa: E402
+by_run = {s["run"]: s for s in TD.summaries()}
+rows = []
+for run, r in LS.items():
+    s = by_run[run]
+    rows.append([TD.label(s), s["group"], f"{100 * r['e_slope']:+.2f}%", f"{r['curvature']:.1f}",
+                 f"{r['predicted']:+.5f}", f"{r['measured']:+.5f}",
+                 f"{r['measured'] / r['predicted']:.2f}" if abs(r["predicted"]) > 1e-12 else "—"])
+table(["Run", "Group", "e′ per unit s", "J″/J", "Predicted δs", "Measured", "Measured / predicted"],
+      rows, [2900, 1400, 1000, 700, 1100, 1100, 1100])
+h2("Training: Levenberg–Marquardt fails to recover off-centre at Re_h = 0.1")
+rows = [[h["run"], h["group"], f"{h['adam_end']:.3g}", f"{h['lbfgs_peak']:.3g} ({h['lbfgs_jump']:.1f}×)",
+         f"{h['lm_min']:.3g}", f"{h['lm_recovery']:.0f}"] for h in D["history"]]
+table(["Run", "Group", "Held-out, end of Adam", "L-BFGS peak (× Adam end)", "LM minimum",
+       "End of L-BFGS / LM minimum"], rows, [2900, 1400, 1300, 1700, 1200, 1500],
+      "At Re_h = 0.1 every run, the working q = 0.5 ones included, rises during L-BFGS. The "
+      "earlier q = 0.5 runs then fall about 400-fold under Levenberg–Marquardt; the Tier A "
+      "runs only 5- to 40-fold. Held-out loss is a diagnostic, in each run's pressure units.")
+h2("Collocation points across the narrow daughter")
+rows = [[x["case"], f"{x['split']:.4f}", f"{x['d1_width']:.3f}", f"{x['d1_across']:.1f}",
+         f"{x['d2_width']:.3f}", f"{x['d2_across']:.1f}"] for x in D["resolution"]]
+table(["Case", "Split", "Daughter 1 width", "Points across it", "Daughter 2 width",
+       "Points across it"], rows, [1800, 1000, 1500, 1400, 1500, 1400],
+      "One draw of 1,024 points per split (the trainer's sampler, mean of 8 draws); 'points "
+      "across' = width / mean spacing. The narrowest daughters get 2.7–3.3 points across, against "
+      "5.8 at the earlier q = 0.5 range's edge; q = 0.35 (4.3) also failed at Re_h = 0.1, so "
+      "sampling density alone does not explain the collapse.")
+h2("P2: the friction law with lengths re-measured at every split")
+rows = [[x["case"], f"{x['s_M']:.4f}", f"{x['s_L']:.4f}", f"{x['friction_centreline']:.4f}",
+         f"{x['friction_closed']:.4f}",
+         ", ".join(f"{k}: {v:.4f}" for k, v in sorted(x["reference"].items(), key=lambda kv: float(kv[0])))]
+        for x in D["friction"]]
+table(["Case", "s_M", "s_L (lengths at s_L)", "Friction law, centreline lengths at every s",
+       "Closed lengths at every s", "Reference optimum (Re_h: s*)"], rows,
+      [1300, 800, 1200, 1800, 1500, 2600],
+      "Re-measuring the lengths at every split does not close the gap at q = 0.2 and 0.8 "
+      "(30/90): the departure there is a junction effect that grows as the share leaves 0.5, "
+      "not the frozen-length shortcut in s_L.")
 
 OUT.write_text(json.dumps(blocks, indent=1, ensure_ascii=False))
 lines = []
