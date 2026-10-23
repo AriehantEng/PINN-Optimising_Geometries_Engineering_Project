@@ -72,7 +72,9 @@ blocks.append({"bullets": [
     "0.087% against 0.077%), and the Murray split 0.109%.",
     f"Part D. Of {len(tier)} pre-registered runs, {len(p1)} pass P1 (the PINN's optimum within "
     f"±0.002), both at q = 0.5; every off-centre share fails, the symmetric null test included, "
-    f"and at Re_h = 0.1 badly. The share is confounded with a smaller corner-mode cutoff.",
+    f"and at Re_h = 0.1 badly. Controls show the share, not the corner-mode cutoff, is the limit; "
+    f"a second seed reproduces the q = 0.2 miss (−0.0085 against −0.0078); and the slope of the "
+    f"PINN's error at the optimum predicts each miss through Equation (28) in 16 of 18 runs.",
 ]})
 blocks.append({"table": {"head": ["Re_h", "Seeds", "Argmin error, mean ± sd", "Largest regret"],
                          "rows": rows, "widths": [1500, 1200, 3500, 2500]}})

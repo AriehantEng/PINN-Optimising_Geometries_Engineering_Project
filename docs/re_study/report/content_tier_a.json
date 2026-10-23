@@ -18,6 +18,7 @@
    "At Re_h = 0.1 every off-centre run fails, by +0.006 to +0.156 (regret up to 40%; the PINN's optimum always lies above the reference's). Every Tier A run there, 0/120 included, ends at a held-out loss of 1.1 to 22, against 0.12 to 0.16 for the three earlier 30/90 runs at q = 0.5, and with largest drop errors of 8 to 30%; 0/120 (1.1, −8.1% at its range's top) still placed its optimum to 0.0001, because its error was flat near the optimum.",
    "The 15/15 null test misses by as much as 30/90 at the same share (−0.0068 against −0.0078 at Re_h = 10), so the miss belongs to the share, not to the layout's length asymmetry.",
    "The share, not the corner-mode cutoff, is the limit (section 5, amendment 1): every off-centre case also had a smaller cutoff, but 30/90 at q = 0.5 passes P1 with its cutoff forced to 0.15 at both Reynolds numbers, and q = 0.35 still fails with it raised to 0.40. The small cutoff costs field accuracy (held-out loss and u error several times higher) without moving the optimum.",
+   "One seed is enough to call the Re_h = 10 misses real (section 5): a second seed of 30/90 at q = 0.2 misses by −0.0085 against seed 21's −0.0078, a spread of 0.0007, about the 0.0005 spread of three seeds at q = 0.5.",
    "Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) to within a factor 0.8–1.4 in 16 of 18 runs; off-centre slopes are 17–35% per unit s against 0.5–5% at q = 0.5. The one large failure is the collapsed run (30/90, q = 0.2, Re_h = 0.1).",
    "P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and 0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction loses accuracy as the share moves from 0.5 in a layout with unequal lengths."
   ]
@@ -622,13 +623,13 @@
      "30/90",
      "0.2",
      "10",
-     "rule",
+     "0.1",
      "22",
-     "not finished",
-     "",
-     "",
-     "",
-     ""
+     "-0.0085",
+     "FAIL",
+     "0.1486%",
+     "0.00754",
+     "-0.0078"
     ]
    ],
    "widths": [

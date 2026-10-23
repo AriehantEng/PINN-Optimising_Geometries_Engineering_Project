@@ -125,6 +125,9 @@ bullets([
     "forced to 0.15 at both Reynolds numbers, and q = 0.35 still fails with it raised to 0.40. "
     "The small cutoff costs field accuracy (held-out loss and u error several times higher) "
     "without moving the optimum.",
+    "One seed is enough to call the Re_h = 10 misses real (section 5): a second seed of 30/90 at "
+    "q = 0.2 misses by −0.0085 against seed 21's −0.0078, a spread of 0.0007, about the 0.0005 "
+    "spread of three seeds at q = 0.5.",
     "Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference "
     "optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) to within "
     "a factor 0.8–1.4 in 16 of 18 runs; off-centre slopes are 17–35% per unit s against "
