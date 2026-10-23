@@ -75,7 +75,10 @@ blocks.append({"bullets": [
     f"and at Re_h = 0.1 badly. Controls show the share, not the corner-mode cutoff, is the limit; "
     f"a second seed reproduces the q = 0.2 miss (−0.0085 against −0.0078); and the slope of the "
     f"PINN's error at the optimum predicts each miss through Equation (28): within a factor "
-    f"0.8–1.4 in 13 of 18 runs and within 0.0003 in three more with shifts below 0.0005.",
+    f"0.8–1.4 in 13 of 18 runs and within 0.0003 in three more with shifts below 0.0005. "
+    f"Width-scaled sampling (amendment 3) does not rescue q = 0.35 or 0.2 at Re_h = 10, and 400 "
+    f"LM steps lower the cutoff-0.15 control's held-out loss only to 0.65 (0.12–0.16 at cutoff "
+    f"0.5).",
 ]})
 blocks.append({"table": {"head": ["Re_h", "Seeds", "Argmin error, mean ± sd", "Largest regret"],
                          "rows": rows, "widths": [1500, 1200, 3500, 2500]}})

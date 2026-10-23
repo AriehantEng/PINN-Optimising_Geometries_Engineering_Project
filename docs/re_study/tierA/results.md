@@ -14,6 +14,8 @@ Of the 12 runs reported, 2 pass P1. Of the 10 in P2's scope, 5 pass P2. Verdicts
 - One seed is enough to call the Re_h = 10 misses real (section 5): a second seed of 30/90 at q = 0.2 misses by −0.0085 against seed 21's −0.0078, a spread of 0.0007, about the 0.0005 spread of three seeds at q = 0.5.
 - Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) within a factor 0.8–1.4 in 13 of 18 runs, and within 0.0003 in three more whose shifts are below 0.0005; it is moderately off at q = 0.65, Re_h = 0.1 (0.68) and fails at q = 0.2, Re_h = 0.1 (2.37), where training collapsed. Off-centre slopes at Re_h = 10 are 17–35% per unit s (5.7% at q = 0.65), against 0.5–5.2% at q = 0.5 (the earlier 30/90 runs and 0/120); at Re_h = 0.1 the earlier q = 0.5 slopes were 5.5–16.4%, and 0/120's 0.14%.
 - P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and 0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction loses accuracy as the share moves from 0.5 in a layout with unequal lengths.
+- Sampling is not the cause (section 7, amendment 3): with points scaled to each channel's width (7.9–9.5 across the narrow daughter instead of 2.7–4.3) both 30/90 runs at Re_h = 10 still fail P1, by more (q = 0.35: −0.0069; q = 0.2: −0.0128), so by the pre-registered rule the share itself is the limit; caveat: the junction coarsened to keep the total fixed.
+- Given 400 LM steps instead of 150, the q = 0.5 cutoff-0.15 control at Re_h = 0.1 kept accepting every step at low damping and fell a further 2.8-fold to a held-out 0.65, then levelled off, still 4–5 times the cutoff-0.5 runs' 0.12–0.16. LM is slow there, not stalled, and time closes only part of the gap. Building s_L where it misses by 0.004–0.006 costs 0.03–0.06% in pressure drop.
 
 ## 1. Every run against the pass marks
 
@@ -124,6 +126,13 @@ If J_PINN = J_ref (1 + e(s)), the PINN's optimum lies at δs ≈ −e′(s*)/(J�
 | 30/90 q 0.5 Re 10 s21 cut 0.5 | earlier, q = 0.5 | -5.23% | 33.6 | +0.00155 | +0.00143 | 0.92 | -0.00013 |
 | 30/90 q 0.5 Re 10 s22 cut 0.5 | earlier, q = 0.5 | -0.52% | 33.6 | +0.00016 | +0.00040 | 2.57 | +0.00024 |
 | 30/90 q 0.5 Re 10 s23 cut 0.5 | earlier, q = 0.5 | -3.12% | 33.6 | +0.00093 | +0.00076 | 0.82 | -0.00017 |
+| 30/90 q 0.5 Re 0.1 s21 cut 0.15 | control | +6.40% | 33.7 | -0.00190 | -0.00124 | 0.66 | +0.00065 |
+| 30/90 q 0.5 Re 10 s21 cut 0.15 | control | +3.61% | 33.6 | -0.00107 | -0.00095 | 0.89 | +0.00012 |
+| 30/90 q 0.2 Re 10 s22 cut 0.1 | control | +38.07% | 38.1 | -0.01000 | -0.00853 | 0.85 | +0.00147 |
+| 30/90 q 0.35 Re 0.1 s21 cut 0.4 | control | -142.42% | 34.5 | +0.04130 | +0.03651 | 0.88 | -0.00479 |
+| 30/90 q 0.35 Re 10 s21 cut 0.4 | control | +19.79% | 34.3 | -0.00577 | -0.00541 | 0.94 | +0.00036 |
+| 30/90 q 0.35 Re 10 s21 cut 0.3 | amendment 3 | +24.81% | 34.3 | -0.00724 | -0.00686 | 0.95 | +0.00038 |
+| 30/90 q 0.2 Re 10 s21 cut 0.1 | amendment 3 | +57.74% | 38.1 | -0.01517 | -0.01284 | 0.85 | +0.00233 |
 
 *Where both shifts are below 0.0005 (0/120 at both Reynolds numbers; the earlier q = 0.5 run of seed 22 at Re_h = 10) the ratio is not meaningful and the difference is the test. Both optima are Brent searches to ±0.002 (evaluation.search_xatol).*
 
@@ -199,10 +208,12 @@ Tier A's 30/90 cases at q = 0.35 and 0.2, Re_h = 10, seed 21, rule's cutoff, rep
 
 | q | Sampling | s*_ref | s*_PINN | Argmin error | P1 | Regret | Points across the narrow daughter | Held-out loss | Uniform sampling (Tier A) |
 |---|---|---|---|---|---|---|---|---|---|
-| 0.35 | width | not finished |  |  |  |  |  |  | -0.0049 |
-| 0.2 | width | not finished |  |  |  |  |  |  | -0.0078 |
+| 0.35 | width | 0.4012 | 0.3943 | -0.0069 | FAIL | 0.0781% | 7.9–9.5 | 0.0112 | -0.0049 |
+| 0.2 | width | 0.3056 | 0.2928 | -0.0128 | FAIL | 0.3348% | 7.9–9.5 | 0.0133 | -0.0078 |
 
-*e′ and the predicted shift for these runs are in section 6's table once measured.*
+*e′ and the predicted shift for these runs are in section 6's table: +24.8% and −0.0072 (measured −0.0069) at q = 0.35, +57.7% and −0.0152 (measured −0.0128) at q = 0.2.*
+
+Verdict by the pre-registered rule: neither passes, so the share itself is the limit, not the sampler. Both misses grew rather than shrank (−0.0049 → −0.0069 and −0.0078 → −0.0128) and the local error slope still predicts them within a factor 0.85–0.95. The caveat stands: the total was held, so the junction coarsened from about 15 to 8–9.5 points across while the narrow daughter gained; a run that adds points to the narrow daughter without taking them from the junction would be the direct test.
 
 ### Levenberg–Marquardt at Re_h = 0.1: slow, not stalled
 
@@ -216,7 +227,17 @@ From the stored logs of three runs at Re_h = 0.1: the healthy 30/90 run at q = 0
 
 *No step reached the 30-attempt limit, so LM never stalled at maximum damping; it kept accepting steps but each bought less. The healthy run overshot most during L-BFGS, so the overshoot does not explain the failures. Absolute λ scales with J^T J and is only roughly comparable between runs.*
 
-The continuation to 400 LM steps is queued; its result is added here when it finishes.
+The q = 0.5, cutoff-0.15 control continued for 250 more LM steps (400 in all, seed 22, from its selected network). On the continuation's own held-out set the starting network scored 1.84 (the parent's selection on seed 21's set: 2.04). The best averaged held-out loss was 0.65, a further 2.8-fold fall, reached at step 349; the last 50 steps did not improve on it (plateaued: yes). Argmin error +0.0011 (parent −0.0012), regret 0.0021%, u error at s* 0.86% (parent about 1.1%).
+
+| LM steps | Best averaged held-out | Accepted | Rejected attempts | Median λ (relative to mean diag JᵀJ) | Largest λ | Median gradient norm |
+|---|---|---|---|---|---|---|
+| 151–200 | 0.959 | 50 of 50 | 13 | 3.8e-03 | 1.3e+02 | 60 |
+| 201–250 | 0.854 | 50 of 50 | 15 | 1.6e-03 | 6.3e-01 | 59 |
+| 251–300 | 0.71 | 50 of 50 | 12 | 5.1e-03 | 1.1e+01 | 47 |
+| 301–350 | 0.65 | 50 of 50 | 7 | 7.8e-04 | 3.2e-03 | 62 |
+| 351–400 | 0.654 | 50 of 50 | 16 | 2.9e-03 | 3.0e+02 | 59 |
+
+*Every step was accepted, with at most 6 attempts (the limit is 30); damping stayed low (median below 0.01 relative), so LM is neither stalled nor over-damped. The loss keeps falling, but slowly, and levels off near 0.65 — still 4–5 times the 0.12–0.16 of the cutoff-0.5 runs. Given time, LM recovers part of the gap, not all of it: the small cutoff limits what the network reaches at Re_h = 0.1, not only how fast.*
 
 ### What building s_L costs where it misses (reference solver only)
 

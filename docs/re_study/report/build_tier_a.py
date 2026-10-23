@@ -139,6 +139,15 @@ bullets([
     "and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and "
     "0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction "
     "loses accuracy as the share moves from 0.5 in a layout with unequal lengths.",
+    "Sampling is not the cause (section 7, amendment 3): with points scaled to each channel's "
+    "width (7.9–9.5 across the narrow daughter instead of 2.7–4.3) both 30/90 runs at Re_h = 10 "
+    "still fail P1, by more (q = 0.35: −0.0069; q = 0.2: −0.0128), so by the pre-registered rule "
+    "the share itself is the limit; caveat: the junction coarsened to keep the total fixed.",
+    "Given 400 LM steps instead of 150, the q = 0.5 cutoff-0.15 control at Re_h = 0.1 kept "
+    "accepting every step at low damping and fell a further 2.8-fold to a held-out 0.65, then "
+    "levelled off, still 4–5 times the cutoff-0.5 runs' 0.12–0.16. LM is slow there, not "
+    "stalled, and time closes only part of the gap. Building s_L where it misses by 0.004–0.006 "
+    "costs 0.03–0.06% in pressure drop.",
 ])
 
 h1("1. Every run against the pass marks")
@@ -367,7 +376,14 @@ for share, across_uniform in ((0.35, 4.3), (0.2, 2.7)):
 table(["q", "Sampling", "s*_ref", "s*_PINN", "Argmin error", "P1", "Regret",
        "Points across the narrow daughter", "Held-out loss", "Uniform sampling (Tier A)"], rows,
       [500, 800, 900, 900, 1050, 550, 900, 1300, 1000, 1300],
-      "e′ and the predicted shift for these runs are in section 6's table once measured.")
+      "e′ and the predicted shift for these runs are in section 6's table: +24.8% and −0.0072 "
+      "(measured −0.0069) at q = 0.35, +57.7% and −0.0152 (measured −0.0128) at q = 0.2.")
+p("Verdict by the pre-registered rule: neither passes, so the share itself is the limit, not the "
+  "sampler. Both misses grew rather than shrank (−0.0049 → −0.0069 and −0.0078 → −0.0128) and "
+  "the local error slope still predicts them within a factor 0.85–0.95. The caveat stands: the "
+  "total was held, so the junction coarsened from about 15 to 8–9.5 points across while the "
+  "narrow daughter gained; a run that adds points to the narrow daughter without taking them "
+  "from the junction would be the direct test.")
 h2("Levenberg–Marquardt at Re_h = 0.1: slow, not stalled")
 p("From the stored logs of three runs at Re_h = 0.1: the healthy 30/90 run at q = 0.5 with "
   "cutoff 0.5 (seed 21), the q = 0.5 control at cutoff 0.15, and Tier A's q = 0.35 at cutoff "
@@ -387,9 +403,36 @@ table(["Run", "L-BFGS peak (× end of Adam)", "LM steps accepted", "Rejected att
 LM400 = A3 / "pinn_30-90_Re0.1_seed22_summary.json"
 if LM400.is_file():
     s = json.loads(LM400.read_text())
-    p(f"Continued for 250 more LM steps (400 in all, seed 22): held-out loss "
-      f"{s['training']['selected_heldout_loss']:.3g} (from 2.04), argmin error "
-      f"{s['argmin_error']:+.4f}, regret {100 * s['regret']:.4f}%.")
+    trace = json.loads((ROOT / "bifurcation" / "runs" / "parametric_re0.1_3090_q0.5_cut0.15_lm400_corners_s22"
+                        / "history.json").read_text())
+    lm = [x for x in trace if x.get("phase") == "lm"]
+    rows = []
+    for a, b in ((1, 50), (51, 100), (101, 150), (151, 200), (201, 250)):
+        seg = [x for x in lm if a <= x["iteration"] <= b]
+        avg = [x["heldout_average"] for x in seg if x["heldout_average"] is not None]
+        lam = sorted(x["lm_damping_relative"] for x in seg)
+        grad = sorted(x["gradient_norm"] for x in seg)
+        rows.append([f"{150 + a}–{150 + b}", f"{min(avg):.3g}" if avg else "—",
+                     f"{sum(x['lm_accepted'] for x in seg)} of {len(seg)}",
+                     f"{sum(x['lm_attempts'] - 1 for x in seg)}",
+                     f"{lam[len(lam) // 2]:.1e}", f"{lam[-1]:.1e}", f"{grad[len(grad) // 2]:.0f}"])
+    p(f"The q = 0.5, cutoff-0.15 control continued for 250 more LM steps (400 in all, seed 22, from "
+      f"its selected network). On the continuation's own held-out set the starting network scored "
+      f"{lm[0]['heldout_loss']:.2f} (the parent's selection on seed 21's set: 2.04). The best "
+      f"averaged held-out loss was {s['training']['selected_heldout_loss']:.3g}, a further "
+      f"{lm[0]['heldout_loss'] / s['training']['selected_heldout_loss']:.1f}-fold fall, reached at "
+      f"step {150 + int(s['training']['selected'].split(':')[1])}; the last 50 steps did not improve "
+      f"on it (plateaued: yes). Argmin error {s['argmin_error']:+.4f} (parent −0.0012), regret "
+      f"{100 * s['regret']:.4f}%, u error at s* 0.86% (parent about 1.1%).")
+    table(["LM steps", "Best averaged held-out", "Accepted", "Rejected attempts",
+           "Median λ (relative to mean diag JᵀJ)", "Largest λ", "Median gradient norm"], rows,
+          [1100, 1300, 1000, 1100, 1700, 1100, 1300],
+          f"Every step was accepted, with at most {max(x['lm_attempts'] for x in lm)} attempts "
+          "(the limit is 30); damping stayed low (median below "
+          "0.01 relative), so LM is neither stalled nor over-damped. The loss keeps falling, but "
+          "slowly, and levels off near 0.65 — still 4–5 times the 0.12–0.16 of the cutoff-0.5 runs. "
+          "Given time, LM recovers part of the gap, not all of it: the small cutoff limits what the "
+          "network reaches at Re_h = 0.1, not only how fast.")
 else:
     p("The continuation to 400 LM steps is queued; its result is added here when it finishes.")
 h2("What building s_L costs where it misses (reference solver only)")
