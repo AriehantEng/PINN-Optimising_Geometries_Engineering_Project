@@ -12,7 +12,7 @@ Of the 12 runs reported, 2 pass P1. Of the 10 in P2's scope, 5 pass P2. Verdicts
 - The 15/15 null test misses by as much as 30/90 at the same share (−0.0068 against −0.0078 at Re_h = 10), so the miss belongs to the share, not to the layout's length asymmetry.
 - The share, not the corner-mode cutoff, is the limit (section 5, amendment 1): every off-centre case also had a smaller cutoff, but 30/90 at q = 0.5 passes P1 with its cutoff forced to 0.15 at both Reynolds numbers, and q = 0.35 still fails with it raised to 0.40. The small cutoff costs field accuracy (held-out loss and u error several times higher) without moving the optimum.
 - One seed is enough to call the Re_h = 10 misses real (section 5): a second seed of 30/90 at q = 0.2 misses by −0.0085 against seed 21's −0.0078, a spread of 0.0007, about the 0.0005 spread of three seeds at q = 0.5.
-- Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) to within a factor 0.8–1.4 in 16 of 18 runs; off-centre slopes are 17–35% per unit s against 0.5–5% at q = 0.5. The one large failure is the collapsed run (30/90, q = 0.2, Re_h = 0.1).
+- Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) within a factor 0.8–1.4 in 13 of 18 runs, and within 0.0003 in three more whose shifts are below 0.0005; it is moderately off at q = 0.65, Re_h = 0.1 (0.68) and fails at q = 0.2, Re_h = 0.1 (2.37), where training collapsed. Off-centre slopes at Re_h = 10 are 17–35% per unit s (5.7% at q = 0.65), against 0.5–5.2% at q = 0.5 (the earlier 30/90 runs and 0/120); at Re_h = 0.1 the earlier q = 0.5 slopes were 5.5–16.4%, and 0/120's 0.14%.
 - P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and 0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction loses accuracy as the share moves from 0.5 in a layout with unequal lengths.
 
 ## 1. Every run against the pass marks
@@ -104,26 +104,28 @@ Pre-registered as amendment 1 after the twelve runs, with the decision rule fixe
 
 If J_PINN = J_ref (1 + e(s)), the PINN's optimum lies at δs ≈ −e′(s*)/(J″/J) from the reference's (supplement S1.3). e′ is measured here by central difference from two extra reference-mesh solves at s*_ref ± 0.01, J″/J by the central second difference of J_ref.
 
-| Run | Group | e′ per unit s | J″/J | Predicted δs | Measured | Measured / predicted |
-|---|---|---|---|---|---|---|
-| 0/120 q 0.5 Re 0.1 s21 cut 0.4 | Tier A | -0.14% | 29.1 | +0.00005 | +0.00014 | 2.88 |
-| 0/120 q 0.5 Re 10 s21 cut 0.4 | Tier A | +0.57% | 28.8 | -0.00020 | +0.00002 | -0.10 |
-| 15/15 q 0.2 Re 0.1 s21 cut 0.15 | Tier A | -228.22% | 45.5 | +0.05014 | +0.05566 | 1.11 |
-| 15/15 q 0.2 Re 10 s21 cut 0.15 | Tier A | +32.32% | 45.7 | -0.00708 | -0.00676 | 0.96 |
-| 30/90 q 0.2 Re 0.1 s21 cut 0.1 | Tier A | -252.71% | 38.4 | +0.06576 | +0.15560 | 2.37 |
-| 30/90 q 0.2 Re 10 s21 cut 0.1 | Tier A | +34.90% | 38.1 | -0.00917 | -0.00784 | 0.86 |
-| 30/90 q 0.35 Re 0.1 s21 cut 0.3 | Tier A | -142.22% | 34.5 | +0.04124 | +0.03818 | 0.93 |
-| 30/90 q 0.35 Re 10 s21 cut 0.3 | Tier A | +16.78% | 34.3 | -0.00489 | -0.00490 | 1.00 |
-| 30/90 q 0.65 Re 0.1 s21 cut 0.35 | Tier A | -36.30% | 35.3 | +0.01029 | +0.00698 | 0.68 |
-| 30/90 q 0.65 Re 10 s21 cut 0.35 | Tier A | -5.65% | 35.4 | +0.00159 | +0.00202 | 1.27 |
-| 30/90 q 0.8 Re 0.1 s21 cut 0.15 | Tier A | -27.70% | 40.3 | +0.00687 | +0.00644 | 0.94 |
-| 30/90 q 0.8 Re 10 s21 cut 0.15 | Tier A | +18.74% | 40.6 | -0.00462 | -0.00639 | 1.38 |
-| 30/90 q 0.5 Re 0.1 s21 cut 0.5 | earlier, q = 0.5 | -8.49% | 33.7 | +0.00252 | +0.00263 | 1.05 |
-| 30/90 q 0.5 Re 0.1 s22 cut 0.5 | earlier, q = 0.5 | -16.39% | 33.7 | +0.00486 | +0.00581 | 1.20 |
-| 30/90 q 0.5 Re 0.1 s23 cut 0.5 | earlier, q = 0.5 | -5.49% | 33.7 | +0.00163 | +0.00184 | 1.13 |
-| 30/90 q 0.5 Re 10 s21 cut 0.5 | earlier, q = 0.5 | -5.23% | 33.6 | +0.00155 | +0.00143 | 0.92 |
-| 30/90 q 0.5 Re 10 s22 cut 0.5 | earlier, q = 0.5 | -0.52% | 33.6 | +0.00016 | +0.00040 | 2.57 |
-| 30/90 q 0.5 Re 10 s23 cut 0.5 | earlier, q = 0.5 | -3.12% | 33.6 | +0.00093 | +0.00076 | 0.82 |
+| Run | Group | e′ per unit s | J″/J | Predicted δs | Measured | Measured / predicted | Measured − predicted |
+|---|---|---|---|---|---|---|---|
+| 0/120 q 0.5 Re 0.1 s21 cut 0.4 | Tier A | -0.14% | 29.1 | +0.00005 | +0.00014 | 2.88 | +0.00009 |
+| 0/120 q 0.5 Re 10 s21 cut 0.4 | Tier A | +0.57% | 28.8 | -0.00020 | +0.00002 | -0.10 | +0.00022 |
+| 15/15 q 0.2 Re 0.1 s21 cut 0.15 | Tier A | -228.22% | 45.5 | +0.05014 | +0.05566 | 1.11 | +0.00552 |
+| 15/15 q 0.2 Re 10 s21 cut 0.15 | Tier A | +32.32% | 45.7 | -0.00708 | -0.00676 | 0.96 | +0.00031 |
+| 30/90 q 0.2 Re 0.1 s21 cut 0.1 | Tier A | -252.71% | 38.4 | +0.06576 | +0.15560 | 2.37 | +0.08985 |
+| 30/90 q 0.2 Re 10 s21 cut 0.1 | Tier A | +34.90% | 38.1 | -0.00917 | -0.00784 | 0.86 | +0.00133 |
+| 30/90 q 0.35 Re 0.1 s21 cut 0.3 | Tier A | -142.22% | 34.5 | +0.04124 | +0.03818 | 0.93 | -0.00306 |
+| 30/90 q 0.35 Re 10 s21 cut 0.3 | Tier A | +16.78% | 34.3 | -0.00489 | -0.00490 | 1.00 | -0.00001 |
+| 30/90 q 0.65 Re 0.1 s21 cut 0.35 | Tier A | -36.30% | 35.3 | +0.01029 | +0.00698 | 0.68 | -0.00331 |
+| 30/90 q 0.65 Re 10 s21 cut 0.35 | Tier A | -5.65% | 35.4 | +0.00159 | +0.00202 | 1.27 | +0.00043 |
+| 30/90 q 0.8 Re 0.1 s21 cut 0.15 | Tier A | -27.70% | 40.3 | +0.00687 | +0.00644 | 0.94 | -0.00044 |
+| 30/90 q 0.8 Re 10 s21 cut 0.15 | Tier A | +18.74% | 40.6 | -0.00462 | -0.00639 | 1.38 | -0.00177 |
+| 30/90 q 0.5 Re 0.1 s21 cut 0.5 | earlier, q = 0.5 | -8.49% | 33.7 | +0.00252 | +0.00263 | 1.05 | +0.00012 |
+| 30/90 q 0.5 Re 0.1 s22 cut 0.5 | earlier, q = 0.5 | -16.39% | 33.7 | +0.00486 | +0.00581 | 1.20 | +0.00096 |
+| 30/90 q 0.5 Re 0.1 s23 cut 0.5 | earlier, q = 0.5 | -5.49% | 33.7 | +0.00163 | +0.00184 | 1.13 | +0.00021 |
+| 30/90 q 0.5 Re 10 s21 cut 0.5 | earlier, q = 0.5 | -5.23% | 33.6 | +0.00155 | +0.00143 | 0.92 | -0.00013 |
+| 30/90 q 0.5 Re 10 s22 cut 0.5 | earlier, q = 0.5 | -0.52% | 33.6 | +0.00016 | +0.00040 | 2.57 | +0.00024 |
+| 30/90 q 0.5 Re 10 s23 cut 0.5 | earlier, q = 0.5 | -3.12% | 33.6 | +0.00093 | +0.00076 | 0.82 | -0.00017 |
+
+*Where both shifts are below 0.0005 (0/120 at both Reynolds numbers; the earlier q = 0.5 run of seed 22 at Re_h = 10) the ratio is not meaningful and the difference is the test. Both optima are Brent searches to ±0.002 (evaluation.search_xatol).*
 
 ### Training: Levenberg–Marquardt fails to recover off-centre at Re_h = 0.1
 
@@ -188,3 +190,45 @@ If J_PINN = J_ref (1 + e(s)), the PINN's optimum lies at δs ≈ −e′(s*)/(J�
 | 30/90 q 0.8 | 0.6667 | 0.6608 | 0.6576 | 0.6542 | 0.1: 0.6649, 10.0: 0.6653 |
 
 *Re-measuring the lengths at every split does not close the gap at q = 0.2 and 0.8 (30/90): the departure there is a junction effect that grows as the share leaves 0.5, not the frozen-length shortcut in s_L.*
+
+## 7. Amendment 3: the narrow daughter's sampling, LM given time, and what s_L costs
+
+### Width-scaled sampling
+
+Tier A's 30/90 cases at q = 0.35 and 0.2, Re_h = 10, seed 21, rule's cutoff, repeated with interior points at a density ~ 1/w² in each channel (the same total per draw): 7.9–9.5 points across every channel, against 2.7–4.3 across the narrow daughter at the range edge with uniform sampling. Decision rule (fixed before the runs): both pass → the sampler caused the off-centre misses; only q = 0.35 → moderate shares only; neither → the share itself is the limit. Caveat: the parent and junction drop from about 15 to 8–9.5 points across.
+
+| q | Sampling | s*_ref | s*_PINN | Argmin error | P1 | Regret | Points across the narrow daughter | Held-out loss | Uniform sampling (Tier A) |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.35 | width | not finished |  |  |  |  |  |  | -0.0049 |
+| 0.2 | width | not finished |  |  |  |  |  |  | -0.0078 |
+
+*e′ and the predicted shift for these runs are in section 6's table once measured.*
+
+### Levenberg–Marquardt at Re_h = 0.1: slow, not stalled
+
+From the stored logs of three runs at Re_h = 0.1: the healthy 30/90 run at q = 0.5 with cutoff 0.5 (seed 21), the q = 0.5 control at cutoff 0.15, and Tier A's q = 0.35 at cutoff 0.30. The per-step damping and gradient norm were not logged before amendment 3; the continuation run logs both.
+
+| Run | L-BFGS peak (× end of Adam) | LM steps accepted | Rejected attempts | Final damping λ (absolute) | Held-out fall, LM steps 1–10 / 10–50 / 50–150 | Held-out after 150 steps |
+|---|---|---|---|---|---|---|
+| q 0.5, cutoff 0.5 (healthy) | 6.1 | 150 of 150 | 4 | 0.0046 | 8.2× / 4.5× / 8.5× | 0.142 |
+| q 0.5, cutoff 0.15 | 3.3 | 150 of 150 | 9 | 0.108 | 2.5× / 1.8× / 2.2× | 2.19 |
+| q 0.35, cutoff 0.30 | 2.5 | 150 of 150 | 23 | 0.340 | 1.9× / 1.3× / 1.6× | 6.35 |
+
+*No step reached the 30-attempt limit, so LM never stalled at maximum damping; it kept accepting steps but each bought less. The healthy run overshot most during L-BFGS, so the overshoot does not explain the failures. Absolute λ scales with J^T J and is only roughly comparable between runs.*
+
+The continuation to 400 LM steps is queued; its result is added here when it finishes.
+
+### What building s_L costs where it misses (reference solver only)
+
+| 30/90, q | Re_h | s_L | Reference s* | s_L − s* | J(s_L)/J* − 1 |
+|---|---|---|---|---|---|
+| 0.2 | 0.1 | 0.3116 | 0.3060 | +0.0056 | 0.0552% |
+| 0.2 | 10 | 0.3116 | 0.3056 | +0.0060 | 0.0628% |
+| 0.35 | 0.1 | 0.4039 | 0.4012 | +0.0027 | 0.0133% |
+| 0.35 | 10 | 0.4039 | 0.4012 | +0.0027 | 0.0139% |
+| 0.65 | 0.1 | 0.5655 | 0.5680 | -0.0025 | 0.0128% |
+| 0.65 | 10 | 0.5655 | 0.5686 | -0.0031 | 0.0197% |
+| 0.8 | 0.1 | 0.6608 | 0.6649 | -0.0041 | 0.0289% |
+| 0.8 | 10 | 0.6608 | 0.6653 | -0.0045 | 0.0369% |
+
+*One reference-mesh solve at s_L against the reference-mesh optimum J*. Where s_L misses by 0.004–0.006 (q = 0.2 and 0.8) the cost is 0.03–0.06%, consistent with (J″/J)δ²/2.*

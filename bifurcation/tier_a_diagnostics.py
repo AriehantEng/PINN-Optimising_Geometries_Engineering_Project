@@ -41,6 +41,7 @@ def summaries():
     out = []
     for group, pattern in (("Tier A", "tierA/pinn_*_summary.json"),
                            ("control", "tierA_controls/pinn_*_summary.json"),
+                           ("amendment 3", "tierA_amend3/pinn_*_summary.json"),
                            ("earlier, q = 0.5", "pinn_30-90_Re*_seed*_summary.json")):
         for f in sorted(glob.glob(str(STUDY / pattern))):
             s = json.loads(pathlib.Path(f).read_text())
@@ -300,3 +301,39 @@ def local_markdown():
     L += ["", "The three-point estimate of section 3 uses evaluation splits 0.05 apart; this one "
           "takes e′ by central difference over ±0.01, where e is close to linear."]
     return "\n".join(L) + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# 5. What building s_L costs: J_ref(s_L)/J* - 1, reference mesh
+# --------------------------------------------------------------------------- #
+
+
+def s_l_cost():
+    """For 30/90 at every Tier A share and both Reynolds numbers: one reference
+    solve at s_L, against the reference-mesh optimum J* (Brent, from the Tier A
+    run's evaluation)."""
+    from bifurcation import flow, parametric as P, reference
+    from developing_flow import pinn
+    path = OUT / "diagnostics_s_l_cost.json"
+    out = json.loads(path.read_text()) if path.is_file() else {}
+    for s in summaries():
+        if s["group"] != "Tier A" or tuple(s["layout"]) != (30.0, 90.0):
+            continue
+        key = f"q{s['share']:g}_Re{s['reynolds']:g}"
+        if key in out:
+            continue
+        c = config_of(s)
+        s_l = T.length_split((30.0, 90.0), s["share"])[0]
+        g = c.geometry(s_l)
+        _, inlet, _, _ = P.build(c)
+        a, _ = pinn.scaling_coefficients(c.reynolds, c.pressure_scaling)
+        sol = reference.solve_bifurcation(g, c.reynolds, c.pressure_scaling, inlet,
+                                          c.outlet1_share, c.fe_max_area, c.fe_corner_levels,
+                                          c.fe_corner_radius, continuation=c.fe_continuation)
+        j_l = flow.opening_measures(sol, g, a, c.n_line)["total_pressure_drop"]
+        out[key] = {"share": s["share"], "reynolds": s["reynolds"], "s_L": s_l,
+                    "s_ref": s["s_star_reference_mesh_brent"], "J_s_L": j_l,
+                    "J_star": s["J_fe_at_reference_s_star"],
+                    "cost": j_l / s["J_fe_at_reference_s_star"] - 1.0}
+        path.write_text(json.dumps(out, indent=1))
+        print(key, out[key], flush=True)

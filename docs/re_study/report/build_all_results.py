@@ -74,7 +74,8 @@ blocks.append({"bullets": [
     f"±0.002), both at q = 0.5; every off-centre share fails, the symmetric null test included, "
     f"and at Re_h = 0.1 badly. Controls show the share, not the corner-mode cutoff, is the limit; "
     f"a second seed reproduces the q = 0.2 miss (−0.0085 against −0.0078); and the slope of the "
-    f"PINN's error at the optimum predicts each miss through Equation (28) in 16 of 18 runs.",
+    f"PINN's error at the optimum predicts each miss through Equation (28): within a factor "
+    f"0.8–1.4 in 13 of 18 runs and within 0.0003 in three more with shifts below 0.0005.",
 ]})
 blocks.append({"table": {"head": ["Re_h", "Seeds", "Argmin error, mean ± sd", "Largest regret"],
                          "rows": rows, "widths": [1500, 1200, 3500, 2500]}})

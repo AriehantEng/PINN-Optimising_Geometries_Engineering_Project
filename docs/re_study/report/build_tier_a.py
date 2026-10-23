@@ -129,9 +129,12 @@ bullets([
     "q = 0.2 misses by −0.0085 against seed 21's −0.0078, a spread of 0.0007, about the 0.0005 "
     "spread of three seeds at q = 0.5.",
     "Mechanism (section 6): the slope e′ of the PINN's pressure-drop error at the reference "
-    "optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) to within "
-    "a factor 0.8–1.4 in 16 of 18 runs; off-centre slopes are 17–35% per unit s against "
-    "0.5–5% at q = 0.5. The one large failure is the collapsed run (30/90, q = 0.2, Re_h = 0.1).",
+    "optimum, measured over ±0.01, predicts each argmin error through δs ≈ −e′/(J″/J) within a "
+    "factor 0.8–1.4 in 13 of 18 runs, and within 0.0003 in three more whose shifts are below "
+    "0.0005; it is moderately off at q = 0.65, Re_h = 0.1 (0.68) and fails at q = 0.2, "
+    "Re_h = 0.1 (2.37), where training collapsed. Off-centre slopes at Re_h = 10 are 17–35% per "
+    "unit s (5.7% at q = 0.65), against 0.5–5.2% at q = 0.5 (the earlier 30/90 runs and 0/120); "
+    "at Re_h = 0.1 the earlier q = 0.5 slopes were 5.5–16.4%, and 0/120's 0.14%.",
     "P2, a property of the reference solution: s_L lies within 0.003 of the optimum at q = 0.35 "
     "and 0.65 at Re_h = 0.1, q = 0.35 at 10, and for 15/15 at both; it does not at q = 0.2 and "
     "0.8 for 30/90 (0.004 to 0.006), nor at q = 0.65 at Re_h = 10 (0.0031). The length correction "
@@ -300,9 +303,13 @@ for run, r in LS.items():
     s = by_run[run]
     rows.append([TD.label(s), s["group"], f"{100 * r['e_slope']:+.2f}%", f"{r['curvature']:.1f}",
                  f"{r['predicted']:+.5f}", f"{r['measured']:+.5f}",
-                 f"{r['measured'] / r['predicted']:.2f}" if abs(r["predicted"]) > 1e-12 else "—"])
-table(["Run", "Group", "e′ per unit s", "J″/J", "Predicted δs", "Measured", "Measured / predicted"],
-      rows, [2900, 1400, 1000, 700, 1100, 1100, 1100])
+                 f"{r['measured'] / r['predicted']:.2f}" if abs(r["predicted"]) > 1e-12 else "—",
+                 f"{r['measured'] - r['predicted']:+.5f}"])
+table(["Run", "Group", "e′ per unit s", "J″/J", "Predicted δs", "Measured", "Measured / predicted",
+       "Measured − predicted"], rows, [2700, 1300, 950, 650, 1050, 1050, 1000, 1100],
+      "Where both shifts are below 0.0005 (0/120 at both Reynolds numbers; the earlier q = 0.5 "
+      "run of seed 22 at Re_h = 10) the ratio is not meaningful and the difference is the test. "
+      "Both optima are Brent searches to ±0.002 (evaluation.search_xatol).")
 h2("Training: Levenberg–Marquardt fails to recover off-centre at Re_h = 0.1")
 rows = [[h["run"], h["group"], f"{h['adam_end']:.3g}", f"{h['lbfgs_peak']:.3g} ({h['lbfgs_jump']:.1f}×)",
          f"{h['lm_min']:.3g}", f"{h['lm_recovery']:.0f}"] for h in D["history"]]
@@ -331,6 +338,69 @@ table(["Case", "s_M", "s_L (lengths at s_L)", "Friction law, centreline lengths 
       "Re-measuring the lengths at every split does not close the gap at q = 0.2 and 0.8 "
       "(30/90): the departure there is a junction effect that grows as the share leaves 0.5, "
       "not the frozen-length shortcut in s_L.")
+
+# ---- 7. amendment 3 ------------------------------------------------------ #
+A3 = STUDY / "tierA_amend3"
+h1("7. Amendment 3: the narrow daughter's sampling, LM given time, and what s_L costs")
+h2("Width-scaled sampling")
+p("Tier A's 30/90 cases at q = 0.35 and 0.2, Re_h = 10, seed 21, rule's cutoff, repeated with "
+  "interior points at a density ~ 1/w² in each channel (the same total per draw): 7.9–9.5 "
+  "points across every channel, against 2.7–4.3 across the narrow daughter at the range edge "
+  "with uniform sampling. Decision rule (fixed before the runs): both pass → the sampler caused "
+  "the off-centre misses; only q = 0.35 → moderate shares only; neither → the share itself is "
+  "the limit. Caveat: the parent and junction drop from about 15 to 8–9.5 points across.")
+rows = []
+for share, across_uniform in ((0.35, 4.3), (0.2, 2.7)):
+    f3 = A3 / f"pinn_30-90_q{share:g}_Re10_seed21_summary.json"
+    tier = next(r["s"] for r in R if tuple(r["angles"]) == (30.0, 90.0) and r["share"] == share
+                and r["re"] == 10.0)
+    if not f3.is_file():
+        rows.append([f"{share:g}", "width", "not finished", "", "", "", "", "", "",
+                     f"{tier['argmin_error']:+.4f}"])
+        continue
+    s = json.loads(f3.read_text())
+    rows.append([f"{share:g}", "width", f"{s['s_star_reference_mesh_brent']:.4f}",
+                 f"{s['s_star_pinn']:.4f}", f"{s['argmin_error']:+.4f}",
+                 "pass" if abs(s["argmin_error"]) <= P1 else "FAIL", f"{100 * s['regret']:.4f}%",
+                 "7.9–9.5", f"{s['training']['selected_heldout_loss']:.3g}",
+                 f"{tier['argmin_error']:+.4f}"])
+table(["q", "Sampling", "s*_ref", "s*_PINN", "Argmin error", "P1", "Regret",
+       "Points across the narrow daughter", "Held-out loss", "Uniform sampling (Tier A)"], rows,
+      [500, 800, 900, 900, 1050, 550, 900, 1300, 1000, 1300],
+      "e′ and the predicted shift for these runs are in section 6's table once measured.")
+h2("Levenberg–Marquardt at Re_h = 0.1: slow, not stalled")
+p("From the stored logs of three runs at Re_h = 0.1: the healthy 30/90 run at q = 0.5 with "
+  "cutoff 0.5 (seed 21), the q = 0.5 control at cutoff 0.15, and Tier A's q = 0.35 at cutoff "
+  "0.30. The per-step damping and gradient norm were not logged before amendment 3; the "
+  "continuation run logs both.")
+table(["Run", "L-BFGS peak (× end of Adam)", "LM steps accepted", "Rejected attempts",
+       "Final damping λ (absolute)", "Held-out fall, LM steps 1–10 / 10–50 / 50–150",
+       "Held-out after 150 steps"],
+      [["q 0.5, cutoff 0.5 (healthy)", "6.1", "150 of 150", "4", "0.0046", "8.2× / 4.5× / 8.5×", "0.142"],
+       ["q 0.5, cutoff 0.15", "3.3", "150 of 150", "9", "0.108", "2.5× / 1.8× / 2.2×", "2.19"],
+       ["q 0.35, cutoff 0.30", "2.5", "150 of 150", "23", "0.340", "1.9× / 1.3× / 1.6×", "6.35"]],
+      [1900, 1300, 1100, 1100, 1200, 2000, 1100],
+      "No step reached the 30-attempt limit, so LM never stalled at maximum damping; it kept "
+      "accepting steps but each bought less. The healthy run overshot most during L-BFGS, so the "
+      "overshoot does not explain the failures. Absolute λ scales with J^T J and is only roughly "
+      "comparable between runs.")
+LM400 = A3 / "pinn_30-90_Re0.1_seed22_summary.json"
+if LM400.is_file():
+    s = json.loads(LM400.read_text())
+    p(f"Continued for 250 more LM steps (400 in all, seed 22): held-out loss "
+      f"{s['training']['selected_heldout_loss']:.3g} (from 2.04), argmin error "
+      f"{s['argmin_error']:+.4f}, regret {100 * s['regret']:.4f}%.")
+else:
+    p("The continuation to 400 LM steps is queued; its result is added here when it finishes.")
+h2("What building s_L costs where it misses (reference solver only)")
+SL = json.loads((TIER / "diagnostics_s_l_cost.json").read_text())
+table(["30/90, q", "Re_h", "s_L", "Reference s*", "s_L − s*", "J(s_L)/J* − 1"],
+      [[f"{v['share']:g}", f"{v['reynolds']:g}", f"{v['s_L']:.4f}", f"{v['s_ref']:.4f}",
+        f"{v['s_L'] - v['s_ref']:+.4f}", f"{100 * v['cost']:.4f}%"]
+       for v in sorted(SL.values(), key=lambda v: (v["share"], v["reynolds"]))],
+      [1200, 900, 1200, 1400, 1300, 1600],
+      "One reference-mesh solve at s_L against the reference-mesh optimum J*. Where s_L misses by "
+      "0.004–0.006 (q = 0.2 and 0.8) the cost is 0.03–0.06%, consistent with (J″/J)δ²/2.")
 
 OUT.write_text(json.dumps(blocks, indent=1, ensure_ascii=False))
 lines = []
