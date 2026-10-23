@@ -1,0 +1,98 @@
+{
+ "run": "bifurcation/runs/parametric_re10_3090_q0.35_cut0.4_corners_s21",
+ "layout": [
+  30.0,
+  90.0
+ ],
+ "share": 0.35,
+ "split_range": [
+  0.2539,
+  0.5539
+ ],
+ "reynolds": 10.0,
+ "pressure_scaling": "inertial",
+ "seed": 21,
+ "s_star_pinn": 0.39574701241415405,
+ "J_pinn_at_s_star": 3.8782485106820657,
+ "s_star_pinn_on_bound": false,
+ "loss_at_s_star": 0.003346812416821197,
+ "loss_at_s_star_points": "4 x 1024 interior points at s*, stream 2026",
+ "J_fe_at_s_star_pinn": 3.874420779608281,
+ "s_star_reference_mesh_brent": 0.40116009827600707,
+ "J_fe_at_reference_s_star": 3.8725580870030085,
+ "argmin_error": -0.0054130858618530175,
+ "regret": 0.00048099797689893364,
+ "fields": [
+  {
+   "split": 0.2539,
+   "u": 0.015214148950641727,
+   "v": 0.015448130362632186,
+   "p": 0.015343452155929745,
+   "drop_error": -0.0019515234707921936
+  },
+  {
+   "split": 0.3039,
+   "u": 0.012185765630994137,
+   "v": 0.012347881669462178,
+   "p": 0.005447227512055864,
+   "drop_error": 0.0038177792440052816
+  },
+  {
+   "split": 0.3539,
+   "u": 0.012145563316258544,
+   "v": 0.011820231687127883,
+   "p": 0.007765072855214006,
+   "drop_error": -0.0026580181071234055
+  },
+  {
+   "split": 0.4039,
+   "u": 0.012802461434182975,
+   "v": 0.011869367429255607,
+   "p": 0.004194413687240965,
+   "drop_error": 0.002588976622204031
+  },
+  {
+   "split": 0.4539,
+   "u": 0.013610765720466876,
+   "v": 0.012538598042997359,
+   "p": 0.015561929930000593,
+   "drop_error": 0.01296877573173516
+  },
+  {
+   "split": 0.5039,
+   "u": 0.014070274562285549,
+   "v": 0.013895028419510591,
+   "p": 0.014453529640031404,
+   "drop_error": 0.012289612030476516
+  },
+  {
+   "split": 0.5539,
+   "u": 0.01569268832166308,
+   "v": 0.01711076879409396,
+   "p": 0.023970009951786286,
+   "drop_error": -0.016718214651201158
+  },
+  {
+   "split": 0.39574701241415405,
+   "at": "PINN s*",
+   "u": 0.012666948818882428,
+   "v": 0.011813550996966269,
+   "p": 0.0035084148892680993,
+   "drop_error": 0.0009879492423565672
+  }
+ ],
+ "training": {
+  "wall_seconds": 9919.870507955551,
+  "final_training_loss": 0.012098506877069684,
+  "selected": "lm_average:129",
+  "selected_heldout_loss": 0.005061938991307481,
+  "parameters": 5507,
+  "plateaued": true,
+  "finite": true,
+  "still_falling": false,
+  "best_heldout_before_last_steps": 0.005452621544145419,
+  "best_heldout_last_steps": 0.005061938991307481,
+  "definition": "finished, every loss finite, and the best held-out loss of the last 25 LM steps not more than 10% below the best before them",
+  "lm_stalled": 0
+ }
+}
