@@ -43,6 +43,7 @@ model:
 sampling:
   designs: 16                 # splits per draw, stratified over the range
   points_per_design: 1024     # 16,384 interior points per draw (the fixed run: 8,192)
+  density: "uniform"
   corner_fraction: 0.1
   corner_radius: 0.5
   corner_exclusion: 0.02

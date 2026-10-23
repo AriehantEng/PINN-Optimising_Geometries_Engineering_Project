@@ -35,6 +35,7 @@ model:
 sampling:
   designs: 16
   points_per_design: 1024
+  density: "uniform"
   corner_fraction: 0.1
   corner_radius: 0.5
   corner_exclusion: 0.02

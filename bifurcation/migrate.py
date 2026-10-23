@@ -19,6 +19,7 @@ ACTUALLY did:
     model.corner_exponent_max = 1.0         (parametric, corner modes) the modes with z < 1
     training.init_from = random             (parametric) a random start
     evaluation.continuation = []            (parametric) the reference solved from Stokes
+    sampling.density = uniform              (parametric) interior points uniform in area
 
 A targeted text insertion (comments survive), recorded in config.migrated.json,
 as developing_flow/migrate.py does for Network 1.
@@ -75,6 +76,9 @@ PARAMETRIC_MIGRATIONS = (
      lambda d: "continuation" not in d.get("evaluation", {}),
      "before evaluation.continuation existed the reference was always solved by one Newton "
      "solve from Stokes, at Re_h = 10"),
+    ("sampling.density", "uniform", r"^  points_per_design: .*$",
+     lambda d: "density" not in d.get("sampling", {}),
+     "before sampling.density existed the interior points were uniform in area"),
 )
 
 

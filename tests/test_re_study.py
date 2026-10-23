@@ -162,3 +162,25 @@ def test_answer_key_files_name_the_share_away_from_half(tmp_path):
     assert sorted(p.name for p in tmp_path.iterdir()) == [
         "fe_30-90_Re10_q0.2_reference.csv", "fe_30-90_Re10_q0.8_reference.csv",
         "fe_30-90_Re10_reference.csv"]
+
+
+def test_width_scaled_sampling_puts_the_same_points_across_every_channel():
+    """sampling.density = width: density ~ 1/w^2, so a narrow daughter gets as
+    many points across as the parent; the total is unchanged."""
+    import math
+    import numpy as np
+    from bifurcation import flow
+    from bifurcation.geometry import Geometry
+    g = Geometry.from_split(0.1616, 30.0, 90.0, 3.0, 4.0, 0.2)
+    rng = np.random.default_rng(3)
+    pts = flow.width_scaled_points(rng, g, 922, 0.02)
+    assert len(pts) == 922
+    across = []
+    for path, w in flow.channel_regions(g):
+        v = path.vertices
+        area = 0.5 * abs(np.dot(v[:, 0], np.roll(v[:, 1], -1)) - np.dot(v[:, 1], np.roll(v[:, 0], -1)))
+        across.append(w / math.sqrt(area / path.contains_points(pts).sum()))
+    assert min(across) > 5.8 and max(across) / min(across) < 1.1
+    uniform = flow.uniform_points(np.random.default_rng(3), g, 922, 0.02)
+    path, w = flow.channel_regions(g)[0]
+    assert path.contains_points(uniform).sum() < path.contains_points(pts).sum() / 3

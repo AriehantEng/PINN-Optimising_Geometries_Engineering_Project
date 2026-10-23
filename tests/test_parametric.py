@@ -25,7 +25,7 @@ BASE = {
     "model": {"width": 8, "depth": 2, "activation": "tanh", "init_gain": 1.0,
               "input_scale": 2.0, "distance_order": 1, "wall_extension": 0.5,
               "blend_exponent": 2.0, "offset_degree": 3, "corner_modes": "none"},
-    "sampling": {"designs": 3, "points_per_design": 32, "corner_fraction": 0.25,
+    "sampling": {"designs": 3, "points_per_design": 32, "density": "uniform", "corner_fraction": 0.25,
                  "corner_radius": 0.5, "corner_exclusion": 0.05, "inlet_per_design": 8,
                  "outlet_per_design": 8, "validation_designs": 4, "n_flux": 32},
     "weights": {"momentum_x": 1.0, "momentum_y": 2.0, "inlet": 3.0, "outlet": 4.0,

@@ -302,3 +302,50 @@ def write_control_configs():
             f"{admitted:.3f} across the range).\n" + yaml.safe_dump(doc, sort_keys=False))
         written.append(path)
     return written
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 3: the narrow daughter's sampling, and Levenberg-Marquardt given time
+# --------------------------------------------------------------------------- #
+
+SAMPLING_RUNS = [((30.0, 90.0), 0.35), ((30.0, 90.0), 0.2)]   # Re_h 10, seed 21, rule's cutoff
+LM_PARENT = "parametric_re0.1_3090_q0.5_cut0.15_corners_s21"
+LM_EXTRA_STEPS = 250                                         # 150 + 250 = 400 LM steps
+
+
+def write_amendment3_configs():
+    written = []
+    flow10 = next(f for f in FLOWS if f["reynolds"] == 10.0)
+    for angles, share in SAMPLING_RUNS:
+        cutoff, admitted = corner_cutoff(angles, share)
+        doc = parametric_document(angles, share, flow10, cutoff)
+        doc["sampling"]["density"] = "width"
+        tag = f"re10_{angles[0]:g}{angles[1]:g}_q{share:g}_width_corners_s{SEED}"
+        doc["name"] = f"parametric_{tag}"
+        if not _loads(doc):
+            raise RuntimeError(f"{tag} does not load")
+        path = HERE / f"p_{tag}.yaml"
+        path.write_text(
+            "# Tier A amendment 3: Tier A's run with interior points scaled with channel\n"
+            f"# width (density ~ 1/w^2, the same total): layout {angles[0]:g}/{angles[1]:g}, "
+            f"share {share:g}, Re_h 10,\n# seed {SEED}, corner cutoff {cutoff:g} by the rule.\n"
+            + yaml.safe_dump(doc, sort_keys=False))
+        written.append(path)
+    parent = yaml.safe_load((HERE / "runs" / LM_PARENT / "config.yaml").read_text())
+    doc = parent
+    doc["name"] = LM_PARENT.replace("_corners_s21", "_lm400_corners_s22")
+    doc["seed"] = 22               # not the parent's: its held-out points selected it
+    doc["training"]["adam"]["steps"] = 0
+    doc["training"]["lbfgs"]["cycles"] = 0
+    doc["training"]["lm"]["iterations"] = LM_EXTRA_STEPS
+    doc["training"]["init_from"] = LM_PARENT
+    if not _loads(doc):
+        raise RuntimeError(f"{doc['name']} does not load")
+    path = HERE / f"p_{doc['name'][len('parametric_'):]}.yaml"
+    path.write_text(
+        f"# Tier A amendment 3: {LM_PARENT} continued for {LM_EXTRA_STEPS} more\n"
+        "# Levenberg-Marquardt steps (400 in all), from its selected network; no Adam or\n"
+        "# L-BFGS. Seed 22, not the parent's 21. Same cutoff, range and sampling.\n"
+        + yaml.safe_dump(doc, sort_keys=False))
+    written.append(path)
+    return written

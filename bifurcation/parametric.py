@@ -101,7 +101,7 @@ SCHEMA = {
     "model": {"width": int, "depth": int, "activation": str, "init_gain": float,
               "input_scale": float, "distance_order": int, "wall_extension": float,
               "blend_exponent": float, "offset_degree": int, "corner_modes": str},
-    "sampling": {"designs": int, "points_per_design": int, "corner_fraction": float,
+    "sampling": {"designs": int, "points_per_design": int, "density": str, "corner_fraction": float,
                  "corner_radius": float, "corner_exclusion": float, "inlet_per_design": int,
                  "outlet_per_design": int, "validation_designs": int, "n_flux": int},
     "weights": {"momentum_x": float, "momentum_y": float, "inlet": float, "outlet": float,
@@ -163,6 +163,7 @@ class Config:
     corner_exponent_max: float | None
     designs: int
     points_per_design: int
+    density: str
     corner_fraction: float
     corner_radius: float
     corner_exclusion: float
@@ -259,6 +260,8 @@ def parse_config(document) -> Config:
         raise ConfigError("model.blend_exponent must be >= 2 (no-slip needs it)")
     if m["wall_extension"] < 0.0 or m["offset_degree"] < 0:
         raise ConfigError("model.wall_extension and model.offset_degree must be >= 0")
+    if s["density"] not in ("uniform", "width"):
+        raise ConfigError("sampling.density must be uniform or width")
     if not 0.0 <= s["corner_fraction"] < 1.0:
         raise ConfigError("sampling.corner_fraction must lie in [0, 1)")
     if not 0.0 < s["corner_exclusion"] < s["corner_radius"]:
@@ -302,7 +305,7 @@ def parse_config(document) -> Config:
         corner_cutoff=(float(conditional[("model", "corner_cutoff")]) if stokes else None),
         corner_exponent_max=(float(conditional[("model", "corner_exponent_max")]) if stokes
                              else None),
-        designs=s["designs"], points_per_design=s["points_per_design"],
+        designs=s["designs"], points_per_design=s["points_per_design"], density=s["density"],
         corner_fraction=float(s["corner_fraction"]), corner_radius=float(s["corner_radius"]),
         corner_exclusion=float(s["corner_exclusion"]), inlet_per_design=s["inlet_per_design"],
         outlet_per_design=s["outlet_per_design"], validation_designs=s["validation_designs"],
@@ -650,8 +653,8 @@ def sample_batch(rng, config: Config, inlet, designs) -> flow.Batch:
         g = config.geometry(s)
         n_corner = int(round(config.points_per_design * config.corner_fraction))
         points = np.concatenate([
-            flow.uniform_points(rng, g, config.points_per_design - n_corner,
-                                config.corner_exclusion),
+            (flow.width_scaled_points if config.density == "width" else flow.uniform_points)(
+                rng, g, config.points_per_design - n_corner, config.corner_exclusion),
             flow.corner_points(rng, g, n_corner, config.corner_radius, config.corner_exclusion)])
         interior.append(np.column_stack([points, np.full(len(points), s)]))
         y = np.sin(0.5 * np.pi * rng.uniform(-1.0, 1.0, config.inlet_per_design))

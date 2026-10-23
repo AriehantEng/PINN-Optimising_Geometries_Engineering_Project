@@ -552,6 +552,52 @@ def uniform_points(rng, geometry: Geometry, n, exclusion):
     return np.concatenate(out)[:n]
 
 
+def channel_regions(geometry: Geometry):
+    """(path, width) for each daughter's strip, entrance to outlet; the rest of
+    the polygon (parent and junction) has the parent's width 2."""
+    from matplotlib.path import Path as PolyPath
+    from bifurcation.geometry import corner_points as named_points
+    q = named_points(geometry.w1, geometry.w2, math.radians(geometry.angle1),
+                     math.radians(geometry.angle2), geometry.parent_length,
+                     geometry.daughter_length)
+    tip = q["T"] if "T" in q else 0.5 * (q["start1"] + q["start2"])
+    return [(PolyPath(np.array([q["C"], q["E1o"], q["E1i"], tip])), geometry.w1),
+            (PolyPath(np.array([q["B"], q["E2o"], q["E2i"], tip])), geometry.w2)]
+
+
+def width_scaled_points(rng, geometry: Geometry, n, exclusion):
+    """n points, none within `exclusion` of a singular corner, with a density
+    proportional to 1/w^2 in each channel of width w: the same number of
+    points across every channel, where a uniform density gives a narrow
+    daughter fewer (sampling.density = width). The total is the same n."""
+    regions = channel_regions(geometry)
+    tris = np.asarray(geometry.triangles())
+    e1, e2 = tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0]
+    total = float(np.sum(0.5 * np.abs(e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0])))
+
+    def area(path):
+        v = path.vertices
+        return 0.5 * abs(np.dot(v[:, 0], np.roll(v[:, 1], -1))
+                         - np.dot(v[:, 1], np.roll(v[:, 0], -1)))
+
+    areas = [area(path) for path, _ in regions]
+    areas.append(total - sum(areas))
+    widths = [w for _, w in regions] + [2.0]
+    weight = np.array([a / w ** 2 for a, w in zip(areas, widths)])
+    counts = np.floor(n * weight / weight.sum()).astype(int)
+    counts[-1] += n - counts.sum()
+    out = []
+    for k, need in enumerate(counts):
+        while need > 0:
+            trial = uniform_points(rng, geometry, max(int(4 * need * total / areas[k]), 64),
+                                   exclusion)
+            hits = np.array([path.contains_points(trial) for path, _ in regions])
+            keep = trial[hits[k]] if k < len(regions) else trial[~hits.any(axis=0)]
+            out.append(keep[:need])
+            need -= len(out[-1])
+    return np.concatenate(out)
+
+
 def corner_points(rng, geometry: Geometry, n, radius, exclusion):
     """n extra points around the singular corners (Geometry.singular_corners),
     uniform in AREA over the annulus exclusion < r < radius, inside the
@@ -808,7 +854,7 @@ def optimise(config, params, groups, batched_loss, draws, draw, heldout, fingerp
     def saved_batch():
         return Batch(**{k: saved[f"batch_{k}"] for k in Batch._fields})
 
-    def record(vector, batch, phase, iteration, average=None):
+    def record(vector, batch, phase, iteration, average=None, trace=None):
         loss = lm_loss(vector, batch)
         held = heldout_loss(vector)
         held_average = math.nan if average is None else heldout_loss(average)
@@ -823,6 +869,8 @@ def optimise(config, params, groups, batched_loss, draws, draw, heldout, fingerp
                "heldout_average": held_average, "seconds": time.time() - started}
         extras = describe(unflatten(vector))
         row.update(extras)
+        if trace:
+            row.update(trace)
         history.append(row)
         if verbose:
             print(f"  {phase:>6} {iteration:>7d} {loss:>12.4e} {held:>12.4e}"
@@ -898,9 +946,15 @@ def optimise(config, params, groups, batched_loss, draws, draw, heldout, fingerp
             A, g, loss_now = normal_equations(flat, batch)
             if lam is None:
                 lam = config.lm_damping * float(jnp.mean(jnp.diag(A)))
+            lam_tried = lam
             delta, _, lam, nu_lm, attempts = pinn.levenberg_marquardt_step(
                 A, g, loss_now, lambda d: lm_loss(flat + jnp.asarray(d), batch), lam, nu_lm)
             lm_log["rejected"] += attempts - 1
+            # per-step record of the damping, relative to J^T J's mean diagonal, the
+            # attempts the step took, and the gradient norm it started from
+            lm_trace = {"lm_damping_relative": lam_tried / float(jnp.mean(jnp.diag(A))),
+                        "lm_attempts": int(attempts), "lm_accepted": delta is not None,
+                        "gradient_norm": float(jnp.linalg.norm(g))}
             if delta is None:
                 lm_log["stalled"] += 1
                 batch = draw()
@@ -913,7 +967,7 @@ def optimise(config, params, groups, batched_loss, draws, draw, heldout, fingerp
                 window = (window + [flat])[-config.lm_average:]
                 if len(window) == config.lm_average:
                     average = jnp.mean(jnp.stack(window), axis=0)
-            record(flat, batch, "lm", step + 1, average)
+            record(flat, batch, "lm", step + 1, average, lm_trace)
             save("lm", step + 1, flat, batch,
                  {"lm_window": np.stack([np.asarray(w) for w in window])} if window else None,
                  lam=lam, nu=nu_lm)

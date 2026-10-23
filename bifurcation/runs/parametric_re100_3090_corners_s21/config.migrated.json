@@ -1,0 +1,14 @@
+[
+  {
+    "migrated_by": "bifurcation/migrate.py",
+    "migrated_at": "2026-10-23T07:10:27.577865+00:00",
+    "why": "config keys became required after this run finished; values describe what the run actually computed, and no result changed",
+    "added": [
+      {
+        "key": "sampling.density",
+        "value": "uniform",
+        "reason": "before sampling.density existed the interior points were uniform in area"
+      }
+    ]
+  }
+]

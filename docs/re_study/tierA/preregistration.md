@@ -104,3 +104,29 @@ The verdict defined above is renamed, not changed: it says whether the
 held-out loss had stopped falling, not whether it is low (30/90, q = 0.2,
 Re_h = 0.1 plateaued at 22 against 0.12-0.16 for the earlier q = 0.5 runs).
 Held-out losses are reported beside it, as a diagnostic only.
+
+## Amendment 3 (2026-10-23, before these runs): the narrow daughter's sampling, and LM given time
+
+**Sampling.** The trainer's interior points are uniform in area, so a
+narrow daughter gets fewer points across it (2.7-4.8 at the range edge in
+the failing cases, 5.4-5.8 in the passing ones). Two runs repeat Tier A's
+30/90 cases at q = 0.35 and q = 0.2, Re_h = 10, seed 21, cutoff by the rule,
+with `sampling.density: width`: density proportional to 1/w^2 in each channel
+of width w (the parent and junction count as width 2), the total points per
+draw unchanged. One draw then puts 7.9-9.5 points across every channel at
+every split, the narrow daughter included (at least the 5.8 of the q = 0.5
+range edge); the parent and junction fall from about 15 to 8-9.5.
+
+Decision rule: both pass P1 → the sampler caused the off-centre misses;
+only q = 0.35 passes → it explains moderate shares only; neither passes →
+the share itself is the limit. Caveat fixed now: because the total is held,
+a failure could also come from the coarser junction; that is reported with
+the result. Reported per run: s*_ref, s*_PINN, the argmin error, e' at s*_ref
+and the predicted shift (S1.3, over s*_ref ± 0.01), regret, points across
+the narrow daughter, held-out loss.
+
+**Levenberg-Marquardt given time.** The control 30/90, q = 0.5, cutoff 0.15,
+Re_h = 0.1 is continued for 250 more LM steps (400 in all) from its selected
+network, seed 22 (not its own), with the damping, attempts per step and the
+gradient norm now logged at every step. Question: does the held-out loss keep
+falling toward the 0.12-0.16 of the cutoff-0.5 runs, or stall?
