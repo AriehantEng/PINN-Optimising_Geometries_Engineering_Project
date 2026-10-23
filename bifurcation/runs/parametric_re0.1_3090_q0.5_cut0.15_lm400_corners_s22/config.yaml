@@ -1,0 +1,85 @@
+# Tier A amendment 3: parametric_re0.1_3090_q0.5_cut0.15_corners_s21 continued for 250 more
+# Levenberg-Marquardt steps (400 in all), from its selected network; no Adam or
+# L-BFGS. Seed 22, not the parent's 21. Same cutoff, range and sampling.
+name: parametric_re0.1_3090_q0.5_cut0.15_lm400_corners_s22
+seed: 22
+physics:
+  reynolds: 0.1
+  pressure_scaling: viscous
+geometry:
+  angle1: 30.0
+  angle2: 90.0
+  parent_length: 3.0
+  daughter_length: 4.0
+  min_width: 0.2
+design:
+  split_min: 0.3343
+  split_max: 0.6343
+  outlet1_share: 0.5
+inlet:
+  profile: parabola
+model:
+  width: 40
+  depth: 4
+  activation: tanh
+  init_gain: 1.0
+  input_scale: 2.0
+  distance_order: 1
+  wall_extension: 0.5
+  blend_exponent: 2.0
+  offset_degree: 4
+  corner_modes: stokes
+  corner_degree: 4
+  corner_cutoff: 0.15
+  corner_exponent_max: 1.0
+sampling:
+  designs: 16
+  points_per_design: 1024
+  density: uniform
+  corner_fraction: 0.1
+  corner_radius: 0.5
+  corner_exclusion: 0.02
+  inlet_per_design: 32
+  outlet_per_design: 32
+  validation_designs: 32
+  n_flux: 64
+weights:
+  momentum_x: 1.0
+  momentum_y: 1.0
+  inlet: 1.0
+  outlet: 1.0
+  corner_radius: 0.3
+training:
+  adam:
+    steps: 0
+    learning_rate: 0.001
+    decay_rate: 0.9
+    decay_steps: 1000
+    resample_every: 250
+  lbfgs:
+    cycles: 0
+    iterations_per_cycle: 500
+    gtol: 1.0e-14
+  lm:
+    iterations: 250
+    damping: 0.0001
+    resample_every: 1
+    average: 20
+  check_every: 250
+  init_from: parametric_re0.1_3090_q0.5_cut0.15_corners_s21
+evaluation:
+  max_area: 0.002
+  corner_levels: 6
+  corner_radius: 0.4
+  n_line: 256
+  splits:
+  - 0.3343
+  - 0.3843
+  - 0.4343
+  - 0.4843
+  - 0.5343
+  - 0.5843
+  - 0.6343
+  search_xatol: 0.002
+  curve_points: 61
+  continuation: []
