@@ -2,7 +2,6 @@
 that need no finite-element solve. The study itself is the evidence it writes."""
 
 import copy
-import math
 
 import pytest
 import yaml

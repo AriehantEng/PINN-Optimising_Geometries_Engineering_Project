@@ -6,8 +6,6 @@ parabolic mean 2/3 was required, inflating the correlation by 25% and turning a
 41% entrance-length miss into a reported 12.9% pass.
 """
 
-import copy
-
 import numpy as np
 import pytest
 import yaml

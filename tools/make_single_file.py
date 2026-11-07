@@ -408,9 +408,9 @@ if __name__ == "__main__":
 def build() -> str:
     parts = [HEADER]
     for name, text in collect_sources().items():
-        parts.append(f"# ---------------------------------------------------------------------------\n")
+        parts.append("# ---------------------------------------------------------------------------\n")
         parts.append(f"# {name}\n")
-        parts.append(f"# ---------------------------------------------------------------------------\n")
+        parts.append("# ---------------------------------------------------------------------------\n")
         parts.append(f"FILES[{name!r}] = r'''{text}'''\n\n")
     parts.append(FOOTER)
     return "".join(parts)

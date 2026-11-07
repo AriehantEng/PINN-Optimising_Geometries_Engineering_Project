@@ -11,7 +11,6 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from src.config import parse_config
 from src.geometry.domain import WALL, Channel, dphi_dy, normalise, phi
 from src.geometry.sampling import evaluation_grid, sample_all, station_grid
 from src.models.build import build_model, count_parameters

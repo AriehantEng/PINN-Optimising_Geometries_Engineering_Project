@@ -11,17 +11,14 @@ So the round-trip is asserted to be BITWISE identical, not merely close.
 """
 
 import json
-from pathlib import Path
 
-import jax
 import numpy as np
 import pytest
 import yaml
 
-from src.config import parse_config
 from src.evaluation.accuracy import evaluate
 from src.physics import analytic
-from src.predict import TrainedModel, load_run
+from src.predict import load_run
 from src.run import execute
 from tests.test_accuracy import SHORT_SCHEDULE, _apply
 

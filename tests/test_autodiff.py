@@ -20,8 +20,6 @@ h = 1e-3 sits in the flat minimum of the measured error curve (error stays
 below 1e-8 for h in [1e-3, 3e-3] on every architecture tested).
 """
 
-import itertools
-
 import jax
 import jax.numpy as jnp
 import numpy as np

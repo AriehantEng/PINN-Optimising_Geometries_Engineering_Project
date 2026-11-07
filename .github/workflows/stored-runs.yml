@@ -1,0 +1,38 @@
+name: stored runs
+
+# A push that only adds or changes a finished run (the study's usual push)
+# needs one check, not the whole fast suite: that every stored run still loads
+# (CLAUDE.md, "Making a config key required"). A push that also touches code
+# runs tests.yml as well, whose fast job includes these same two tests.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "bifurcation/runs/*/config.yaml"
+      - "bifurcation/runs/*/params.npz"
+      - "developing_flow/runs/*/config.yaml"
+      - "developing_flow/runs/*/params.npz"
+
+concurrency:
+  group: stored-runs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-ci.txt
+      - run: pip install -r requirements.txt -c requirements-ci.txt
+      - name: Every stored run still loads
+        run: >-
+          python -m pytest -q
+          "tests/test_bifurcation_flow.py::test_every_stored_bifurcation_run_still_loads"
+          "tests/test_developing.py::test_every_stored_developing_run_still_loads"

@@ -1,22 +1,69 @@
 name: tests
 
+# Minutes: this repository is private, so Actions has a monthly allowance.
+# October 2026 used all 2,000 minutes by the 16th, at ~30 min per push on
+# every push, and every later run was refused before it started. So:
+#   - a push runs only `fast`, and only when it touches something a test can
+#     read (the `paths` list below); result-only pushes (exports, figures,
+#     Word documents) start nothing, and a push that only stores a finished
+#     run starts the two-test stored-runs.yml instead
+#   - `short-schedule` (~20 min) runs on pull requests, pushes to main and the
+#     manual "Run workflow" button, not on every branch push
+#   - a newer push to the same branch cancels the run still in progress
 on:
   push:
     branches: ["**"]
+    # Order matters: a later pattern overrides an earlier one. Everything
+    # counts, then result folders and document types are dropped, then the
+    # files the suite reads from them are put back. The put-back list is
+    # what a traced run of the fast suite opened (stored runs are read only
+    # by the two tests stored-runs.yml runs); if a test starts reading
+    # another file under docs/, add it here (CLAUDE.md).
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!bifurcation/runs/**"
+      - "!developing_flow/runs/**"
+      - "!**/*.md"
+      - "!**/*.docx"
+      - "!**/*.png"
+      - "!**/*.pdf"
+      - "!**/*.csv"
+      - "docs/re_study/figures.py"
+      - "docs/re_study/pinn_*"
+      - "docs/bifurcation_re10-shares.json"
+      - "docs/bifurcation_re10-shares-all.json"
+      - "docs/bifurcation_re10-sensitivity.json"
+      - "docs/falsifiability-matrix.md"
+      - "docs/network3_re10_all_w16.md"
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   fast:
     # Everything that does not require training. This is the suite that must
     # never go red.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-ci.txt
+      - run: pip install -r requirements.txt pyflakes -c requirements-ci.txt
+      - name: Static check (undefined names and syntax errors only)
+        # Unused imports and variables are reported but do not fail the job.
+        run: |
+          git ls-files '*.py' | xargs python -m pyflakes > pyflakes.txt || true
+          if grep -vE "imported but unused|assigned to but never used|f-string is missing placeholders|redefinition of unused" pyflakes.txt; then exit 1; fi
       - name: Non-training tests (SPEC tests 5, 6, 7 and structural checks)
         run: python -m pytest tests/ -q -m "not slow"
 
@@ -26,13 +73,18 @@ jobs:
     # against documented smoke bounds. It is NOT the SPEC accuracy gate --
     # the gate is `pytest tests/ -q` on the full schedule, which takes far
     # longer than a CI job should.
-    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-ci.txt
+      - run: pip install -r requirements.txt -c requirements-ci.txt
       - name: Training tests, short schedule (smoke bounds, not the gate)
         run: python -m pytest tests/ -q -m slow --schedule short

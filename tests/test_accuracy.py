@@ -17,9 +17,7 @@ clearly-labelled set of numbers for the reduced schedule.
 """
 
 import copy
-import json
 
-import jax
 import numpy as np
 import pytest
 import yaml

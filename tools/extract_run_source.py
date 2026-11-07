@@ -1,5 +1,5 @@
 """Assemble the source that produced runs/caseA_re10_extended into one file."""
-import json, pathlib, subprocess, sys
+import json, pathlib, sys
 
 WT = pathlib.Path(sys.argv[1])
 OUT = pathlib.Path(sys.argv[2])

@@ -259,3 +259,16 @@ range wider than the region where the answer can lie, and check the error
 slope around the argmin, not the worst error. L-BFGS on one fixed draw also
 over-fitted it (held-out 4.3x training, rising); Levenberg-Marquardt with
 fresh points every step recovered it.
+
+**A red check that failed in seconds is a billing refusal, not a test result.**
+From 16 October 2026 every push showed failing checks → the repository is
+private, every push ran both CI jobs (~30 min), and the 2,000 free Actions
+minutes for October were used by the 16th, so GitHub refused each later job
+before it started (the run's annotation says so) → `.github/workflows/tests.yml`
+now runs `fast` only for pushes that touch something a test reads,
+`short-schedule` only on pull requests, `main` and the manual button, and
+`stored-runs.yml` (two tests, ~4 min) when a push only stores finished runs.
+CI installs the pinned versions in `requirements-ci.txt`. The `paths` list
+came from a traced run of the fast suite: if a test starts reading another
+file under `docs/`, add it to that list, or a push changing only that file
+skips the test that reads it.
