@@ -1,0 +1,1305 @@
+{
+ "settings": {
+  "xatol": 1e-05,
+  "scan_step": 0.0005,
+  "scan_points": 4,
+  "mesh_delta": 0.01,
+  "check_mesh": [
+   0.005,
+   5.0
+  ]
+ },
+ "skipped": [
+  {
+   "run": "parametric_re10_30120_corners_s21",
+   "why": "reference optimum on an evaluation-grid end"
+  },
+  {
+   "run": "parametric_re1_30120_corners_s21",
+   "why": "reference optimum on an evaluation-grid end"
+  }
+ ],
+ "cases": {
+  "0-120_q0.5_Re0.1": {
+   "case": "0-120_q0.5_Re0.1",
+   "spec": {
+    "angles": [
+     0.0,
+     120.0
+    ],
+    "share": 0.5,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.4209,
+      0.5209
+     ],
+     "runs": [
+      "parametric_re0.1_0120_q0.5_corners_s21"
+     ],
+     "s": 0.452612861950601,
+     "J": 35.77350036678222,
+     "evaluations": 15
+    }
+   ],
+   "scan": {
+    "vertex": 0.45260158260066014,
+    "curvature": 29.308268452052236,
+    "jitter": 1.6291341690875472e-06,
+    "noise_half_width": 0.0004715343566459393,
+    "vertex_spread": 1.142271523596472e-05,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 8.805963843949716e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.0002709716355742112,
+    "shift": -9.24556959130887e-06,
+    "relative_difference": [
+     3.546067782767004e-05,
+     2.630876577480734e-05,
+     4.08801105391543e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0004715343566459393,
+    "mesh": 9.24556959130887e-06,
+    "brent": 0.0004907799262372482,
+    "model": 8.805963843949716e-06,
+    "vertex": 2.9474248671223305e-05
+   }
+  },
+  "0-120_q0.5_Re10": {
+   "case": "0-120_q0.5_Re10",
+   "spec": {
+    "angles": [
+     0.0,
+     120.0
+    ],
+    "share": 0.5,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.4209,
+      0.5209
+     ],
+     "runs": [
+      "parametric_re10_0120_q0.5_corners_s21"
+     ],
+     "s": 0.4527507360944174,
+     "J": 3.6227039379182893,
+     "evaluations": 15
+    }
+   ],
+   "scan": {
+    "vertex": 0.4527370195709813,
+    "curvature": 28.202434101299552,
+    "jitter": 2.571949490052004e-06,
+    "noise_half_width": 0.0006039735457222962,
+    "vertex_spread": 6.335990142081194e-05,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 8.272591781988137e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 4.5072858434469536e-05,
+    "shift": -1.5981903644406568e-06,
+    "relative_difference": [
+     4.082798797822029e-05,
+     3.950160293486604e-05,
+     4.172944514690968e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0006039735457222962,
+    "mesh": 1.5981903644406568e-06,
+    "brent": 0.0006155717360867369,
+    "model": 8.272591781988137e-06,
+    "vertex": 7.323068356724074e-05
+   }
+  },
+  "15-15_q0.2_Re0.1": {
+   "case": "15-15_q0.2_Re0.1",
+   "spec": {
+    "angles": [
+     15.0,
+     15.0
+    ],
+    "share": 0.2,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.2821,
+      0.3821
+     ],
+     "runs": [
+      "parametric_re0.1_1515_q0.2_corners_s21"
+     ],
+     "s": 0.3300003830366387,
+     "J": 33.40077439349014,
+     "evaluations": 13
+    }
+   ],
+   "scan": {
+    "vertex": 0.329965132555874,
+    "curvature": 45.610874352296854,
+    "jitter": 1.3380686417165044e-07,
+    "noise_half_width": 0.00010832657030310885,
+    "vertex_spread": 1.774116602792919e-06,
+    "points": 17,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 4.422875564402684e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -0.0001692622827287327,
+    "shift": 3.7110071914288804e-06,
+    "relative_difference": [
+     -2.5409714243807e-07,
+     -7.047995371767257e-07,
+     -3.6393427970127235e-06
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00010832657030310885,
+    "mesh": 3.7110071914288804e-06,
+    "brent": 0.00012203757749453773,
+    "model": 4.422875564402684e-06,
+    "vertex": 9.907999358624483e-06
+   }
+  },
+  "15-15_q0.2_Re10": {
+   "case": "15-15_q0.2_Re10",
+   "spec": {
+    "angles": [
+     15.0,
+     15.0
+    ],
+    "share": 0.2,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.2821,
+      0.3821
+     ],
+     "runs": [
+      "parametric_re10_1515_q0.2_corners_s21"
+     ],
+     "s": 0.32970942639963946,
+     "J": 3.3483105930868007,
+     "evaluations": 11
+    }
+   ],
+   "scan": {
+    "vertex": 0.32973945162979973,
+    "curvature": 45.73695473380893,
+    "jitter": 8.491783934497604e-08,
+    "noise_half_width": 8.61778869004981e-05,
+    "vertex_spread": 1.4968379232205287e-06,
+    "points": 16,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 4.105884455263276e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -2.329127066769117e-05,
+    "shift": 5.092440194859361e-07,
+    "relative_difference": [
+     -1.1324446463900628e-06,
+     -8.547484634524594e-07,
+     -1.5982700597438892e-06
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 8.61778869004981e-05,
+    "mesh": 5.092440194859361e-07,
+    "brent": 9.668713091998403e-05,
+    "model": 4.105884455263276e-06,
+    "vertex": 6.11196639796974e-06
+   }
+  },
+  "30-120_q0.5_Re100": {
+   "case": "30-120_q0.5_Re100",
+   "spec": {
+    "angles": [
+     30.0,
+     120.0
+    ],
+    "share": 0.5,
+    "reynolds": 100.0,
+    "pressure_scaling": "inertial",
+    "continuation": [
+     25.0,
+     50.0
+    ],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.35,
+      0.45
+     ],
+     "runs": [
+      "parametric_re100_30120_corners_s21"
+     ],
+     "s": 0.3859340913135795,
+     "J": 0.4257532190826859,
+     "evaluations": 14
+    }
+   ],
+   "local_scan": {
+    "vertex": 0.3748523728839694,
+    "curvature": 0.7253440340169491,
+    "jitter": 3.0887418009590935e-05,
+    "noise_half_width": 0.013051149869263352,
+    "vertex_spread": 0.10202534866368446,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola"
+   },
+   "scan": {
+    "vertex": 0.3855948436608817,
+    "curvature": 6.831714286765543,
+    "jitter": 2.5975054126739967e-05,
+    "noise_half_width": 0.0038998093724136322,
+    "vertex_spread": 0.000252259422640122,
+    "points": 33,
+    "window": 0.015000000001,
+    "model": "cubic",
+    "model_error": 1.064783577309214e-05
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.0010010941145499558,
+    "shift": -0.00014653629711788214,
+    "relative_difference": [
+     0.00015881541263174093,
+     -2.867970576470036e-05,
+     0.00017883729492274014
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0038998093724136322,
+    "mesh": 0.00014653629711788214,
+    "brent": 0.004056345669531515,
+    "model": 1.064783577309214e-05,
+    "vertex": 0.0004094435555310963
+   }
+  },
+  "30-90_q0.2_Re0.1": {
+   "case": "30-90_q0.2_Re0.1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.2,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.2616,
+      0.3616
+     ],
+     "runs": [
+      "parametric_re0.1_3090_q0.2_corners_s21"
+     ],
+     "s": 0.3063491559073639,
+     "J": 33.59197297341216,
+     "evaluations": 14
+    }
+   ],
+   "scan": {
+    "vertex": 0.306205261633314,
+    "curvature": 38.284088888028116,
+    "jitter": 1.0181645970960381e-06,
+    "noise_half_width": 0.0003261593505701415,
+    "vertex_spread": 1.2987352659865614e-05,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 3.378609158166679e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -3.381298357974082e-05,
+    "shift": 8.832124405163665e-07,
+    "relative_difference": [
+     1.9612784641465097e-05,
+     1.4756559228557009e-05,
+     1.8936524969870305e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0003261593505701415,
+    "mesh": 8.832124405163665e-07,
+    "brent": 0.0003370425630106579,
+    "model": 3.378609158166679e-06,
+    "vertex": 1.724917425854866e-05
+   }
+  },
+  "30-90_q0.2_Re10": {
+   "case": "30-90_q0.2_Re10",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.2,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.2616,
+      0.3616
+     ],
+     "runs": [
+      "parametric_re10_3090_q0.2_corners_s21",
+      "parametric_re10_3090_q0.2_corners_s22",
+      "parametric_re10_3090_q0.2_width_corners_s21"
+     ],
+     "s": 0.3060776040057955,
+     "J": 3.413298865333331,
+     "evaluations": 13
+    }
+   ],
+   "scan": {
+    "vertex": 0.3058253209157542,
+    "curvature": 37.9350008622672,
+    "jitter": 1.4791517070936486e-06,
+    "noise_half_width": 0.00039492652702426427,
+    "vertex_spread": 3.56456789410986e-05,
+    "points": 18,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 6.851906551030851e-07
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.00036861631925732885,
+    "shift": -9.717050504247659e-06,
+    "relative_difference": [
+     2.133005053095438e-05,
+     1.807544368359615e-05,
+     2.8702376916101002e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00039492652702426427,
+    "mesh": 9.717050504247659e-06,
+    "brent": 0.00041464357752851196,
+    "model": 6.851906551030851e-07,
+    "vertex": 4.6047920100449344e-05
+   }
+  },
+  "30-90_q0.35_Re0.1": {
+   "case": "30-90_q0.35_Re0.1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.35,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.3539,
+      0.4539
+     ],
+     "runs": [
+      "parametric_re0.1_3090_q0.35_corners_s21",
+      "parametric_re0.1_3090_q0.35_cut0.4_corners_s21"
+     ],
+     "s": 0.4012383746675959,
+     "J": 38.348575329898296,
+     "evaluations": 16
+    }
+   ],
+   "scan": {
+    "vertex": 0.4010847386085196,
+    "curvature": 34.787994251589524,
+    "jitter": 1.0964606818039774e-06,
+    "noise_half_width": 0.00035506824394367716,
+    "vertex_spread": 1.2229118893702928e-05,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 8.414250671606727e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.0006615104279350504,
+    "shift": -1.9015480546275668e-05,
+    "relative_difference": [
+     9.03933948048774e-06,
+     1.5714766138597014e-05,
+     2.226954803918879e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00035506824394367716,
+    "mesh": 1.9015480546275668e-05,
+    "brent": 0.00038408372448995285,
+    "model": 8.414250671606727e-06,
+    "vertex": 3.9658850111585326e-05
+   }
+  },
+  "30-90_q0.35_Re10": {
+   "case": "30-90_q0.35_Re10",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.35,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.3539,
+      0.4539
+     ],
+     "runs": [
+      "parametric_re10_3090_q0.35_corners_s21",
+      "parametric_re10_3090_q0.35_cut0.4_corners_s21",
+      "parametric_re10_3090_q0.35_width_corners_s21"
+     ],
+     "s": 0.4011464413994184,
+     "J": 3.87255334343237,
+     "evaluations": 13
+    }
+   ],
+   "scan": {
+    "vertex": 0.4010317409399898,
+    "curvature": 34.148064176498345,
+    "jitter": 1.3432754347309818e-06,
+    "noise_half_width": 0.0003966701199356989,
+    "vertex_spread": 1.9250600459763678e-05,
+    "points": 18,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 6.61907125226735e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -6.51893355629866e-05,
+    "shift": 1.9090199440310215e-06,
+    "relative_difference": [
+     1.6818065116552816e-05,
+     2.054650131566582e-05,
+     1.551427840529307e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0003966701199356989,
+    "mesh": 1.9090199440310215e-06,
+    "brent": 0.00040857913987973,
+    "model": 6.61907125226735e-06,
+    "vertex": 2.777869165606205e-05
+   }
+  },
+  "30-90_q0.5_Re0.1": {
+   "case": "30-90_q0.5_Re0.1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.5,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.45,
+      0.55
+     ],
+     "runs": [
+      "parametric_re0.1_3090_corners_s21",
+      "parametric_re0.1_3090_corners_s22",
+      "parametric_re0.1_3090_corners_s23"
+     ],
+     "s": 0.48433847748459746,
+     "J": 40.091534444959315,
+     "evaluations": 13
+    },
+    {
+     "bracket": [
+      0.4343,
+      0.5343
+     ],
+     "runs": [
+      "parametric_re0.1_3090_q0.5_cut0.15_corners_s21",
+      "parametric_re0.1_3090_q0.5_cut0.15_lm400_corners_s22"
+     ],
+     "s": 0.48436028626042055,
+     "J": 40.09153780279581,
+     "evaluations": 15
+    }
+   ],
+   "scan": {
+    "vertex": 0.48437876509417094,
+    "curvature": 33.45433696605432,
+    "jitter": 8.502105646825277e-07,
+    "noise_half_width": 0.00031883576417279216,
+    "vertex_spread": 3.2362587146228528e-06,
+    "points": 28,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 4.0954242647162076e-07
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.00012212418311063778,
+    "shift": -3.6504738753171404e-06,
+    "relative_difference": [
+     1.4377351529981652e-05,
+     1.4931371777660019e-05,
+     1.6819835192194432e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00031883576417279216,
+    "mesh": 3.6504738753171404e-06,
+    "brent": 0.00033248623804810933,
+    "model": 4.0954242647162076e-07,
+    "vertex": 7.296275016411614e-06
+   }
+  },
+  "30-90_q0.5_Re1": {
+   "case": "30-90_q0.5_Re1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.5,
+    "reynolds": 1.0,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.45,
+      0.55
+     ],
+     "runs": [
+      "parametric_re1_3090_corners_s21"
+     ],
+     "s": 0.48434362168330114,
+     "J": 40.09495422313635,
+     "evaluations": 14
+    }
+   ],
+   "scan": {
+    "vertex": 0.4843832694453745,
+    "curvature": 34.2768501139815,
+    "jitter": 7.245710769398175e-07,
+    "noise_half_width": 0.00029078368774527596,
+    "vertex_spread": 4.693081588624803e-06,
+    "points": 17,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 3.243708598277273e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -2.8506313376472725e-05,
+    "shift": 8.316491533405229e-07,
+    "relative_difference": [
+     1.6770446937597328e-05,
+     6.613202883976044e-06,
+     1.6200320670067825e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00029078368774527596,
+    "mesh": 8.316491533405229e-07,
+    "brent": 0.0003016153368986165,
+    "model": 3.243708598277273e-06,
+    "vertex": 8.768439340242598e-06
+   }
+  },
+  "30-90_q0.5_Re10": {
+   "case": "30-90_q0.5_Re10",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.5,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.45,
+      0.55
+     ],
+     "runs": [
+      "parametric_re10_3090_corners_ease",
+      "parametric_re10_3090_corners_more",
+      "parametric_re10_3090_corners_next",
+      "parametric_re10_3090_corners_s22",
+      "parametric_re10_3090_corners_s23",
+      "parametric_re10_3090_corners_wide",
+      "parametric_re10_3090_equal",
+      "parametric_re10_3090_equal_corners"
+     ],
+     "s": 0.484748971023819,
+     "J": 4.035828852978822,
+     "evaluations": 15
+    },
+    {
+     "bracket": [
+      0.4343,
+      0.5343
+     ],
+     "runs": [
+      "parametric_re10_3090_q0.5_cut0.15_corners_s21"
+     ],
+     "s": 0.4848476017269293,
+     "J": 4.035831745640206,
+     "evaluations": 17
+    }
+   ],
+   "scan": {
+    "vertex": 0.4847897470185696,
+    "curvature": 33.50246549722753,
+    "jitter": 1.0402388515708922e-06,
+    "noise_half_width": 0.0003524180520926892,
+    "vertex_spread": 9.671408794820202e-06,
+    "points": 39,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 4.426757863607023e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.00013560152711811143,
+    "shift": -4.047508895407504e-06,
+    "relative_difference": [
+     1.1230614091806146e-05,
+     1.4458403973849343e-05,
+     1.3942644634168389e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0003524180520926892,
+    "mesh": 4.047508895407504e-06,
+    "brent": 0.00036646556098809675,
+    "model": 4.426757863607023e-06,
+    "vertex": 1.814567555383473e-05
+   }
+  },
+  "30-90_q0.5_Re100": {
+   "case": "30-90_q0.5_Re100",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.5,
+    "reynolds": 100.0,
+    "pressure_scaling": "inertial",
+    "continuation": [
+     25.0,
+     50.0
+    ],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.45,
+      0.55
+     ],
+     "runs": [
+      "parametric_re100_3090_corners_s21",
+      "parametric_re100_3090_corners_s22",
+      "parametric_re100_3090_corners_s23"
+     ],
+     "s": 0.48859169510671996,
+     "J": 0.45460682209694314,
+     "evaluations": 13
+    }
+   ],
+   "scan": {
+    "vertex": 0.4888609556746124,
+    "curvature": 32.887809117251486,
+    "jitter": 2.013881353836776e-06,
+    "noise_half_width": 0.0004949136870121096,
+    "vertex_spread": 2.8255294188372915e-05,
+    "points": 19,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 2.43422174894814e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.0005644678304883545,
+    "shift": -1.7163436715286084e-05,
+    "relative_difference": [
+     2.95919610449058e-05,
+     3.068409569384478e-05,
+     4.0881317654672955e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0004949136870121096,
+    "mesh": 1.7163436715286084e-05,
+    "brent": 0.0005220771237273956,
+    "model": 2.43422174894814e-06,
+    "vertex": 4.785295265260714e-05
+   }
+  },
+  "30-90_q0.65_Re0.1": {
+   "case": "30-90_q0.65_Re0.1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.65,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.5155,
+      0.6155
+     ],
+     "runs": [
+      "parametric_re0.1_3090_q0.65_corners_s21"
+     ],
+     "s": 0.5679553617222866,
+     "J": 38.83745860262093,
+     "evaluations": 15
+    }
+   ],
+   "scan": {
+    "vertex": 0.5681799407599651,
+    "curvature": 35.22353033538713,
+    "jitter": 6.852137140442471e-07,
+    "noise_half_width": 0.0002789501363670393,
+    "vertex_spread": 1.1103874164142269e-05,
+    "points": 20,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 2.3280388723456724e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -6.0019277059453426e-05,
+    "shift": 1.7039540468535994e-06,
+    "relative_difference": [
+     1.4960208122971608e-05,
+     1.3955618891170474e-05,
+     1.3759822581782544e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0002789501363670393,
+    "mesh": 1.7039540468535994e-06,
+    "brent": 0.0002906540904138929,
+    "model": 2.3280388723456724e-06,
+    "vertex": 1.513586708334154e-05
+   }
+  },
+  "30-90_q0.65_Re10": {
+   "case": "30-90_q0.65_Re10",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.65,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.5155,
+      0.6155
+     ],
+     "runs": [
+      "parametric_re10_3090_q0.65_corners_s21"
+     ],
+     "s": 0.5687382944461467,
+     "J": 3.9019373556209724,
+     "evaluations": 11
+    }
+   ],
+   "scan": {
+    "vertex": 0.5688261805169633,
+    "curvature": 35.79284044787851,
+    "jitter": 7.687627351491589e-07,
+    "noise_half_width": 0.00029310827195304546,
+    "vertex_spread": 1.3694244008100043e-05,
+    "points": 16,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 2.2451374650511724e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 0.00015108527686713484,
+    "shift": -4.221103298218118e-06,
+    "relative_difference": [
+     1.0251911220837684e-05,
+     1.3485717466954483e-05,
+     1.3273616758180395e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00029310827195304546,
+    "mesh": 4.221103298218118e-06,
+    "brent": 0.0003073293752512636,
+    "model": 2.2451374650511724e-06,
+    "vertex": 2.016048477136933e-05
+   }
+  },
+  "30-90_q0.8_Re0.1": {
+   "case": "30-90_q0.8_Re0.1",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.8,
+    "reynolds": 0.1,
+    "pressure_scaling": "viscous",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.6108,
+      0.7108
+     ],
+     "runs": [
+      "parametric_re0.1_3090_q0.8_corners_s21"
+     ],
+     "s": 0.6646511962589897,
+     "J": 34.14249832142951,
+     "evaluations": 12
+    }
+   ],
+   "scan": {
+    "vertex": 0.6646216054888341,
+    "curvature": 40.18643403327467,
+    "jitter": 4.650108553291366e-07,
+    "noise_half_width": 0.00021514031791153204,
+    "vertex_spread": 5.366371815807014e-06,
+    "points": 17,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 2.778165806183175e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": -0.0002373868244420747,
+    "shift": 5.907138320496827e-06,
+    "relative_difference": [
+     7.349538446277393e-06,
+     1.0322855207522963e-05,
+     2.6018019574358675e-06
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.00021514031791153204,
+    "mesh": 5.907138320496827e-06,
+    "brent": 0.00023104745623202887,
+    "model": 2.778165806183175e-06,
+    "vertex": 1.4051675942487016e-05
+   }
+  },
+  "30-90_q0.8_Re10": {
+   "case": "30-90_q0.8_Re10",
+   "spec": {
+    "angles": [
+     30.0,
+     90.0
+    ],
+    "share": 0.8,
+    "reynolds": 10.0,
+    "pressure_scaling": "inertial",
+    "continuation": [],
+    "geometry": [
+     3.0,
+     4.0,
+     0.2
+    ],
+    "inlet": "parabola",
+    "mesh": [
+     0.002,
+     6,
+     0.4
+    ],
+    "n_line": 256
+   },
+   "brent": [
+    {
+     "bracket": [
+      0.6108,
+      0.7108
+     ],
+     "runs": [
+      "parametric_re10_3090_q0.8_corners_s21"
+     ],
+     "s": 0.6650191030982833,
+     "J": 3.425807417468233,
+     "evaluations": 17
+    }
+   ],
+   "scan": {
+    "vertex": 0.6650969878336339,
+    "curvature": 40.58919821213815,
+    "jitter": 5.713705278777912e-07,
+    "noise_half_width": 0.0002372923170114216,
+    "vertex_spread": 5.909092307465613e-06,
+    "points": 21,
+    "window": 0.002000000001,
+    "model": "parabola",
+    "model_error": 5.291565012610633e-06
+   },
+   "mesh": {
+    "check_mesh": [
+     0.005,
+     5
+    ],
+    "delta": 0.01,
+    "error_slope": 9.94402952758664e-05,
+    "shift": -2.4499201673347885e-06,
+    "relative_difference": [
+     8.066713179877283e-06,
+     1.2427458742525488e-05,
+     1.0055519085394593e-05
+    ]
+   },
+   "eps_s": {
+    "xatol": 1e-05,
+    "noise": 0.0002372923170114216,
+    "mesh": 2.4499201673347885e-06,
+    "brent": 0.0002497422371787564,
+    "model": 5.291565012610633e-06,
+    "vertex": 1.3650577487411035e-05
+   }
+  }
+ }
+}

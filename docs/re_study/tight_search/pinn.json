@@ -345,6 +345,231 @@
    "J": 4.036356625620277,
    "on_bound": false,
    "evaluations": 6
+  },
+  "parametric_re10_3090_corners_s23": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re10",
+   "seed": 23,
+   "stored": {
+    "s": 0.48551366600961243,
+    "J": 4.035433551002934,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.48574104790809464,
+   "J": 4.0354300381782355,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_corners_wide": {
+   "family": "earlier experiment",
+   "case": "30-90_q0.5_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.48545768268458533,
+    "J": 4.028418243575996,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.48545768268458533,
+   "J": 4.028418243575996,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_equal": {
+   "family": "earlier experiment",
+   "case": "30-90_q0.5_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.484486333955373,
+    "J": 4.038519835181431,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.4843131009256758,
+   "J": 4.038517751078848,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_equal_corners": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.4861803398874989,
+    "J": 4.035573278380532,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.4863521733342684,
+   "J": 4.035571228584352,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.2_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.2_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.2977803398874989,
+    "J": 3.426470109972123,
+    "reference_s": 0.30562165105531225
+   },
+   "curve_reproduces": true,
+   "s": 0.29761458817918446,
+   "J": 3.42646797620536,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re10_3090_q0.2_corners_s22": {
+   "family": "controls",
+   "case": "30-90_q0.2_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.2970917973168749,
+    "J": 3.4198099488919387,
+    "reference_s": 0.30562165105531225
+   },
+   "curve_reproduces": true,
+   "s": 0.29708339034217746,
+   "J": 3.4198099439002356,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re10_3090_q0.2_width_corners_s21": {
+   "family": "amendment 3",
+   "case": "30-90_q0.2_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.29278033988749896,
+    "J": 3.3898381830837954,
+    "reference_s": 0.30562165105531225
+   },
+   "curve_reproduces": true,
+   "s": 0.29264381813478507,
+   "J": 3.389836614251214,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re10_3090_q0.35_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.35_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.3962606797749979,
+    "J": 3.887970684827281,
+    "reference_s": 0.40116009827600707
+   },
+   "curve_reproduces": true,
+   "s": 0.3965214220670743,
+   "J": 3.887965694051678,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.35_cut0.4_corners_s21": {
+   "family": "controls",
+   "case": "30-90_q0.35_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.39574701241415405,
+    "J": 3.8782485106820657,
+    "reference_s": 0.40116009827600707
+   },
+   "curve_reproduces": true,
+   "s": 0.39570338184984205,
+   "J": 3.878248362764616,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.35_width_corners_s21": {
+   "family": "amendment 3",
+   "case": "30-90_q0.35_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.39429882420529266,
+    "J": 3.8621695577057253,
+    "reference_s": 0.40116009827600707
+   },
+   "curve_reproduces": true,
+   "s": 0.39429548502356265,
+   "J": 3.8621695568072814,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.5_cut0.15_corners_s21": {
+   "family": "controls",
+   "case": "30-90_q0.5_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.48382303016150163,
+    "J": 4.062630619472842,
+    "reference_s": 0.4847770790799147
+   },
+   "curve_reproduces": true,
+   "s": 0.48382303016150163,
+   "J": 4.062630619472842,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.65_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.65_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.5706530103444731,
+    "J": 3.9021451049823455,
+    "reference_s": 0.5686316659979144
+   },
+   "curve_reproduces": true,
+   "s": 0.5704102171802188,
+   "J": 3.9021408488973797,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_q0.8_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.8_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.6589529836620938,
+    "J": 3.4416621679124364,
+    "reference_s": 0.6653385962225105
+   },
+   "curve_reproduces": true,
+   "s": 0.6591864423536452,
+   "J": 3.4416589773455213,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re1_30120_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-120_q0.5_Re1",
+   "seed": 21,
+   "stored": {
+    "s": 0.35,
+    "J": 30.622453799241743,
+    "reference_s": 0.35
+   },
+   "curve_reproduces": true,
+   "s": 0.35,
+   "J": 30.622453799241743,
+   "on_bound": true,
+   "evaluations": 0
+  },
+  "parametric_re1_3090_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re1",
+   "seed": 21,
+   "stored": {
+    "s": 0.48302735359622967,
+    "J": 40.301089816886474,
+    "reference_s": 0.48434362168330114
+   },
+   "curve_reproduces": true,
+   "s": 0.4827394676276189,
+   "J": 40.301040824019324,
+   "on_bound": false,
+   "evaluations": 6
   }
  }
 }

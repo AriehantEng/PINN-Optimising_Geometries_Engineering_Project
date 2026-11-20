@@ -74,3 +74,69 @@ def test_the_bracket_is_the_best_evaluation_split_and_its_neighbours():
     assert T.bracket_of({"splits": rows[::-1]}) == (0.40, 0.50)
     rows[0]["reference_drop"] = 1.0
     assert T.bracket_of({"splits": rows}) is None                # best at the grid's end
+
+
+def test_the_cubic_finds_the_minimum_of_an_asymmetric_curve_a_parabola_misses():
+    s0 = 0.386
+    s = s0 + 0.0025 * np.arange(-6, 7)
+    j = 0.4258 * (1.0 + 3.75 * (s - s0) ** 2 + 40.0 * (s - s0) ** 3)   # J''/J = 7.5 at s0
+    fit = T.cubic(list(zip(s, j)), 0.385)
+    assert abs(fit["vertex"] - s0) < 1e-10
+    assert fit["curvature"] == pytest.approx(7.5, rel=1e-8)
+    assert fit["jitter"] < 1e-12 and fit["vertex_spread"] < 1e-10
+    # why not a parabola: the cubic term leaks into the linear one and moves
+    # its vertex by -40 (sum x^4 / sum x^2) / 7.5 = -8.33e-4, four times eps_s
+    assert T.parabola(list(zip(s, j)), 0.385)["vertex"] - s0 == pytest.approx(
+        -40.0 * 25 * 0.0025 ** 2 / 7.5, rel=1e-6)
+
+
+def test_the_cubic_reports_jitter_and_the_spread_it_causes():
+    rng = np.random.default_rng(0)
+    s0 = 0.386
+    s = s0 + 0.0025 * np.arange(-6, 7)
+    j = 0.4258 * (1.0 + 3.75 * (s - s0) ** 2 + 40.0 * (s - s0) ** 3 + 3e-5 * rng.standard_normal(13))
+    fit = T.cubic(list(zip(s, j)), s0)
+    assert 1e-5 < fit["jitter"] < 5e-5
+    assert fit["noise_half_width"] == pytest.approx(
+        math.sqrt(4.0 * fit["jitter"] / fit["curvature"]), rel=1e-9)
+    assert 0.0 < fit["vertex_spread"] < 0.01 and abs(fit["vertex"] - s0) < 0.005
+
+
+def test_every_counted_run_is_a_finished_run_and_the_groups_are_the_reviews():
+    sizes = {label: len(runs) for label, runs, _ in T.GROUPS}
+    assert sizes["even share (q = 0.5)"] == 12 and sizes["uneven share"] == 10
+    for _, runs, _ in T.GROUPS:
+        for name in runs:
+            assert (T.RUNS / name / "metrics.json").is_file(), name
+
+
+def test_h2_counts_against_its_own_tolerance():
+    assert T.verdict(0.0026, 0.0003, tolerance=0.003) == "pass"
+    assert T.verdict(0.0029, 0.0003, tolerance=0.003) == "borderline"
+    assert T.verdict(0.0058, 0.0003, tolerance=0.003) == "miss"
+
+
+def test_the_stored_values_reproduce_the_reviews_count():
+    """The review's 5 / 5 / 2 (even) and 0 / 1 / 9 (uneven) from the stored
+    argmin errors and a +-0.0010 band."""
+    stored = {"parametric_re0.1_3090_corners_s21": 0.00263, "parametric_re0.1_3090_corners_s22": 0.00581,
+              "parametric_re0.1_3090_corners_s23": 0.00184, "parametric_re1_3090_corners_s21": -0.00132,
+              "parametric_re10_3090_equal_corners": 0.00143, "parametric_re10_3090_corners_s22": 0.00040,
+              "parametric_re10_3090_corners_s23": 0.00076, "parametric_re100_3090_corners_s21": -0.00504,
+              "parametric_re100_3090_corners_s22": -0.00122, "parametric_re100_3090_corners_s23": 0.00062,
+              "parametric_re0.1_0120_q0.5_corners_s21": 0.00014,
+              "parametric_re10_0120_q0.5_corners_s21": 0.00002}
+    rows = [{"run": k, "stored_error": v, "error_brent": v, "eps_brent": 0.0,
+             "error_vertex": v, "eps_vertex": 0.0} for k, v in stored.items()]
+    runs = dict((label, r) for label, r, _ in T.GROUPS)["even share (q = 0.5)"]
+    assert T.counts(rows, runs, 0.002)["stored, ±0.0010"] == {"pass": 5, "borderline": 5, "miss": 2}
+
+
+def test_the_model_error_is_the_parabolas_bias_on_an_asymmetric_curve():
+    s0 = 0.4848
+    s = s0 + 0.0005 * np.arange(-20, 21)
+    j = 4.0 * (1.0 + 17.0 * (s - s0) ** 2 + 60.0 * (s - s0) ** 3)
+    near = [(x, y) for x, y in zip(s, j) if abs(x - s0) <= 0.002 + 1e-12]
+    vertex = T.parabola(near, s0)["vertex"]
+    assert vertex - s0 == pytest.approx(-60.0 * 11.8 * 0.0005 ** 2 / (2 * 17.0), rel=1e-6)
+    assert T.model_error(list(zip(s, j)), s0, vertex, 3) == pytest.approx(abs(vertex - s0), rel=1e-6)

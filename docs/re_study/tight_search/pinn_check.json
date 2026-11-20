@@ -1,0 +1,216 @@
+{
+ "probe": 1e-05,
+ "all_converged": true,
+ "runs": {
+  "parametric_re0.1_0120_q0.5_corners_s21": {
+   "s": 0.4526222583112654,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -3.0774854734864343e-07
+  },
+  "parametric_re0.1_1515_q0.2_corners_s21": {
+   "s": 0.38574641301037166,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -7.577549973072941e-07
+  },
+  "parametric_re0.1_3090_corners_s21": {
+   "s": 0.4870871688762971,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -2.389574469306755e-07
+  },
+  "parametric_re0.1_3090_corners_s22": {
+   "s": 0.4899416782156556,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.1396576055308494e-06
+  },
+  "parametric_re0.1_3090_corners_s23": {
+   "s": 0.48628444464844467,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.643804035308748e-07
+  },
+  "parametric_re0.1_3090_q0.35_corners_s21": {
+   "s": 0.4393825140170552,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.1029923278074188e-06
+  },
+  "parametric_re0.1_3090_q0.35_cut0.4_corners_s21": {
+   "s": 0.4373935232143598,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 9.569634130766383e-07
+  },
+  "parametric_re0.1_3090_q0.5_cut0.15_corners_s21": {
+   "s": 0.48297125153297826,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.9174560976158001e-07
+  },
+  "parametric_re0.1_3090_q0.5_cut0.15_lm400_corners_s22": {
+   "s": 0.4855125842790569,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -5.356022075905755e-07
+  },
+  "parametric_re0.1_3090_q0.65_corners_s21": {
+   "s": 0.5748709168215872,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.5014834307153352e-06
+  },
+  "parametric_re0.1_3090_q0.8_corners_s21": {
+   "s": 0.6715674833360235,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.5467443305855185e-06
+  },
+  "parametric_re100_30120_corners_s21": {
+   "s": 0.4001288362553103,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -5.5100961352392476e-08
+  },
+  "parametric_re100_3090_corners_s21": {
+   "s": 0.48395119974092493,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -4.643864462220585e-07
+  },
+  "parametric_re100_3090_corners_s22": {
+   "s": 0.4873875172359436,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -9.529860221448473e-07
+  },
+  "parametric_re100_3090_corners_s23": {
+   "s": 0.4893306821346082,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 8.345911897961842e-07
+  },
+  "parametric_re10_0120_q0.5_corners_s21": {
+   "s": 0.452597624228759,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 5.321398303936152e-07
+  },
+  "parametric_re10_1515_q0.2_corners_s21": {
+   "s": 0.3231499944953841,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 5.595119962000394e-07
+  },
+  "parametric_re10_3090_corners_ease": {
+   "s": 0.48596022222267804,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.0075688841313006e-06
+  },
+  "parametric_re10_3090_corners_more": {
+   "s": 0.4858109144044333,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 8.821194072740759e-07
+  },
+  "parametric_re10_3090_corners_next": {
+   "s": 0.4858641205698056,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 9.229475541779379e-07
+  },
+  "parametric_re10_3090_corners_s22": {
+   "s": 0.4849507983748298,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.4747987770812338e-07
+  },
+  "parametric_re10_3090_corners_s23": {
+   "s": 0.48574104790809464,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 8.30782554103372e-07
+  },
+  "parametric_re10_3090_corners_wide": {
+   "s": 0.48545768268458533,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 5.349722230835369e-07
+  },
+  "parametric_re10_3090_equal": {
+   "s": 0.4843131009256758,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.1283085003350811e-06
+  },
+  "parametric_re10_3090_equal_corners": {
+   "s": 0.4863521733342684,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 9.165502416190973e-07
+  },
+  "parametric_re10_3090_q0.2_corners_s21": {
+   "s": 0.29761458817918446,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 7.785520900557678e-07
+  },
+  "parametric_re10_3090_q0.2_corners_s22": {
+   "s": 0.29708339034217746,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 5.841687962613847e-07
+  },
+  "parametric_re10_3090_q0.2_width_corners_s21": {
+   "s": 0.29264381813478507,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 7.589422081509851e-07
+  },
+  "parametric_re10_3090_q0.35_corners_s21": {
+   "s": 0.3965214220670743,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -5.049609677786358e-07
+  },
+  "parametric_re10_3090_q0.35_cut0.4_corners_s21": {
+   "s": 0.39570338184984205,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.1353732651922638e-06
+  },
+  "parametric_re10_3090_q0.35_width_corners_s21": {
+   "s": 0.39429548502356265,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.1999751789213569e-07
+  },
+  "parametric_re10_3090_q0.5_cut0.15_corners_s21": {
+   "s": 0.48382303016150163,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 9.187102962461627e-07
+  },
+  "parametric_re10_3090_q0.65_corners_s21": {
+   "s": 0.5704102171802188,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": -1.5040770857965192e-06
+  },
+  "parametric_re10_3090_q0.8_corners_s21": {
+   "s": 0.6591864423536452,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.4869426310809023e-06
+  },
+  "parametric_re1_3090_corners_s21": {
+   "s": 0.4827394676276189,
+   "J_reproduces": true,
+   "lower_probes": [],
+   "vertex_minus_s": 1.1448617486503517e-06
+  }
+ }
+}

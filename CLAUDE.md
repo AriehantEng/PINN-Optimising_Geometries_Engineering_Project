@@ -272,3 +272,17 @@ CI installs the pinned versions in `requirements-ci.txt`. The `paths` list
 came from a traced run of the fast suite: if a test starts reading another
 file under `docs/`, add it to that list, or a push changing only that file
 skips the test that reads it.
+
+**A remeshed reference has a noise floor that no Brent tolerance gets under.**
+Re-searching P1's reference optima at xatol 1e-5 instead of 0.001 left their
+uncertainty at 1e-4 to 6e-4, not the ~1e-5 mesh term the answer keys
+predicted -> the reference mesh is regenerated for every split, which moves J
+by 1e-7 to 3e-6 of its value (rms), and near a minimum with J''/J ~ 34 that
+reorders points up to sqrt(4 sigma / J'') apart; at 30/90, Re 0.1 and 1 the
+tight search stopped in the very noise dip the loose one had → locate the
+optimum by a least-squares fit through many solves near it (1e-5 here), and
+check the fit by adding a degree: on a flat optimum (30/120, Re 100: J''/J 6.8,
+jitter 2.6e-5) a +-0.002 window resolved no curvature at all and reported
+J''/J = 0.7, and a parabola on a wider window is biased by the curve's
+asymmetry (`bifurcation/tight_search.py`). Phase 2 compares optima across
+designs, each on its own mesh, so this floor is in every comparison.
