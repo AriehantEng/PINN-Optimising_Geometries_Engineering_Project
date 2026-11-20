@@ -1,0 +1,50 @@
+{
+ "xatol": 1e-05,
+ "runs": {
+  "parametric_re0.1_0120_q0.5_corners_s21": {
+   "family": "Tier A",
+   "case": "0-120_q0.5_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.4527470132596007,
+    "J": 35.79209818124615,
+    "reference_s": 0.4526043765151316
+   },
+   "curve_reproduces": true,
+   "s": 0.4526222583112654,
+   "J": 35.79208539920325,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_1515_q0.2_corners_s21": {
+   "family": "Tier A",
+   "case": "15-15_q0.2_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.38591966011250106,
+    "J": 34.053130209951945,
+    "reference_s": 0.33025974710041667
+   },
+   "curve_reproduces": true,
+   "s": 0.38574641301037166,
+   "J": 34.05311365495534,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re0.1_3090_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.48697264632547543,
+    "J": 40.192624379730226,
+    "reference_s": 0.48433847748459746
+   },
+   "curve_reproduces": true,
+   "s": 0.4870871688762971,
+   "J": 40.19261607001664,
+   "on_bound": false,
+   "evaluations": 6
+  }
+ }
+}
