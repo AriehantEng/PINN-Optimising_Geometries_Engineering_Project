@@ -45,6 +45,306 @@
    "J": 40.19261607001664,
    "on_bound": false,
    "evaluations": 6
+  },
+  "parametric_re0.1_3090_corners_s22": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re0.1",
+   "seed": 22,
+   "stored": {
+    "s": 0.4901530079564572,
+    "J": 40.12150875141278,
+    "reference_s": 0.48433847748459746
+   },
+   "curve_reproduces": true,
+   "s": 0.4899416782156556,
+   "J": 40.12148101008383,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_corners_s23": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re0.1",
+   "seed": 23,
+   "stored": {
+    "s": 0.4861803398874989,
+    "J": 40.250737683899004,
+    "reference_s": 0.48433847748459746
+   },
+   "curve_reproduces": true,
+   "s": 0.48628444464844467,
+   "J": 40.25073142012335,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_q0.2_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.2_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.4616,
+    "J": 33.0010636531131,
+    "reference_s": 0.30599547553705114
+   },
+   "curve_reproduces": true,
+   "s": 0.4616,
+   "J": 33.0010636531131,
+   "on_bound": true,
+   "evaluations": 0
+  },
+  "parametric_re0.1_3090_q0.35_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.35_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.4393858538675339,
+    "J": 38.972063514759434,
+    "reference_s": 0.40120906844103865
+   },
+   "curve_reproduces": true,
+   "s": 0.4393825140170552,
+   "J": 38.972063501843216,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_q0.35_cut0.4_corners_s21": {
+   "family": "controls",
+   "case": "30-90_q0.35_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.437719660112501,
+    "J": 38.704083549547654,
+    "reference_s": 0.40120906844103865
+   },
+   "curve_reproduces": true,
+   "s": 0.4373935232143598,
+   "J": 38.703995848543116,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_q0.5_cut0.15_corners_s21": {
+   "family": "controls",
+   "case": "30-90_q0.5_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.483119660112501,
+    "J": 40.03989092751843,
+    "reference_s": 0.48436362677802747
+   },
+   "curve_reproduces": true,
+   "s": 0.48297125153297826,
+   "J": 40.03987074506532,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_q0.5_cut0.15_lm400_corners_s22": {
+   "family": "amendment 3",
+   "case": "30-90_q0.5_Re0.1",
+   "seed": 22,
+   "stored": {
+    "s": 0.4854803398874989,
+    "J": 40.01011064455389,
+    "reference_s": 0.48436362677802747
+   },
+   "curve_reproduces": true,
+   "s": 0.4855125842790569,
+   "J": 40.010109821249586,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re0.1_3090_q0.65_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.65_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.5749863352977048,
+    "J": 38.44628947801225,
+    "reference_s": 0.5680033025343677
+   },
+   "curve_reproduces": true,
+   "s": 0.5748709168215872,
+   "J": 38.4462741260967,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re0.1_3090_q0.8_corners_s21": {
+   "family": "Tier A",
+   "case": "30-90_q0.8_Re0.1",
+   "seed": 21,
+   "stored": {
+    "s": 0.671313663253753,
+    "J": 35.40945844072511,
+    "reference_s": 0.6648758915953485
+   },
+   "curve_reproduces": true,
+   "s": 0.6715674833360235,
+   "J": 35.40941233528324,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re100_30120_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-120_q0.5_Re100",
+   "seed": 21,
+   "stored": {
+    "s": 0.3998469946631218,
+    "J": 0.42800790259039023,
+    "reference_s": 0.3859340913135795
+   },
+   "curve_reproduces": true,
+   "s": 0.4001288362553103,
+   "J": 0.4280077736243194,
+   "on_bound": false,
+   "evaluations": 8
+  },
+  "parametric_re100_3090_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re100",
+   "seed": 21,
+   "stored": {
+    "s": 0.48381966011250105,
+    "J": 0.45299332551158733,
+    "reference_s": 0.48886327503280297
+   },
+   "curve_reproduces": true,
+   "s": 0.48395119974092493,
+   "J": 0.4529931754352255,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re100_3090_corners_s22": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re100",
+   "seed": 22,
+   "stored": {
+    "s": 0.48763932022500206,
+    "J": 0.44931021557569406,
+    "reference_s": 0.48886327503280297
+   },
+   "curve_reproduces": true,
+   "s": 0.4873875172359436,
+   "J": 0.4493096529746258,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re100_3090_corners_s23": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re100",
+   "seed": 23,
+   "stored": {
+    "s": 0.48948633402953495,
+    "J": 0.44990594244411725,
+    "reference_s": 0.48886327503280297
+   },
+   "curve_reproduces": true,
+   "s": 0.4893306821346082,
+   "J": 0.44990572579015015,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_0120_q0.5_corners_s21": {
+   "family": "Tier A",
+   "case": "0-120_q0.5_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.4527470132596007,
+    "J": 3.612695510293461,
+    "reference_s": 0.4527276035039191
+   },
+   "curve_reproduces": true,
+   "s": 0.452597624228759,
+   "J": 3.612694163663011,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_1515_q0.2_corners_s21": {
+   "family": "Tier A",
+   "case": "15-15_q0.2_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.32328033988749894,
+    "J": 3.3501273745349964,
+    "reference_s": 0.3300453300952006
+   },
+   "curve_reproduces": true,
+   "s": 0.3231499944953841,
+   "J": 3.350125907574121,
+   "on_bound": false,
+   "evaluations": 7
+  },
+  "parametric_re10_30120_corners_s21": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-120_q0.5_Re10",
+   "seed": 21,
+   "stored": {
+    "s": 0.35,
+    "J": 3.151093585667707,
+    "reference_s": 0.35
+   },
+   "curve_reproduces": true,
+   "s": 0.35,
+   "J": 3.151093585667707,
+   "on_bound": true,
+   "evaluations": 0
+  },
+  "parametric_re10_3090_corners_ease": {
+   "family": "earlier experiment",
+   "case": "30-90_q0.5_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.4861803398874989,
+    "J": 4.030170104969894,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.48596022222267804,
+   "J": 4.0301667950500715,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_corners_more": {
+   "family": "earlier experiment",
+   "case": "30-90_q0.5_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.48551366600961243,
+    "J": 4.031409940594506,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.4858109144044333,
+   "J": 4.031403819967394,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_corners_next": {
+   "family": "earlier experiment",
+   "case": "30-90_q0.5_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.4861803398874989,
+    "J": 4.03152296573227,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.4858641205698056,
+   "J": 4.031516124259173,
+   "on_bound": false,
+   "evaluations": 6
+  },
+  "parametric_re10_3090_corners_s22": {
+   "family": "q = 0.5 (earlier)",
+   "case": "30-90_q0.5_Re10",
+   "seed": 22,
+   "stored": {
+    "s": 0.4851530078081333,
+    "J": 4.036359380182334,
+    "reference_s": 0.48475260310208196
+   },
+   "curve_reproduces": true,
+   "s": 0.4849507983748298,
+   "J": 4.036356625620277,
+   "on_bound": false,
+   "evaluations": 6
   }
  }
 }
